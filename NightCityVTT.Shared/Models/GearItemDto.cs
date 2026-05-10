@@ -2,6 +2,7 @@ namespace NightCityVTT.Shared.Models;
 
 public class GearItemDto
 {
+    public string InstanceId { get; set; } = Guid.NewGuid().ToString();
     public string? Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
@@ -17,4 +18,9 @@ public class GearItemDto
     public string ROF { get; set; } = string.Empty;
     public string SP { get; set; } = string.Empty;
     public string EV { get; set; } = string.Empty;
+    public double WeightKg { get; set; }
+    
+    public string Seats { get; set; } = string.Empty;
+    public string TopSpeed { get; set; } = string.Empty;
+    public string SDP { get; set; } = string.Empty;
 }

@@ -36,6 +36,7 @@ public class CharacterDocument
     public int    EMP  { get; set; }
     public int    BT   { get; set; }
     public bool   IsElite    { get; set; }
+    public bool   IsTestAsset { get; set; }
     public string SkillsJson { get; set; } = string.Empty;
     public int    Humanity   { get; set; }
     public int    Mobility   { get; set; }
@@ -43,12 +44,14 @@ public class CharacterDocument
     public string CreatedBy  { get; set; } = string.Empty;
     public int Eurobucks { get; set; }
     public List<GearItemDto> Inventory { get; set; } = new();
+    public Dictionary<string, string> EquippedGearIds { get; set; } = new();
+    public Dictionary<string, int> GridItemPositions { get; set; } = new();
 
     public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
 
     public CharacterSheet ToSheet() => new()
     {
-        Id = Id, OwnerId = OwnerId, Handle = Handle, Name = Name,
+        Id = Id, Handle = Handle, Name = Name,
         Clothes = Clothes, Hairstyle = Hairstyle, Affectation = Affectation,
         EthnicOrigin = EthnicOrigin,
         FamilyRanking = FamilyRanking, FamilyTragedy = FamilyTragedy,
@@ -57,15 +60,16 @@ public class CharacterDocument
         Role = Role, SpecialAbility = SpecialAbility,
         INT = INT, REF = REF, TECH = TECH, COOL = COOL, LK = LK,
         ATT = ATT, MA = MA, EMP = EMP, BT = BT,
-        IsElite = IsElite, SkillsJson = SkillsJson,
+        IsElite = IsElite, IsTestAsset = IsTestAsset, SkillsJson = SkillsJson,
         Humanity = Humanity, Mobility = Mobility, Resilience = Resilience,
         CreatedBy = CreatedBy, Eurobucks = Eurobucks, Inventory = Inventory,
+        EquippedGearIds = EquippedGearIds, GridItemPositions = GridItemPositions,
         CreatedAt = CreatedAt
     };
 
     public static CharacterDocument FromSheet(CharacterSheet s) => new()
     {
-        Id = s.Id, OwnerId = s.OwnerId,
+        Id = s.Id,
         Handle = s.Handle, Name = s.Name,
         Clothes = s.Clothes, Hairstyle = s.Hairstyle, Affectation = s.Affectation,
         EthnicOrigin = s.EthnicOrigin,
@@ -75,9 +79,10 @@ public class CharacterDocument
         Role = s.Role, SpecialAbility = s.SpecialAbility,
         INT = s.INT, REF = s.REF, TECH = s.TECH, COOL = s.COOL, LK = s.LK,
         ATT = s.ATT, MA = s.MA, EMP = s.EMP, BT = s.BT,
-        IsElite = s.IsElite, SkillsJson = s.SkillsJson,
+        IsElite = s.IsElite, IsTestAsset = s.IsTestAsset, SkillsJson = s.SkillsJson,
         Humanity = s.Humanity, Mobility = s.Mobility, Resilience = s.Resilience,
         CreatedBy = s.CreatedBy, Eurobucks = s.Eurobucks, Inventory = s.Inventory,
+        EquippedGearIds = s.EquippedGearIds, GridItemPositions = s.GridItemPositions,
         CreatedAt = s.CreatedAt == default ? DateTime.UtcNow : s.CreatedAt
     };
 }

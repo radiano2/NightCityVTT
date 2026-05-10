@@ -2,6 +2,7 @@
 @layout LoginLayout
 @using NightCityVTT.Shared.Models
 @inject UserApiService UserApi
+@inject SeedingApiService SeedApi
 @inject UserSessionService Session
 @inject NavigationManager Nav
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
@@ -21,42 +22,60 @@ else if (_mode == LoginMode.ForceRegister || _mode == LoginMode.Register)
             <p class="lp-sub">@(_mode == LoginMode.ForceRegister ? "No operators detected. Create the first account." : "Register a new identity.")</p>
         </div>
 
-        <div class="lp-role-row">
-            <button class="lp-role-btn @(_regRole == UserRole.Player ? "active" : "")"
-                    @onclick="() => _regRole = UserRole.Player">
-                <span class="lp-role-icon">▶</span> PLAYER
-            </button>
-            <button class="lp-role-btn @(_regRole == UserRole.GameMaster ? "active gm" : "")"
-                    @onclick="() => _regRole = UserRole.GameMaster">
-                <span class="lp-role-icon">◈</span> GAME MASTER
-            </button>
-        </div>
-
-        <div class="lp-field">
-            <label>HANDLE / NICKNAME</label>
-            <input class="lp-input" type="text" placeholder="ENTER CALLSIGN..."
-                   @bind="_regNick" @bind:event="oninput" maxlength="24" />
-        </div>
-        <div class="lp-field">
-            <label>ACCESS CODE</label>
-            <input class="lp-input" type="password" placeholder="••••••••"
-                   @bind="_regPass" @bind:event="oninput" />
-        </div>
-        <div class="lp-field">
-            <label>CONFIRM ACCESS CODE</label>
-            <input class="lp-input" type="password" placeholder="••••••••"
-                   @bind="_regPass2" @bind:event="oninput"
-                   @onkeydown="OnRegisterKeyDown" />
-        </div>
-
-        @if (!string.IsNullOrEmpty(_error))
+        @if (_dbNeedsSeeding)
         {
-            <div class="lp-error">[!] @_error</div>
+            <div class="lp-error" style="background:rgba(255,191,36,0.08); border-color:var(--nc-gold); color:var(--nc-gold); margin-bottom:1rem;">
+                [!] CORE DATABASE IS EMPTY. SYSTEM MUST BE SEEDED BEFORE CREATING OPERATORS.
+            </div>
+            
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="lp-error">[!] @_error</div>
+            }
+            
+            <button class="lp-submit" style="background:var(--nc-gold); color:var(--nc-black);" @onclick="DoSeed" disabled="@_seeding">
+                @(_seeding ? "INITIALIZING CORE DATA..." : "SEED DATABASE NOW")
+            </button>
         }
+        else
+        {
+            <div class="lp-role-row">
+                <button class="lp-role-btn @(_regRole == UserRole.Player ? "active" : "")"
+                        @onclick="() => _regRole = UserRole.Player">
+                    <span class="lp-role-icon">▶</span> PLAYER
+                </button>
+                <button class="lp-role-btn @(_regRole == UserRole.GameMaster ? "active gm" : "")"
+                        @onclick="() => _regRole = UserRole.GameMaster">
+                    <span class="lp-role-icon">◈</span> GAME MASTER
+                </button>
+            </div>
 
-        <button class="lp-submit" @onclick="DoRegister" disabled="@_busy">
-            @(_busy ? "PROCESSING..." : "REGISTER IDENTITY")
-        </button>
+            <div class="lp-field">
+                <label>HANDLE / NICKNAME</label>
+                <input class="lp-input" type="text" placeholder="ENTER CALLSIGN..."
+                       @bind="_regNick" @bind:event="oninput" maxlength="24" />
+            </div>
+            <div class="lp-field">
+                <label>ACCESS CODE</label>
+                <input class="lp-input" type="password" placeholder="••••••••"
+                       @bind="_regPass" @bind:event="oninput" />
+            </div>
+            <div class="lp-field">
+                <label>CONFIRM ACCESS CODE</label>
+                <input class="lp-input" type="password" placeholder="••••••••"
+                       @bind="_regPass2" @bind:event="oninput"
+                       @onkeydown="OnRegisterKeyDown" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="lp-error">[!] @_error</div>
+            }
+
+            <button class="lp-submit" @onclick="DoRegister" disabled="@_busy">
+                @(_busy ? "PROCESSING..." : "REGISTER IDENTITY")
+            </button>
+        }
 
         @if (_mode == LoginMode.Register)
         {
@@ -272,6 +291,8 @@ else if (_mode == LoginMode.PickUser)
     private LoginMode       _mode        = LoginMode.Loading;
     private bool            _loading     = true;
     private bool            _busy        = false;
+    private bool            _dbNeedsSeeding = false;
+    private bool            _seeding     = false;
     private string?         _error;
     private List<UserDto>   _users       = new();
     private UserDto?        _selectedUser;
@@ -288,24 +309,53 @@ else if (_mode == LoginMode.PickUser)
     protected override async Task OnInitializedAsync()
     {
         await Session.InitializeAsync();
+        var allUsers = await UserApi.GetAllAsync();
+        bool anyExist = allUsers.Count > 0;
 
         if (Session.IsLoggedIn)
         {
-            Nav.NavigateTo("/", forceLoad: true);
-            return;
+            if (!anyExist || !allUsers.Any(u => u.Id == Session.CurrentUser!.Id))
+            {
+                await Session.ClearAsync();
+            }
+            else
+            {
+                Nav.NavigateTo("/", forceLoad: true);
+                return;
+            }
         }
 
-        var anyExist = await UserApi.AnyExistAsync();
         if (!anyExist)
         {
             _mode = LoginMode.ForceRegister;
+            var report = await SeedApi.ValidateAsync();
+            if (report != null && report.GearCount == 0)
+            {
+                _dbNeedsSeeding = true;
+            }
         }
         else
         {
-            _users = await UserApi.GetAllAsync();
+            _users = allUsers;
             _mode  = LoginMode.PickUser;
         }
         _loading = false;
+    }
+
+    private async Task DoSeed()
+    {
+        _seeding = true;
+        _error = null;
+        var report = await SeedApi.RunSeedAsync();
+        if (report != null && report.Success)
+        {
+            _dbNeedsSeeding = false;
+        }
+        else
+        {
+            _error = report?.Message ?? "Seeding failed.";
+        }
+        _seeding = false;
     }
 
     private void SelectUser(UserDto u)

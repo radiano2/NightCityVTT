@@ -17,6 +17,18 @@ public class CharacterApiService
         return await _http.GetFromJsonAsync<List<CharacterSheet>>(url) ?? new();
     }
 
+    public async Task<CharacterSheet?> GetByIdAsync(string id)
+    {
+        try
+        {
+            return await _http.GetFromJsonAsync<CharacterSheet>($"api/character/{id}");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public async Task<CharacterSheet?> CreateAsync(CharacterSheet sheet)
     {
         var res = await _http.PostAsJsonAsync("api/character", sheet);

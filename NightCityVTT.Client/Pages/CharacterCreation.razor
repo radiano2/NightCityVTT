@@ -6,6 +6,7 @@
 @inject UserSessionService Session
 @inject UserApiService UserApi
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 @implements IDisposable
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
@@ -20,18 +21,30 @@
     @if (!_isCreating)
     {
         <!-- ═══ ROSTER VIEW ═══ -->
-        <div class="roster-header">
-            <h1 class="lang-en hide-in-eec">PERSONNEL REGISTRY</h1>
-            <h1 class="lang-eec">OPERATIVE DOSSIERS</h1>
-            <h1 class="lang-ru">КАРТОТЕКА КАДРОВ</h1>
-            <h1 class="lang-pl">REJESTR PERSONELU</h1>
+        <div class="roster-header" style="display:flex; flex-direction:column; gap:1.5rem; align-items:flex-start; margin-bottom: 2rem;">
+            <div>
+                <h1 class="lang-en hide-in-eec" style="margin:0;">PERSONNEL REGISTRY</h1>
+                <h1 class="lang-eec" style="margin:0;">OPERATIVE DOSSIERS</h1>
+                <h1 class="lang-ru" style="margin:0;">КАРТОТЕКА КАДРОВ</h1>
+                <h1 class="lang-pl" style="margin:0;">REJESTR PERSONELU</h1>
+            </div>
             
-            <button class="ncc-btn-submit" @onclick="StartCreation">
-                <span class="lang-en hide-in-eec">NEW ASSET ⊕</span>
-                <span class="lang-eec">NEW OPERATIVE ⊕</span>
-                <span class="lang-ru">НОВЫЙ ОБЪЕКТ ⊕</span>
-                <span class="lang-pl">NOWY WPIS ⊕</span>
-            </button>
+            <div style="display:flex; gap:1rem; align-items:center; width: 100%;">
+                @if (Session.CurrentUser?.Role == UserRole.GameMaster)
+                {
+                    <select class="ncc-select" style="max-width:240px; padding: 0.5rem;" @bind="RosterFilter">
+                        <option value="All">SHOW ALL ASSETS</option>
+                        <option value="Players">PLAYER OPERATIVES</option>
+                        <option value="Tests">TEST ASSETS</option>
+                    </select>
+                }
+                <button class="ncc-btn-submit" @onclick="StartCreation" style="white-space:nowrap;">
+                    <span class="lang-en hide-in-eec">NEW ASSET ⊕</span>
+                    <span class="lang-eec">NEW OPERATIVE ⊕</span>
+                    <span class="lang-ru">НОВЫЙ ОБЪЕКТ ⊕</span>
+                    <span class="lang-pl">NOWY WPIS ⊕</span>
+                </button>
+            </div>
         </div>
 
         @if (_loading)
@@ -41,7 +54,7 @@
                 <div class="ncc-empty-sub">SYNCING RECORDS...</div>
             </div>
         }
-        else if (_characters.Count == 0)
+        else if (FilteredCharacters.Count == 0)
         {
             <div class="ncc-empty">
                 <div class="ncc-empty-icon">◌</div>
@@ -54,7 +67,7 @@
         else
         {
             <div class="char-grid">
-                @foreach (var c in _characters)
+                @foreach (var c in FilteredCharacters)
                 {
                     <div class="char-card @(c.Role.ToLower())" @onclick="() => ShowDetail(c)">
                         <div class="card-header">
@@ -291,73 +304,7 @@
     }
 </div>
 
-<!-- DETAIL POPUP -->
-@if (_detailChar is not null)
-{
-    <div class="detail-overlay" @onclick="CloseDetail">
-        <div class="detail-box" @onclick:stopPropagation="true">
-            <div class="detail-header">
-                <h2>@_detailChar.Handle.ToUpper()</h2>
-                <div class="detail-role">@_detailChar.Role // @_detailChar.SpecialAbility</div>
-                @if (Session.CurrentUser?.Role == UserRole.GameMaster && !string.IsNullOrEmpty(_detailChar.OwnerId))
-                {
-                    <div class="detail-owner">
-                        OPERATOR: @(_userMap.TryGetValue(_detailChar.OwnerId, out var on) ? on.ToUpper() : "UNKNOWN")
-                    </div>
-                }
-                <button class="detail-close" @onclick="CloseDetail">✕</button>
-            </div>
-            <div class="detail-grid">
-                <div class="detail-stats">
-                    <div class="stat-chip">INT: @_detailChar.INT</div>
-                    <div class="stat-chip">REF: @_detailChar.REF</div>
-                    <div class="stat-chip">TECH: @_detailChar.TECH</div>
-                    <div class="stat-chip">COOL: @_detailChar.COOL</div>
-                    <div class="stat-chip">LK: @_detailChar.LK</div>
-                    <div class="stat-chip">ATT: @_detailChar.ATT</div>
-                    <div class="stat-chip">MA: @_detailChar.MA</div>
-                    <div class="stat-chip">EMP: @_detailChar.EMP</div>
-                    <div class="stat-chip">BT: @_detailChar.BT</div>
-                </div>
-                <div class="detail-derived">
-                    <div class="der-row"><span>HUMANITY</span> <strong>@_detailChar.Humanity</strong></div>
-                    <div class="der-row"><span>MOBILITY</span> <strong>@_detailChar.Mobility</strong></div>
-                    <div class="der-row"><span>RESILIENCE</span> <strong>@_detailChar.Resilience</strong></div>
-                    <div class="der-row"><span>FUNDS</span> <strong style="color:var(--nc-gold);">€$@_detailChar.Eurobucks</strong></div>
-                </div>
-            </div>
-            <div class="detail-info">
-                <h3>LIFEPATH</h3>
-                <p><strong>ORIGIN:</strong> @_detailChar.EthnicOrigin</p>
-                <p><strong>STYLE:</strong> @_detailChar.Clothes, @_detailChar.Hairstyle, @_detailChar.Affectation</p>
-                <p><strong>FAMILY:</strong> @_detailChar.FamilyRanking — @_detailChar.FamilyTragedy</p>
-                <p><strong>PERSONALITY:</strong> @_detailChar.PersonalityTrait</p>
-            </div>
-            
-            @if (_detailChar.Inventory != null && _detailChar.Inventory.Any())
-            {
-                <div class="detail-info" style="margin-top: 1rem;">
-                    <h3>INVENTORY (@_detailChar.Inventory.Count)</h3>
-                    <div style="max-height: 180px; overflow-y: auto; font-size: 0.8rem; color: var(--nc-cream); border: 1px solid var(--nc-border); padding: 0.5rem;">
-                        @foreach (var item in _detailChar.Inventory)
-                        {
-                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dotted rgba(255,255,255,0.1); padding:0.25rem 0;">
-                                <span>@item.Name</span>
-                                <div style="display:flex; gap:0.8rem; align-items:center;">
-                                    <span style="color:var(--nc-dim); font-size:0.75rem;">[@item.Category]</span>
-                                    @if (item.CostEurobucks > 0)
-                                    {
-                                        <span style="color:var(--nc-gold); font-size:0.75rem;">€$@item.CostEurobucks</span>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
-}
+
 
 <style>
     .char-suite { padding: 2rem; max-width: 1400px; margin: 0 auto; min-height: 80vh; }
@@ -427,33 +374,27 @@
     .wiz-btn.primary { background: var(--nc-red); border-color: var(--nc-red); color: var(--nc-black); font-weight: bold; }
     .wiz-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* DETAIL POPUP */
-    .detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem; }
-    .detail-box { background: var(--nc-panel); border: 1px solid var(--nc-red); width: 100%; max-width: 700px; padding: 2rem; position: relative; }
-    .detail-header { border-bottom: 2px solid var(--nc-red); padding-bottom: 1rem; margin-bottom: 1.5rem; position: relative; }
-    .detail-close { position: absolute; top: 0; right: 0; background: transparent; border: none; color: var(--nc-red); font-size: 1.5rem; cursor: pointer; }
-    .detail-role { color: var(--nc-dim); font-size: 0.9rem; }
-    .detail-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-bottom: 1.5rem; }
-    .stat-chip { background: var(--nc-dark); border: 1px solid var(--nc-border); padding: 0.4rem; text-align: center; font-size: 0.75rem; color: var(--nc-cyan); }
-    .detail-derived { display: flex; gap: 2rem; background: rgba(0,229,255,0.05); padding: 1rem; margin-bottom: 1.5rem; }
-    .der-row { display: flex; flex-direction: column; }
-    .der-row span { font-size: 0.6rem; color: var(--nc-dim); }
-    .der-row strong { font-size: 1.1rem; color: var(--nc-cyan); }
-    .detail-owner { font-size: 0.7rem; color: var(--nc-gold); letter-spacing: 0.1em; margin-top: 0.3rem; }
-    .detail-info h3 { font-size: 0.9rem; color: var(--nc-red); margin-bottom: 0.8rem; border-bottom: 1px solid var(--nc-border); }
-    .detail-info p { font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--nc-dim); }
-    .detail-info strong { color: var(--nc-cream); }
-
-    @@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 </style>
 
 @code {
     private List<CharacterSheet> _characters = new();
     private Dictionary<string, string> _userMap = new();
+    
+    private string _rosterFilter = "All";
+    private string RosterFilter 
+    { 
+        get => _rosterFilter; 
+        set { _rosterFilter = value; StateHasChanged(); } 
+    }
+    
+    private List<CharacterSheet> FilteredCharacters => _rosterFilter switch {
+        "Players" => _characters.Where(c => !c.IsTestAsset).ToList(),
+        "Tests" => _characters.Where(c => c.IsTestAsset).ToList(),
+        _ => _characters
+    };
     private bool _loading = true;
     private bool _isCreating = false;
-    private CharacterSheet? _detailChar;
-
+    
     // Wizard State
     private int _stage = 0;
     private string[] _stageLabels = ["IDENTITY", "ROLE", "STATS", "LIFEPATH", "SKILLS"];
@@ -613,9 +554,8 @@
         await LoadCharacters();
     }
 
-    private void ShowDetail(CharacterSheet c) => _detailChar = c;
-    private void CloseDetail() => _detailChar = null;
-
+    private void ShowDetail(CharacterSheet c) => Nav.NavigateTo($"/characters/{c.Id}", forceLoad: true);
+    
     private int CalculateStartingFunds(string role, int level)
     {
         int[] g1 = {1000, 1000, 1500, 2000, 3000, 4000, 5000, 7000, 9000, 12000};
@@ -636,7 +576,9 @@
 
     public void Dispose() { }
 
+
     // ── DATA ──
+
     private record RoleDef(string Name, string Special, string[] CareerSkills);
     private RoleDef? CurrentRole => _roles.FirstOrDefault(r => r.Name == _role);
     private readonly RoleDef[] _roles = [
