@@ -272,6 +272,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await Session.InitializeAsync();
         if (Session.CurrentUser?.Role == UserRole.GameMaster)
         {
             await LoadStories();
