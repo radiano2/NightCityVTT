@@ -1,0 +1,219 @@
+@using MudBlazor
+@using NightCityVTT.Shared.Services
+@using NightCityVTT.Shared.Models
+@using NightCityVTT.Client.Components
+@inject DiceEngine Dice
+@inject IJSRuntime JS
+@implements IDisposable
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+
+<div class="dice-terminal">
+    <div class="dt-header">
+        <span class="dt-title">
+            <span class="lang-en">// DICE TERMINAL //</span>
+            <span class="lang-ru">// ДАЙС ТЕРМИНАЛ //</span>
+            <span class="lang-pl">// TERMINAL KOŚCI //</span>
+        </span>
+        <div class="dt-clock-badge">
+            <span class="dt-clock">@_clock</span>
+            <WeatherWidget />
+        </div>
+    </div>
+
+    <div class="dt-body">
+
+        <!-- STAT INPUTS -->
+        <div>
+            <div class="dt-section-label">
+                <span class="lang-en">// ATTRIBUTES //</span>
+                <span class="lang-ru">// АТРИБУТЫ //</span>
+                <span class="lang-pl">// ATRYBUTY //</span>
+            </div>
+            <div class="dt-inputs">
+                <MudNumericField T="int" @bind-Value="_stat"
+                    Label="@(_isHeroldowie ? "STAT" : _isLuna ? "СТАТ" : "STAT")" Variant="Variant.Outlined"
+                    Min="1" Max="10" HideSpinButtons="true" />
+                <MudNumericField T="int" @bind-Value="_skill"
+                    Label="@(_isHeroldowie ? "UMIEJĘTN." : _isLuna ? "НАВЫК" : "SKILL")" Variant="Variant.Outlined"
+                    Min="0" Max="10" HideSpinButtons="true" />
+                <MudNumericField T="int" @bind-Value="_luck"
+                    Label="@(_isHeroldowie ? "SZCZĘŚCIE" : _isLuna ? "УДАЧА" : "LUCK SPENT")" Variant="Variant.Outlined"
+                    Min="0" Max="10" HideSpinButtons="true" />
+                <MudNumericField T="int" @bind-Value="_body"
+                    Label="@(_isHeroldowie ? "BUDOWA" : _isLuna ? "ТЕЛОСЛОЖЕНИЕ" : "BODY TYPE")" Variant="Variant.Outlined"
+                    Min="1" Max="10" HideSpinButtons="true" />
+            </div>
+        </div>
+
+        <!-- DAMAGE FORMULA -->
+        <div>
+            <div class="dt-section-label">
+                <span class="lang-en">// DAMAGE FORMULA //</span>
+                <span class="lang-ru">// ФОРМУЛА УРОНА //</span>
+                <span class="lang-pl">// FORMUŁA OBRAŻEŃ //</span>
+            </div>
+            <div class="dt-damage-row">
+                <MudTextField @bind-Value="_damageFormula"
+                    Label="e.g. 3D6+1 / 2D6 / 1D10+2"
+                    Variant="Variant.Outlined"
+                    Style="flex:1" />
+            </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div>
+            <div class="dt-section-label">
+                <span class="lang-en">// QUICK ACTIONS //</span>
+                <span class="lang-ru">// БЫСТРЫЕ ДЕЙСТВИЯ //</span>
+                <span class="lang-pl">// SZYBKIE AKCJE //</span>
+            </div>
+            <div class="dt-actions">
+                <MudButton Variant="Variant.Filled"   Color="Color.Error"   OnClick="DoSkillCheck">
+                    <span class="lang-en">SKILL CHECK</span>
+                    <span class="lang-ru">ПРОВЕРКА НАВЫКА</span>
+                    <span class="lang-pl">SPRAWDZENIE</span>
+                </MudButton>
+                <MudButton Variant="Variant.Filled"   Color="Color.Warning" OnClick="DoAttack">
+                    <span class="lang-en">ATTACK</span>
+                    <span class="lang-ru">АТАКА</span>
+                    <span class="lang-pl">ATAK</span>
+                </MudButton>
+                <MudButton Variant="Variant.Filled"   Color="Color.Info"    OnClick="DoSave">
+                    <span class="lang-en">SAVE</span>
+                    <span class="lang-ru">СПАСБРОСОК</span>
+                    <span class="lang-pl">RZUT OBRONNY</span>
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="DoD10">
+                    <span class="lang-en">MANUAL D10</span>
+                    <span class="lang-ru">РУЧНОЙ D10</span>
+                    <span class="lang-pl">RĘCZNY D10</span>
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="DoD6">
+                    <span class="lang-en">MANUAL D6</span>
+                    <span class="lang-ru">РУЧНОЙ D6</span>
+                    <span class="lang-pl">RĘCZNY D6</span>
+                </MudButton>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- CRT LOG -->
+    <div class="dt-log" id="dt-log-box">
+        @if (_log.Count == 0)
+        {
+            <div class="log-line log-dim">
+                <span class="lang-en">_ AWAITING INPUT — JACK IN TO ROLL _</span>
+                <span class="lang-ru">_ ОЖИДАНИЕ ВВОДА — ПОДКЛЮЧИСЬ ДЛЯ БРОСКА _</span>
+                <span class="lang-pl">_ OCZEKIWANIE — PODŁĄCZ SIĘ, ABY RZUCIĆ _</span>
+            </div>
+        }
+        @foreach (var entry in _log)
+        {
+            <div class="log-line @entry.CssClass">@entry.Text</div>
+        }
+    </div>
+
+    <div class="dt-footer">
+        <MudButton Variant="Variant.Text" Color="Color.Default"
+            Size="Size.Small" OnClick="ClearLog">
+            <span class="lang-en">CLEAR LOG</span>
+            <span class="lang-ru">ОЧИСТИТЬ</span>
+            <span class="lang-pl">WYCZYŚĆ LOG</span>
+        </MudButton>
+    </div>
+</div>
+
+@code {
+    private int _stat  = 5;
+    private int _skill = 3;
+    private int _luck  = 0;
+    private int _body  = 5;
+    private string _damageFormula = "3D6";
+    private string _clock = string.Empty;
+    private System.Timers.Timer? _timer;
+    private bool _isLuna;
+    private bool _isHeroldowie;
+    private DotNetObjectReference<DiceTerminal>? _dotNetRef;
+
+    private readonly List<LogEntry> _log = new();
+
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary        = "#ff003c",
+            Secondary      = "#00e5ff",
+            Background     = "#111214",
+            Surface        = "#16181c",
+            TextPrimary    = "#e8e0cc",
+            TextSecondary  = "#4a4f5a",
+            ActionDefault  = "#4a4f5a",
+            DrawerBackground = "#111214",
+        }
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var theme = await JS.InvokeAsync<string?>("localStorage.getItem", "nc-theme");
+            _isLuna = theme == "luna";
+            _isHeroldowie = theme == "heroldowie";
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("ncOnThemeChange", _dotNetRef);
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void OnThemeChanged(string theme)
+    {
+        _isLuna = theme == "luna";
+        _isHeroldowie = theme == "heroldowie";
+        InvokeAsync(StateHasChanged);
+    }
+
+    protected override void OnInitialized()
+    {
+        _clock = DateTime.Now.ToString("HH:mm:ss");
+        _timer = new System.Timers.Timer(1000);
+        _timer.Elapsed += (_, _) =>
+        {
+            _clock = DateTime.Now.ToString("HH:mm:ss");
+            InvokeAsync(StateHasChanged);
+        };
+        _timer.Start();
+    }
+
+    private void AddResult(RollResult r)
+    {
+        foreach (var line in r.Log)
+        {
+            string css = line.Contains("[CRITICAL")  ? "log-crit"
+                       : line.Contains("[FUMBLE")    ? "log-fumble"
+                       : line.Contains("[RESULT")    ? "log-result"
+                       : line.Contains("= ")         ? "log-result"
+                       : string.Empty;
+            _log.Insert(0, new LogEntry(line, css));
+        }
+        if (_log.Count > 100) _log.RemoveRange(100, _log.Count - 100);
+    }
+
+    private void DoSkillCheck() => AddResult(Dice.RollSkillCheck(_stat, _skill, _luck));
+    private void DoAttack()     => AddResult(Dice.RollDamage(_damageFormula));
+    private void DoSave()       => AddResult(Dice.PerformSave(_body));
+    private void DoD10()        => AddResult(Dice.RollManual(10));
+    private void DoD6()         => AddResult(Dice.RollManual(6));
+    private void ClearLog()     => _log.Clear();
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+        _dotNetRef?.Dispose();
+    }
+
+    private record LogEntry(string Text, string CssClass);
+}

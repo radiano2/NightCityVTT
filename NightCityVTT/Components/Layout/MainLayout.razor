@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+@using NightCityVTT.Client.Components
+@inject NightCityVTT.Client.Services.SettingsApiService SettingsApi
+@inject IJSRuntime JS
+
+<div class="nc-layout">
+    <NavMenu />
+    <div class="nc-main-wrapper">
+        <main class="nc-main">
+            @Body
+        </main>
+    </div>
+</div>
+
+<AuthGuard      @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))" />
+<UserSwitcherWidget @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))" />
+
+<div id="blazor-error-ui">
+    ⚠ SYSTEM ERROR — <a href="" class="reload">REBOOT</a>
+    <a class="dismiss">✕</a>
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var settings = await SettingsApi.GetSettingsAsync();
+                await JS.InvokeVoidAsync("_ncSetTheme", settings.Theme);
+                await JS.InvokeVoidAsync("ncSetCrt", settings.CrtFilterEnabled);
+                await JS.InvokeVoidAsync("localStorage.setItem", "nc-anim-interval", settings.AnimationIntervalMs.ToString());
+                await JS.InvokeVoidAsync("localStorage.setItem", "nc-crt-enabled", settings.CrtFilterEnabled ? "1" : "0");
+            }
+            catch { }
+        }
+    }
+}

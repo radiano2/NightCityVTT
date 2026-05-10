@@ -1,0 +1,83 @@
+@using NightCityVTT.Client.Services
+@inject SeedingApiService SeedApi
+
+<div class="sw-wrap">
+    <button class="sw-btn" @onclick="Seed" disabled="@_busy">
+        <span class="sw-icon">@(_busy ? "◈" : "⬡")</span>
+        <span class="lang-en">@(_busy ? "JACKING IN..." : "SEED DATABASE")</span>
+        <span class="lang-ru">@(_busy ? "ПОДКЛЮЧЕНИЕ..." : "ЗАГРУЗИТЬ БАЗУ")</span>
+        <span class="lang-pl">@(_busy ? "ŁADOWANIE..." : "ZAŁADUJ BAZĘ")</span>
+    </button>
+    @if (_status is not null)
+    {
+        <div class="sw-status @(_ok ? "sw-ok" : "sw-err")">@_status</div>
+    }
+</div>
+
+<style>
+    .sw-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .sw-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        width: 100%;
+        background: transparent;
+        border: 1px solid var(--nc-red);
+        color: var(--nc-red);
+        font-family: var(--font-mono);
+        font-size: 0.65rem;
+        letter-spacing: 0.15em;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        transition: background 0.15s, box-shadow 0.15s, color 0.15s;
+        text-transform: uppercase;
+    }
+    .sw-btn:hover:not(:disabled) {
+        background: var(--nc-red);
+        color: #000;
+        box-shadow: 0 0 12px rgba(255,0,60,0.4);
+    }
+    .sw-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .sw-icon { font-size: 0.8rem; line-height: 1; }
+
+    .sw-status {
+        font-family: var(--font-mono);
+        font-size: 0.58rem;
+        letter-spacing: 0.08em;
+        padding: 0.15rem 0;
+        line-height: 1.5;
+    }
+    .sw-ok  { color: var(--nc-green); }
+    .sw-err { color: var(--nc-red); }
+</style>
+
+@code {
+    private bool _busy;
+    private string? _status;
+    private bool _ok;
+
+    private async Task Seed()
+    {
+        _busy = true;
+        _status = null;
+        try
+        {
+            var r = await SeedApi.RunSeedAsync();
+            _ok = r?.Success ?? false;
+            _status = _ok
+                ? $"✓ {r!.SkillCount} SKILLS / {r.RoleCount} ROLES / {r.GearCount} GEAR"
+                : $"✕ {r?.Message ?? "UNKNOWN ERROR"}";
+        }
+        catch (Exception ex)
+        {
+            _ok = false;
+            _status = $"✕ {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

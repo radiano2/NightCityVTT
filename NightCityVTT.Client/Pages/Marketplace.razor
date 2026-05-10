@@ -1,0 +1,387 @@
+@page "/marketplace"
+@using NightCityVTT.Shared.Models
+@using NightCityVTT.Client.Services
+@inject GearApiService GearApi
+@inject CharacterApiService CharApi
+@inject IJSRuntime JS
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>
+    <span class="lang-en hide-in-eec">Black Market</span>
+    <span class="lang-eec">Euro-Market</span>
+    <span class="lang-ru">Черный Рынок</span>
+    <span class="lang-pl">Czarny Rynek</span>
+</PageTitle>
+
+<div class="market-page">
+    <div class="market-header">
+        <h1 class="lang-en hide-in-eec">NIGHT CITY BLACK MARKET // SECURE CONNECTION</h1>
+        <h1 class="lang-eec">EURO-MARKET // VERIFIED VENDORS</h1>
+        <h1 class="lang-ru">ЧЕРНЫЙ РЫНОК // ШИФРОВАННЫЙ КАНАЛ</h1>
+        <h1 class="lang-pl">CZARNY RYNEK // BEZPIECZNE POŁĄCZENIE</h1>
+        <p class="subtitle lang-en hide-in-eec">Weapons, Armor, Cyberware, and everything you need to survive.</p>
+        <p class="subtitle lang-eec">Standardized EC compliant logistics and defense acquisitions.</p>
+        <p class="subtitle lang-ru">Оружие, броня, инструменты и препараты. Без лишних вопросов.</p>
+        <p class="subtitle lang-pl">Broń, pancerze i sprzęt do zadań specjalnych. Ceny rynkowe.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="ncc-loading">
+            <div class="ncc-empty-icon">⬡</div>
+            <div class="ncc-empty-sub">
+                <span class="lang-en hide-in-eec">ESTABLISHING VENDOR UPLINK...</span>
+                <span class="lang-eec">CONNECTING TO EURO-LOGISTICS...</span>
+                <span class="lang-ru">УСТАНОВКА СВЯЗИ С ПОСТАВЩИКОМ...</span>
+                <span class="lang-pl">NAWIĄZYWANIE POŁĄCZENIA Z DOSTAWCĄ...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- BUYER SELECTOR -->
+        <div class="buyer-bar">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                <div class="buyer-select-group">
+                    <span style="color:var(--nc-dim); font-size:0.8rem; letter-spacing:0.1em;">ACTIVE BUYER:</span>
+                    <select class="ncc-select" style="width: auto; min-width: 250px;" @onchange="OnBuyerSelected">
+                        <option value="">— SELECT CHARACTER —</option>
+                        @foreach (var c in _characters)
+                        {
+                            <option value="@c.Id">@c.Handle.ToUpper() (@c.Role)</option>
+                        }
+                    </select>
+                </div>
+                @if (_selectedBuyer != null)
+                {
+                    <div class="buyer-funds">
+                        <span style="color:var(--nc-dim); font-size:0.8rem; letter-spacing:0.1em; margin-right:0.5rem;">AVAILABLE FUNDS:</span>
+                        <strong style="color:var(--nc-gold); font-size:1.2rem;">€$ @_selectedBuyer.Eurobucks</strong>
+                    </div>
+                }
+            </div>
+            
+            @if (_selectedBuyer != null && _selectedBuyer.Inventory != null && _selectedBuyer.Inventory.Any())
+            {
+                <div style="margin-top: 1rem; border-top: 1px dotted var(--nc-border); padding-top: 1rem;">
+                    <span style="color:var(--nc-cyan); font-size:0.8rem; letter-spacing:0.1em; display:block; margin-bottom:0.5rem;">CURRENT INVENTORY (@_selectedBuyer.Inventory.Count ITEMS):</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        @foreach (var item in _selectedBuyer.Inventory)
+                        {
+                            <span style="background: var(--nc-dark); border: 1px solid var(--nc-border); color: var(--nc-cream); padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+                                @item.Name <span style="color:var(--nc-dim); margin-left:0.2rem;">[@item.Category]</span>
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+        
+        @if (!string.IsNullOrEmpty(_purchaseMessage))
+        {
+            <div class="ncc-msg @(_purchaseSuccess ? "ncc-msg-ok" : "ncc-msg-err")" style="margin-bottom: 1.5rem;">
+                @_purchaseMessage
+            </div>
+        }
+
+        <div class="market-layout">
+            <div class="market-sidebar">
+                <div class="filter-group">
+                    <h3>
+                        <span class="lang-en hide-in-eec">CATEGORIES</span>
+                        <span class="lang-eec">CLASSIFICATIONS</span>
+                        <span class="lang-ru">КАТЕГОРИИ</span>
+                        <span class="lang-pl">KATEGORIE</span>
+                    </h3>
+                    <div class="filter-btns">
+                        <button class="filter-btn @(_selectedCategory == "" ? "active" : "")" @onclick='() => SetCategory("")'>
+                            <span class="lang-en hide-in-eec">ALL</span>
+                            <span class="lang-eec">ALL</span>
+                            <span class="lang-ru">ВСЕ</span>
+                            <span class="lang-pl">WSZYSTKIE</span>
+                        </button>
+                        @foreach (var cat in _categories)
+                        {
+                            <button class="filter-btn @(_selectedCategory == cat ? "active" : "")" @onclick="() => SetCategory(cat)">@cat</button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="market-content">
+                @if (FilteredItems.Count == 0)
+                {
+                    <div class="ncc-empty">
+                        <div class="ncc-empty-icon">◌</div>
+                        <div>NO ITEMS MATCHING QUERY</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="item-grid">
+                        @foreach (var item in FilteredItems)
+                        {
+                            <div class="item-card">
+                                <div class="item-header">
+                                    <span class="item-name">@item.Name</span>
+                                    <span class="item-price">€$ @item.CostEurobucks</span>
+                                </div>
+                                <div class="item-cat">@item.Category</div>
+                                <div class="item-desc">@item.Description</div>
+                                
+                                @if (item.Category == "Weapon")
+                                {
+                                    <div class="item-stats">
+                                        <div class="stat"><span class="lbl">DMG:</span> @item.Damage</div>
+                                        <div class="stat"><span class="lbl">ACC:</span> @item.Acc</div>
+                                        <div class="stat"><span class="lbl">RNG:</span> @item.Range</div>
+                                        <div class="stat"><span class="lbl">CAP:</span> @item.Capacity</div>
+                                        <div class="stat"><span class="lbl">ROF:</span> @item.ROF</div>
+                                    </div>
+                                }
+                                else if (item.Category == "Armor")
+                                {
+                                    <div class="item-stats">
+                                        <div class="stat"><span class="lbl">SP:</span> @item.SP</div>
+                                        <div class="stat"><span class="lbl">EV:</span> @item.EV</div>
+                                    </div>
+                                }
+                                
+                                <div class="item-footer">
+                                    <div class="footer-info">
+                                        @if (!string.IsNullOrEmpty(item.Concealability))
+                                        {
+                                            <span>CONCEAL: @item.Concealability</span><br/>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.Availability))
+                                        {
+                                            <span>AVAIL: @item.Availability</span>
+                                        }
+                                    </div>
+                                    @if (_selectedBuyer != null)
+                                    {
+                                        <button class="buy-btn @(CanAfford(item) ? "" : "disabled")" @onclick="() => BuyItem(item)" disabled="@(!CanAfford(item))">
+                                            @(CanAfford(item) ? "ACQUIRE ◈" : "INSUFFICIENT FUNDS")
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .market-page {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        color: var(--nc-cream);
+        font-family: var(--font-mono);
+    }
+    .market-header {
+        border-bottom: 2px solid var(--nc-border);
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .market-header h1 {
+        font-family: var(--font-display);
+        font-size: 2.2rem;
+        color: var(--nc-red);
+        margin: 0 0 0.5rem 0;
+        letter-spacing: 0.1em;
+    }
+    .subtitle { color: var(--nc-dim); font-size: 0.9rem; }
+    
+    .market-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+    }
+    
+    .filter-group h3 {
+        color: var(--nc-red);
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--nc-border);
+        padding-bottom: 0.5rem;
+    }
+    .filter-btns {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .filter-btn {
+        background: var(--nc-panel);
+        border: 1px solid var(--nc-border);
+        color: var(--nc-cream);
+        padding: 0.75rem 1rem;
+        text-align: left;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        transition: all 0.2s;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+    }
+    .filter-btn:hover { background: var(--nc-dark); border-color: var(--nc-cyan); }
+    .filter-btn.active { background: var(--nc-dark); border-color: var(--nc-red); border-left: 4px solid var(--nc-red); color: var(--nc-red); font-weight: bold; }
+    
+    .item-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+    .item-card {
+        background: var(--nc-panel);
+        border: 1px solid var(--nc-border);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    .item-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--nc-cyan);
+    }
+    .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+    .item-name {
+        font-weight: bold;
+        color: var(--nc-cream);
+        font-size: 1.1rem;
+        flex: 1;
+        padding-right: 1rem;
+    }
+    .item-price {
+        color: var(--nc-gold);
+        font-family: var(--font-display);
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    .item-cat {
+        font-size: 0.7rem;
+        color: var(--nc-red);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 1rem;
+    }
+    .item-desc {
+        font-size: 0.85rem;
+        color: var(--nc-dim);
+        margin-bottom: 1.5rem;
+        flex: 1;
+        line-height: 1.4;
+    }
+    .item-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        background: var(--nc-dark);
+        padding: 0.8rem;
+        border: 1px solid var(--nc-border);
+        margin-bottom: 1rem;
+        font-size: 0.75rem;
+    }
+    .stat { color: var(--nc-cream); }
+    .stat .lbl { color: var(--nc-cyan); margin-right: 0.3rem; }
+    
+    .item-footer {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.7rem;
+        color: var(--nc-dim);
+        border-top: 1px dotted var(--nc-border);
+        padding-top: 0.8rem;
+    }
+    .footer-info { flex: 1; }
+    
+    .buy-btn { background: var(--nc-dark); border: 1px solid var(--nc-cyan); color: var(--nc-cyan); padding: 0.4rem 0.8rem; cursor: pointer; transition: all 0.2s; font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; }
+    .buy-btn:hover:not(:disabled) { background: var(--nc-cyan); color: var(--nc-black); }
+    .buy-btn.disabled { opacity: 0.4; border-color: var(--nc-dim); color: var(--nc-dim); cursor: not-allowed; }
+    
+    .buyer-bar { display: flex; flex-direction: column; align-items: stretch; background: var(--nc-panel); border: 1px solid var(--nc-border); padding: 1rem; margin-bottom: 2rem; border-left: 4px solid var(--nc-gold); }
+    .buyer-select-group { display: flex; align-items: center; gap: 1rem; }
+    .buyer-funds { display: flex; align-items: center; }
+</style>
+
+@code {
+    private List<GearItemDto> _items = new();
+    private List<string> _categories = new();
+    private string _selectedCategory = "";
+    private bool _loading = true;
+
+    // Buyer state
+    private List<CharacterSheet> _characters = new();
+    private CharacterSheet? _selectedBuyer;
+    private string? _purchaseMessage;
+    private bool _purchaseSuccess;
+
+    private List<GearItemDto> FilteredItems => string.IsNullOrEmpty(_selectedCategory) 
+        ? _items 
+        : _items.Where(i => i.Category == _selectedCategory).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var gearTask = GearApi.GetAllAsync();
+        var charTask = CharApi.GetAllAsync();
+        
+        await Task.WhenAll(gearTask, charTask);
+        
+        _items = gearTask.Result;
+        _characters = charTask.Result;
+        _categories = _items.Select(i => i.Category).Distinct().OrderBy(c => c).ToList();
+        _loading = false;
+    }
+
+    private void SetCategory(string category)
+    {
+        _selectedCategory = category;
+        _purchaseMessage = null;
+    }
+
+    private void OnBuyerSelected(ChangeEventArgs e)
+    {
+        var id = e.Value?.ToString();
+        _selectedBuyer = _characters.FirstOrDefault(c => c.Id == id);
+        _purchaseMessage = null;
+    }
+
+    private bool CanAfford(GearItemDto item)
+    {
+        if (_selectedBuyer == null) return false;
+        return _selectedBuyer.Eurobucks >= item.CostEurobucks;
+    }
+
+    private async Task BuyItem(GearItemDto item)
+    {
+        if (_selectedBuyer == null) return;
+        if (!CanAfford(item)) return;
+
+        _selectedBuyer.Eurobucks -= item.CostEurobucks;
+        if (_selectedBuyer.Inventory == null) _selectedBuyer.Inventory = new();
+        _selectedBuyer.Inventory.Add(item);
+
+        var result = await CharApi.UpdateAsync(_selectedBuyer);
+        if (result != null)
+        {
+            _purchaseSuccess = true;
+            _purchaseMessage = $"SUCCESSFULLY ACQUIRED: {item.Name}. REMAINING FUNDS: €${_selectedBuyer.Eurobucks}";
+        }
+        else
+        {
+            // Revert on failure
+            _selectedBuyer.Eurobucks += item.CostEurobucks;
+            _selectedBuyer.Inventory.Remove(item);
+            _purchaseSuccess = false;
+            _purchaseMessage = "TRANSACTION FAILED. SECURE CONNECTION LOST.";
+        }
+    }
+}

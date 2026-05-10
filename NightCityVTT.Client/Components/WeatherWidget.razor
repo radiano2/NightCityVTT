@@ -1,0 +1,69 @@
+@inject HttpClient Http
+@implements IDisposable
+
+<div class="nc-weather" title="Night City atmospheric data (San Francisco)">
+    @if (_loading)
+    {
+        <span class="nc-weather-city">NC WEATHER</span>
+        <span class="nc-weather-cond"> SCANNING...</span>
+    }
+    else
+    {
+        <span class="nc-weather-city">NIGHT CITY</span>
+        <span> // </span>
+        <span class="nc-weather-temp">@_temp°C</span>
+        <span> // </span>
+        <span class="nc-weather-cond">@_cond</span>
+    }
+</div>
+
+@code {
+    private string _temp    = "--";
+    private string _cond    = "UNKNOWN";
+    private bool   _loading = true;
+    private System.Timers.Timer? _refreshTimer;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await FetchWeather();
+            _refreshTimer = new System.Timers.Timer(30 * 60 * 1000);
+            _refreshTimer.Elapsed += async (_, _) => await InvokeAsync(async () =>
+            {
+                await FetchWeather();
+                StateHasChanged();
+            });
+            _refreshTimer.AutoReset = true;
+            _refreshTimer.Start();
+        }
+    }
+
+    private async Task FetchWeather()
+    {
+        try
+        {
+            var res = await Http.GetFromJsonAsync<WttrResponse>(
+                "https://wttr.in/San+Francisco?format=j1",
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var c = res?.current_condition?.FirstOrDefault();
+            if (c is not null)
+            {
+                _temp = c.temp_C;
+                _cond = (c.weatherDesc?.FirstOrDefault()?.value ?? "CLEAR").ToUpperInvariant();
+            }
+        }
+        catch
+        {
+            _cond = "NEON FOG";
+        }
+        _loading = false;
+    }
+
+    public void Dispose() => _refreshTimer?.Dispose();
+
+    private record WttrCondition(string temp_C, string temp_F, WttrDesc[]? weatherDesc);
+    private record WttrDesc(string value);
+    private record WttrResponse(WttrCondition[]? current_condition);
+}

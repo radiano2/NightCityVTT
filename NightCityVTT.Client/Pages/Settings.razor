@@ -1,0 +1,163 @@
+@page "/settings"
+@using NightCityVTT.Shared.Models
+@using NightCityVTT.Client.Services
+@inject SettingsApiService SettingsApi
+@inject IJSRuntime JS
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>
+    <span class="lang-en hide-in-eec">System Settings</span>
+    <span class="lang-eec">EC Protocol Config</span>
+    <span class="lang-ru">Настройки системы</span>
+    <span class="lang-pl">Ustawienia systemu</span>
+</PageTitle>
+
+<div class="setup-container">
+    <h2 class="setup-title">
+        <span class="lang-en hide-in-eec">SYSTEM SETTINGS</span>
+        <span class="lang-eec">PROTOCOL CONFIGURATION</span>
+        <span class="lang-ru">НАСТРОЙКИ СИСТЕМЫ</span>
+        <span class="lang-pl">USTAWIENIA SYSTEMU</span>
+    </h2>
+    <p class="setup-subtitle">
+        <span class="lang-en hide-in-eec">Configure visual protocols and connection timing.</span>
+        <span class="lang-eec">Adjust EC protocol parameters, visuals, and link speeds.</span>
+        <span class="lang-ru">Настройте визуальные протоколы и время соединения.</span>
+        <span class="lang-pl">Skonfiguruj protokoły wizualne i czas połączenia.</span>
+    </p>
+
+    @if (_loading)
+    {
+        <div class="ncc-loading">
+            <div class="ncc-empty-icon">⬡</div>
+            <div class="ncc-empty-sub">
+                <span class="lang-en hide-in-eec">RETRIEVING DATA...</span>
+                <span class="lang-eec">ACCESSING ARCHIVE...</span>
+                <span class="lang-ru">ПОЛУЧЕНИЕ ДАННЫХ...</span>
+                <span class="lang-pl">POBIERANIE DANYCH...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="ncc-section">
+            <div class="ncc-section-title">
+                <span class="lang-en hide-in-eec">Visual Protocol (Theme)</span>
+                <span class="lang-eec">Aesthetic Protocol</span>
+                <span class="lang-ru">Визуальный протокол (Тема)</span>
+                <span class="lang-pl">Protokół wizualny (Motyw)</span>
+            </div>
+            <select class="ncc-select" @bind="_settings.Theme">
+                <option value="">ENGLISH (DEFAULT)</option>
+                <option value="eec">EEC (EUROPEAN BLUE)</option>
+                <option value="luna">LUNA (RUSSIAN)</option>
+                <option value="heroldowie">HEROLDOWIE (POLISH)</option>
+            </select>
+        </div>
+
+        <div class="ncc-section">
+            <div class="ncc-section-title">
+                <span class="lang-en hide-in-eec">Hacking Animation Interval (ms)</span>
+                <span class="lang-eec">Uplink Simulation Delay (ms)</span>
+                <span class="lang-ru">Интервал анимации взлома (мс)</span>
+                <span class="lang-pl">Interwał animacji hackowania (ms)</span>
+            </div>
+            <input type="number" class="ncc-input" @bind="_settings.AnimationIntervalMs" min="0" step="100" />
+            <div class="ncc-msg" style="margin-top: 0.5rem; color: var(--nc-dim);">
+                <span class="lang-en hide-in-eec">Default is 5000 (5 seconds). Set to 0 to disable.</span>
+                <span class="lang-eec">Standard delay is 5000ms. Set to 0 for instant access.</span>
+                <span class="lang-ru">По умолчанию 5000 (5 секунд). Установите 0 для отключения.</span>
+                <span class="lang-pl">Domyślnie 5000 (5 sekund). Ustaw 0, aby wyłączyć.</span>
+            </div>
+        </div>
+
+        <div class="ncc-section">
+            <div class="ncc-section-title">
+                <span class="lang-en hide-in-eec">Kinescope Protocol (CRT Filter)</span>
+                <span class="lang-eec">Retro-Phosphor Simulation</span>
+                <span class="lang-ru">Протокол кинескопа (ЭЛТ-фильтр)</span>
+                <span class="lang-pl">Protokół kineskopowy (Filtr CRT)</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0;">
+                <input type="checkbox" id="crtToggle" @bind="_settings.CrtFilterEnabled" style="accent-color: var(--nc-red); transform: scale(1.4);" />
+                <label for="crtToggle" class="ncc-label" style="cursor: pointer; margin-bottom: 0;">
+                    <span class="lang-en hide-in-eec">ENABLE SCANLINES AND PHOSPHOR GLOW</span>
+                    <span class="lang-eec">ENABLE STANDARDIZED SCANLINE PROTOCOL</span>
+                    <span class="lang-ru">ВКЛЮЧИТЬ СКАНИРУЮЩИЕ ЛИНИИ И СВЕЧЕНИЕ ФОСФОРА</span>
+                    <span class="lang-pl">WŁĄCZ LINIE SKANOWANIA I POŚWIATĘ FOSFOROWĄ</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="ncc-submit-row">
+            <button class="ncc-btn-submit" @onclick="SaveSettings" disabled="@_saving">
+                @if (_saving) {
+                    <span class="lang-en hide-in-eec">SAVING...</span>
+                    <span class="lang-eec">PROCESSING...</span>
+                    <span class="lang-ru">СОХРАНЕНИЕ...</span>
+                    <span class="lang-pl">ZAPISYWANIE...</span>
+                } else {
+                    <span class="lang-en hide-in-eec">SAVE SETTINGS</span>
+                    <span class="lang-eec">APPLY PARAMETERS</span>
+                    <span class="lang-ru">СОХРАНИТЬ НАСТРОЙКИ</span>
+                    <span class="lang-pl">ZAPISZ USTAWIENIA</span>
+                }
+            </button>
+            @if (_statusMsg != null)
+            {
+                <div class="ncc-msg @(_statusIsOk ? "ncc-msg-ok" : "ncc-msg-err")">@_statusMsg</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private SystemSettingsDto _settings = new();
+    private bool _loading = true;
+    private bool _saving = false;
+    private string? _statusMsg;
+    private bool _statusIsOk;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await SettingsApi.GetSettingsAsync();
+        _loading = false;
+    }
+
+    private async Task SaveSettings()
+    {
+        _saving = true;
+        _statusMsg = null;
+        
+        var success = await SettingsApi.UpdateSettingsAsync(_settings);
+        
+        if (success)
+        {
+            _statusIsOk = true;
+            _statusMsg = "SETTINGS UPDATED SUCCESSFULLY. APPLYING...";
+            // Update local storage and trigger updates
+            await JS.InvokeVoidAsync("_ncSetTheme", _settings.Theme);
+            await JS.InvokeVoidAsync("ncSetCrt", _settings.CrtFilterEnabled);
+            await JS.InvokeVoidAsync("localStorage.setItem", "nc-anim-interval", _settings.AnimationIntervalMs.ToString());
+            await JS.InvokeVoidAsync("localStorage.setItem", "nc-crt-enabled", _settings.CrtFilterEnabled ? "1" : "0");
+            
+            // Trigger stylized success animation according to theme
+            string successMsg = _settings.Theme switch
+            {
+                "eec" => "[ PARAMETERS APPLIED ]",
+                "luna" => "[ НАСТРОЙКИ СОХРАНЕНЫ ]",
+                "heroldowie" => "[ USTAWIENIA ZAPISANE ]",
+                _ => "[ SETTINGS SAVED SUCCESSFULLY ]"
+            };
+            
+            await JS.InvokeVoidAsync("triggerSuccessAnimation", successMsg);
+        }
+        else
+        {
+            _statusIsOk = false;
+            _statusMsg = "FAILED TO UPDATE SETTINGS.";
+        }
+        
+        _saving = false;
+    }
+}

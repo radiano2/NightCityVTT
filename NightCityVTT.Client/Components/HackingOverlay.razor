@@ -1,0 +1,183 @@
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+@if (isVisible)
+{
+    <div class="hacking-overlay @(isFading ? "fade-out" : "") theme-@(currentTheme)">
+        <div class="hacking-content">
+            <div class="hacking-glitch" data-text="@(intrusionText)">@(intrusionText)</div>
+            <div class="hacking-terminal">
+                <div class="terminal-line">> @(initText)... <span class="status-ok">DONE</span></div>
+                <div class="terminal-line">> @(bypassText) @(currentCorp) @(firewallText)... <span class="status-ok">SUCCESS</span></div>
+                <div class="terminal-line">> @(injectText)... <span class="status-warning">@(decryptText)</span></div>
+                <div class="terminal-line">> @(accessText) @(currentDept) @(databaseText)...</div>
+                <div class="terminal-line">> @(loadText) @(pageName) @(interfaceText)...</div>
+            </div>
+            <div class="hacking-progress">
+                <div class="progress-bar" style="width: @(progress)%"></div>
+            </div>
+            <div class="hacking-footer">
+                @(footerText) @(currentCorp). @(warningText)
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isVisible = false;
+    private bool isFading = false;
+    private string currentCorp = "ARASAKA";
+    private string currentDept = "SECURE";
+    private string pageName = "MAIN_FRAME";
+    private string currentTheme = "";
+    private int progress = 0;
+
+    // Localization/Theme strings
+    private string intrusionText = "[ SYSTEM INTRUSION DETECTED ]";
+    private string initText = "INITIALIZING UPLINK";
+    private string bypassText = "BYPASSING";
+    private string firewallText = "FIREWALL";
+    private string injectText = "INJECTING PAYLOAD";
+    private string decryptText = "DECRYPTING";
+    private string accessText = "ACCESSING";
+    private string databaseText = "DATABASE";
+    private string loadText = "LOADING";
+    private string interfaceText = "INTERFACE";
+    private string footerText = "PROPERTY OF";
+    private string warningText = "UNAUTHORIZED ACCESS IS PUNISHABLE BY DEATH.";
+
+    private readonly string[] defaultCorps = { "ARASAKA", "MILITECH", "KANG TAO", "TRAUMA TEAM", "ZETATECH", "NCPD" };
+    private readonly string[] lunaCorps = { "SOVOIL", "PETROCHEM", "MINISTRY OF INFO", "KGB SECURE", "EUROBANK" };
+    private readonly string[] heroldowieCorps = { "BUREAU OF RECORDS", "POLISH INTEL", "INDUSTRIAL BOARD", "ORZEŁ-TECH", "VISTULA CORP" };
+
+    private readonly string[] depts = { "CENTRAL", "RESEARCH", "FINANCIAL", "MILITARY", "INTELLIGENCE", "BLACK_OPS" };
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += HandleLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TriggerHacking();
+        }
+    }
+
+    private async void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        await TriggerHacking();
+    }
+
+    private async Task TriggerHacking()
+    {
+        if (isVisible) return;
+
+        isVisible = true;
+        isFading = false;
+        progress = 0;
+        StateHasChanged();
+
+        // Get theme from JS - do it after showing to avoid delay
+        try 
+        {
+            currentTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "nc-theme") ?? "";
+        }
+        catch { currentTheme = ""; }
+
+        // Update text based on theme
+        UpdateLocalization();
+        
+        // Extract page name from URL
+        var uri = new Uri(NavigationManager.Uri);
+        pageName = uri.AbsolutePath.Trim('/').ToUpper();
+        if (string.IsNullOrEmpty(pageName)) pageName = "MAIN_FRAME";
+
+        StateHasChanged();
+
+        // Simulate progress
+        for (int i = 0; i <= 100; i += 20)
+        {
+            progress = i;
+            StateHasChanged();
+            await Task.Delay(100);
+        }
+
+        await Task.Delay(400);
+        isFading = true;
+        StateHasChanged();
+
+        await Task.Delay(500);
+        isVisible = false;
+        isFading = false;
+        StateHasChanged();
+    }
+
+    private void UpdateLocalization()
+    {
+        var random = new Random();
+        string[] selectedCorps = currentTheme switch
+        {
+            "luna" => lunaCorps,
+            "heroldowie" => heroldowieCorps,
+            _ => defaultCorps
+        };
+
+        currentCorp = selectedCorps[random.Next(selectedCorps.Length)];
+        currentDept = depts[random.Next(depts.Length)];
+
+        if (currentTheme == "luna")
+        {
+            intrusionText = "[ ОБНАРУЖЕНО ВТОРЖЕНИЕ В СИСТЕМУ ]";
+            initText = "ИНИЦИАЛИЗАЦИЯ СВЯЗИ";
+            bypassText = "ОБХОД";
+            firewallText = "БРАНДМАУЭРА";
+            injectText = "ВНЕДРЕНИЕ ПОЛЕЗНОЙ НАГРУЗКИ";
+            decryptText = "РАСШИФРОВКА";
+            accessText = "ДОСТУП К";
+            databaseText = "БАЗЕ ДАННЫХ";
+            loadText = "ЗАГРУЗКА";
+            interfaceText = "ИНТЕРФЕЙСА";
+            footerText = "СОБСТВЕННОСТЬ";
+            warningText = "НЕСАНКЦИОНИРОВАННЫЙ ДОСТУП КАРАЕТСЯ СМЕРТЬЮ.";
+        }
+        else if (currentTheme == "heroldowie")
+        {
+            intrusionText = "[ WYKRYTO INTRUZJĘ SYSTEMU ]";
+            initText = "INICJOWANIE ŁĄCZA";
+            bypassText = "OMINIĘCIE";
+            firewallText = "FIREWALLA";
+            injectText = "WSTRZYKIWANIE ŁADUNKU";
+            decryptText = "DEKRYPTACJA";
+            accessText = "DOSTĘP DO";
+            databaseText = "BAZY DANYCH";
+            loadText = "ŁADOWANIE";
+            interfaceText = "INTERFEJSU";
+            footerText = "WŁASNOŚĆ";
+            warningText = "NIEAUTORYZOWANY DOSTĘP GROZI ŚMIERCIĄ.";
+        }
+        else
+        {
+            intrusionText = "[ SYSTEM INTRUSION DETECTED ]";
+            initText = "INITIALIZING UPLINK";
+            bypassText = "BYPASSING";
+            firewallText = "FIREWALL";
+            injectText = "INJECTING PAYLOAD";
+            decryptText = "DECRYPTING";
+            accessText = "ACCESSING";
+            databaseText = "DATABASE";
+            loadText = "LOADING";
+            interfaceText = "INTERFACE";
+            footerText = "PROPERTY OF";
+            warningText = "UNAUTHORIZED ACCESS IS PUNISHABLE BY DEATH.";
+        }
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+    }
+}

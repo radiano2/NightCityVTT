@@ -1,0 +1,389 @@
+@page "/login"
+@layout LoginLayout
+@using NightCityVTT.Shared.Models
+@inject UserApiService UserApi
+@inject UserSessionService Session
+@inject NavigationManager Nav
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+@if (_loading)
+{
+    <div class="lp-boot">
+        <div class="lp-blink">// NETWORK HANDSHAKE...</div>
+    </div>
+}
+else if (_mode == LoginMode.ForceRegister || _mode == LoginMode.Register)
+{
+    <div class="lp-card">
+        <div class="lp-header">
+            <div class="lp-slash">// NIGHT CITY VTT //</div>
+            <h1 class="lp-title">@(_mode == LoginMode.ForceRegister ? "SYSTEM INITIALIZATION" : "NEW OPERATOR")</h1>
+            <p class="lp-sub">@(_mode == LoginMode.ForceRegister ? "No operators detected. Create the first account." : "Register a new identity.")</p>
+        </div>
+
+        <div class="lp-role-row">
+            <button class="lp-role-btn @(_regRole == UserRole.Player ? "active" : "")"
+                    @onclick="() => _regRole = UserRole.Player">
+                <span class="lp-role-icon">▶</span> PLAYER
+            </button>
+            <button class="lp-role-btn @(_regRole == UserRole.GameMaster ? "active gm" : "")"
+                    @onclick="() => _regRole = UserRole.GameMaster">
+                <span class="lp-role-icon">◈</span> GAME MASTER
+            </button>
+        </div>
+
+        <div class="lp-field">
+            <label>HANDLE / NICKNAME</label>
+            <input class="lp-input" type="text" placeholder="ENTER CALLSIGN..."
+                   @bind="_regNick" @bind:event="oninput" maxlength="24" />
+        </div>
+        <div class="lp-field">
+            <label>ACCESS CODE</label>
+            <input class="lp-input" type="password" placeholder="••••••••"
+                   @bind="_regPass" @bind:event="oninput" />
+        </div>
+        <div class="lp-field">
+            <label>CONFIRM ACCESS CODE</label>
+            <input class="lp-input" type="password" placeholder="••••••••"
+                   @bind="_regPass2" @bind:event="oninput"
+                   @onkeydown="OnRegisterKeyDown" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="lp-error">[!] @_error</div>
+        }
+
+        <button class="lp-submit" @onclick="DoRegister" disabled="@_busy">
+            @(_busy ? "PROCESSING..." : "REGISTER IDENTITY")
+        </button>
+
+        @if (_mode == LoginMode.Register)
+        {
+            <button class="lp-back" @onclick="() => { _mode = LoginMode.PickUser; _error = null; }">
+                ← BACK TO LOGIN
+            </button>
+        }
+    </div>
+}
+else if (_mode == LoginMode.PickUser)
+{
+    <div class="lp-card">
+        <div class="lp-header">
+            <div class="lp-slash">// NIGHT CITY VTT //</div>
+            <h1 class="lp-title">USER AUTHENTICATION</h1>
+            <p class="lp-sub">Select your operator identity.</p>
+        </div>
+
+        <div class="lp-user-list">
+            @foreach (var u in _users)
+            {
+                <button class="lp-user-card @(_selectedUser?.Id == u.Id ? "selected" : "")"
+                        @onclick="() => SelectUser(u)">
+                    <span class="lp-user-nick">@u.Nickname.ToUpper()</span>
+                    <span class="lp-role-badge @(u.Role == UserRole.GameMaster ? "gm" : "")">
+                        @(u.Role == UserRole.GameMaster ? "GM" : "PLR")
+                    </span>
+                </button>
+            }
+        </div>
+
+        @if (_selectedUser != null)
+        {
+            <div class="lp-field" style="margin-top: 1.5rem;">
+                <label>ACCESS CODE FOR @_selectedUser.Nickname.ToUpper()</label>
+                <input class="lp-input" type="password" placeholder="••••••••"
+                       @bind="_loginPass" @bind:event="oninput"
+                       @onkeydown="OnLoginKeyDown" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <div class="lp-error">[!] @_error</div>
+            }
+
+            <button class="lp-submit" @onclick="DoLogin" disabled="@_busy">
+                @(_busy ? "AUTHENTICATING..." : $"ACCESS AS {_selectedUser.Nickname.ToUpper()}")
+            </button>
+        }
+
+        <button class="lp-new-user" @onclick="() => { _mode = LoginMode.Register; _error = null; ResetRegForm(); }">
+            + NEW OPERATOR
+        </button>
+    </div>
+}
+
+<style>
+    .lp-boot {
+        color: var(--nc-dim);
+        font-family: var(--font-mono);
+        letter-spacing: 0.15em;
+    }
+    .lp-blink { animation: blink 1s infinite; }
+
+    .lp-card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--nc-panel);
+        border: 1px solid var(--nc-border);
+        border-top: 3px solid var(--nc-red);
+        padding: 2.5rem 2rem;
+        box-shadow: 0 0 40px rgba(255, 0, 60, 0.15);
+    }
+
+    .lp-header { margin-bottom: 2rem; text-align: center; }
+    .lp-slash {
+        font-size: 0.7rem;
+        color: var(--nc-dim);
+        letter-spacing: 0.25em;
+        margin-bottom: 0.5rem;
+    }
+    .lp-title {
+        font-family: var(--font-display);
+        font-size: 1.6rem;
+        color: var(--nc-red);
+        margin: 0 0 0.5rem;
+        letter-spacing: 0.1em;
+    }
+    .lp-sub { font-size: 0.75rem; color: var(--nc-dim); margin: 0; }
+
+    .lp-role-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .lp-role-btn {
+        background: var(--nc-dark);
+        border: 1px solid var(--nc-border);
+        color: var(--nc-dim);
+        padding: 0.8rem;
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+    }
+    .lp-role-btn:hover { border-color: var(--nc-cyan); color: var(--nc-cyan); }
+    .lp-role-btn.active { border-color: var(--nc-cyan); color: var(--nc-cyan); background: rgba(0,229,255,0.08); }
+    .lp-role-btn.active.gm { border-color: var(--nc-gold); color: var(--nc-gold); background: rgba(255,191,36,0.08); }
+    .lp-role-icon { font-size: 0.9rem; }
+
+    .lp-field { margin-bottom: 1rem; }
+    .lp-field label {
+        display: block;
+        font-size: 0.65rem;
+        color: var(--nc-dim);
+        letter-spacing: 0.12em;
+        margin-bottom: 0.35rem;
+    }
+    .lp-input {
+        width: 100%;
+        background: var(--nc-dark);
+        border: 1px solid var(--nc-border);
+        border-bottom-color: var(--nc-cyan);
+        color: var(--nc-cream);
+        padding: 0.6rem 0.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.9rem;
+        outline: none;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+    }
+    .lp-input:focus { border-color: var(--nc-cyan); box-shadow: 0 0 8px rgba(0,229,255,0.2); }
+
+    .lp-error {
+        color: var(--nc-red);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        margin-bottom: 1rem;
+        padding: 0.4rem 0.6rem;
+        border-left: 2px solid var(--nc-red);
+        background: rgba(255,0,60,0.08);
+    }
+
+    .lp-submit {
+        width: 100%;
+        background: var(--nc-red);
+        border: none;
+        color: var(--nc-black);
+        padding: 0.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        font-weight: bold;
+        letter-spacing: 0.12em;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        margin-top: 0.5rem;
+    }
+    .lp-submit:hover:not(:disabled) { opacity: 0.85; }
+    .lp-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .lp-back, .lp-new-user {
+        width: 100%;
+        background: transparent;
+        border: 1px dashed var(--nc-border);
+        color: var(--nc-dim);
+        padding: 0.5rem;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        margin-top: 0.75rem;
+        transition: all 0.2s;
+    }
+    .lp-back:hover, .lp-new-user:hover { border-color: var(--nc-cyan); color: var(--nc-cyan); }
+
+    .lp-user-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .lp-user-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--nc-dark);
+        border: 1px solid var(--nc-border);
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        transition: all 0.2s;
+        width: 100%;
+    }
+    .lp-user-card:hover { border-color: var(--nc-cyan); background: rgba(0,229,255,0.05); }
+    .lp-user-card.selected { border-color: var(--nc-red); background: rgba(255,0,60,0.08); }
+    .lp-user-nick { font-size: 0.9rem; color: var(--nc-cream); letter-spacing: 0.08em; }
+    .lp-role-badge {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.4rem;
+        border: 1px solid var(--nc-cyan);
+        color: var(--nc-cyan);
+        letter-spacing: 0.1em;
+    }
+    .lp-role-badge.gm { border-color: var(--nc-gold); color: var(--nc-gold); }
+
+    @@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+</style>
+
+@code {
+    private enum LoginMode { Loading, ForceRegister, PickUser, Register }
+
+    private LoginMode       _mode        = LoginMode.Loading;
+    private bool            _loading     = true;
+    private bool            _busy        = false;
+    private string?         _error;
+    private List<UserDto>   _users       = new();
+    private UserDto?        _selectedUser;
+
+    // Register form
+    private string   _regNick  = string.Empty;
+    private string   _regPass  = string.Empty;
+    private string   _regPass2 = string.Empty;
+    private UserRole _regRole  = UserRole.Player;
+
+    // Login form
+    private string _loginPass = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.InitializeAsync();
+
+        if (Session.IsLoggedIn)
+        {
+            Nav.NavigateTo("/", forceLoad: true);
+            return;
+        }
+
+        var anyExist = await UserApi.AnyExistAsync();
+        if (!anyExist)
+        {
+            _mode = LoginMode.ForceRegister;
+        }
+        else
+        {
+            _users = await UserApi.GetAllAsync();
+            _mode  = LoginMode.PickUser;
+        }
+        _loading = false;
+    }
+
+    private void SelectUser(UserDto u)
+    {
+        _selectedUser = _selectedUser?.Id == u.Id ? null : u;
+        _loginPass    = string.Empty;
+        _error        = null;
+    }
+
+    private async Task DoLogin()
+    {
+        if (_selectedUser is null || string.IsNullOrWhiteSpace(_loginPass)) return;
+        _busy = true; _error = null;
+
+        var (user, err) = await UserApi.LoginAsync(new LoginRequest
+        {
+            Nickname = _selectedUser.Nickname,
+            Password = _loginPass
+        });
+
+        if (user is not null)
+        {
+            await Session.SetUserAsync(user);
+            Nav.NavigateTo("/", forceLoad: true);
+        }
+        else
+        {
+            _error = err ?? "Authentication failed.";
+        }
+        _busy = false;
+    }
+
+    private async Task DoRegister()
+    {
+        if (string.IsNullOrWhiteSpace(_regNick) || string.IsNullOrWhiteSpace(_regPass))
+        {
+            _error = "Handle and access code are required.";
+            return;
+        }
+        if (_regPass != _regPass2)
+        {
+            _error = "Access codes do not match.";
+            return;
+        }
+        _busy = true; _error = null;
+
+        var (user, err) = await UserApi.RegisterAsync(new RegisterRequest
+        {
+            Nickname = _regNick,
+            Password = _regPass,
+            Role     = _regRole
+        });
+
+        if (user is not null)
+        {
+            await Session.SetUserAsync(user);
+            Nav.NavigateTo("/", forceLoad: true);
+        }
+        else
+        {
+            _error = err ?? "Registration failed.";
+        }
+        _busy = false;
+    }
+
+    private void ResetRegForm()
+    {
+        _regNick = _regPass = _regPass2 = string.Empty;
+        _regRole = UserRole.Player;
+    }
+
+    private async Task OnLoginKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await DoLogin();
+    }
+
+    private async Task OnRegisterKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await DoRegister();
+    }
+}

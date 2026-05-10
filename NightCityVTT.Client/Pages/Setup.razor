@@ -1,0 +1,344 @@
+@page "/setup"
+@using NightCityVTT.Client.Services
+@inject SeedingApiService SeedApi
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>GM Setup — Night City VTT</PageTitle>
+
+<div class="setup-container">
+    <h1 class="setup-title">
+        <span class="lang-en hide-in-eec">GM CONSOLE // DATABASE SETUP</span>
+        <span class="lang-eec">DIRECTORATE // NETWORK SETUP</span>
+        <span class="lang-ru">КОНСОЛЬ ГМ // НАСТРОЙКА БАЗЫ ДАННЫХ</span>
+        <span class="lang-pl">KONSOLA MG // KONFIGURACJA BAZY DANYCH</span>
+    </h1>
+    <p class="setup-subtitle">
+        <span class="lang-en hide-in-eec">Initialize the Night City VTT database with CP2020 core rulebook data.</span>
+        <span class="lang-eec">Initialize the Euro NET database with standard EC regulatory data.</span>
+        <span class="lang-ru">Инициализируйте базу данных Найт Сити ВТТ данными из основной книги правил CP2020.</span>
+        <span class="lang-pl">Zainicjalizuj bazę danych Night City VTT danymi z podręcznika podstawowego CP2020.</span>
+    </p>
+
+    <div class="button-row">
+        <button class="btn-seed" @onclick="RunSeed" disabled="@_isWorking">
+            @if (_isWorking)
+            {
+                <span class="lang-en hide-in-eec">SEEDING...</span>
+                <span class="lang-eec">UPLOADING...</span>
+                <span class="lang-ru">ЗАГРУЗКА...</span>
+                <span class="lang-pl">WGRYWANIE...</span>
+            }
+            else
+            {
+                <span class="lang-en hide-in-eec">SEED DATABASE</span>
+                <span class="lang-eec">INIT DATABASE</span>
+                <span class="lang-ru">ЗАГРУЗИТЬ БАЗУ</span>
+                <span class="lang-pl">WGRAJ BAZĘ</span>
+            }
+        </button>
+
+        <button class="btn-validate" @onclick="RunValidate" disabled="@_isWorking">
+            <span class="lang-en hide-in-eec">VALIDATE DATABASE</span>
+            <span class="lang-eec">VERIFY STANDARDS</span>
+            <span class="lang-ru">ПРОВЕРИТЬ БАЗУ</span>
+            <span class="lang-pl">SPRAWDŹ BAZĘ</span>
+        </button>
+    </div>
+
+    @if (_report is not null)
+    {
+        <div class="report-panel @(_report.Success ? "report-success" : "report-failure")">
+            <h2 class="report-status">
+                <span class="lang-en hide-in-eec">@(_report.Success ? "// UPLINK ESTABLISHED" : "// CONNECTION FAILURE")</span>
+                <span class="lang-eec">@(_report.Success ? "// PROTOCOLS APPLIED" : "// REGULATORY BREACH")</span>
+                <span class="lang-ru">@(_report.Success ? "// СОЕДИНЕНИЕ УСТАНОВЛЕНО" : "// ОШИБКА СОЕДИНЕНИЯ")</span>
+                <span class="lang-pl">@(_report.Success ? "// POŁĄCZENIE NAWIĄZANE" : "// BŁĄD POŁĄCZENIA")</span>
+            </h2>
+            <p class="report-message">@_report.Message</p>
+
+            <div class="record-counts">
+                <div class="count-card">
+                    <span class="count-label lang-en">SKILLS</span>
+                    <span class="count-label lang-ru">НАВЫКИ</span>
+                    <span class="count-label lang-pl">UMIEJĘTNOŚCI</span>
+                    <span class="count-value">@_report.SkillCount</span>
+                </div>
+                <div class="count-card">
+                    <span class="count-label lang-en">ROLES</span>
+                    <span class="count-label lang-ru">РОЛИ</span>
+                    <span class="count-label lang-pl">ROLE</span>
+                    <span class="count-value">@_report.RoleCount</span>
+                </div>
+                <div class="count-card">
+                    <span class="count-label lang-en">GEAR ITEMS</span>
+                    <span class="count-label lang-ru">СНАРЯЖЕНИЕ</span>
+                    <span class="count-label lang-pl">WYPOSAŻENIE</span>
+                    <span class="count-value">@_report.GearCount</span>
+                </div>
+            </div>
+
+            @if (_report.ValidationWarnings.Any())
+            {
+                <div class="warnings-section">
+                    <h3>
+                        <span class="lang-en">WARNINGS</span>
+                        <span class="lang-ru">ПРЕДУПРЕЖДЕНИЯ</span>
+                        <span class="lang-pl">OSTRZEŻENIA</span>
+                    </h3>
+                    <ul>
+                        @foreach (var warning in _report.ValidationWarnings)
+                        {
+                            <li class="warning-item">⚠ @warning</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            @if (_report.Errors.Any())
+            {
+                <div class="errors-section">
+                    <h3>
+                        <span class="lang-en">ERRORS</span>
+                        <span class="lang-ru">ОШИБКИ</span>
+                        <span class="lang-pl">BŁĘDY</span>
+                    </h3>
+                    <ul>
+                        @foreach (var error in _report.Errors)
+                        {
+                            <li class="error-item">✕ @error</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            @if (_report.CollectionCounts.Any())
+            {
+                <div class="collections-section">
+                    <h3>
+                        <span class="lang-en">COLLECTION COUNTS</span>
+                        <span class="lang-ru">КОЛИЧЕСТВО ЗАПИСЕЙ</span>
+                        <span class="lang-pl">LICZBA REKORDÓW</span>
+                    </h3>
+                    <table class="counts-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <span class="lang-en">Collection</span>
+                                    <span class="lang-ru">Коллекция</span>
+                                    <span class="lang-pl">Kolekcja</span>
+                                </th>
+                                <th>
+                                    <span class="lang-en">Documents</span>
+                                    <span class="lang-ru">Документы</span>
+                                    <span class="lang-pl">Dokumenty</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var (collection, count) in _report.CollectionCounts)
+                            {
+                                <tr><td>@collection</td><td>@count</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .setup-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: #0a0a0a;
+        border: 1px solid #ff003c;
+        font-family: 'Courier New', monospace;
+        color: #e0e0e0;
+    }
+
+    .setup-title {
+        color: #ff003c;
+        font-size: 1.8rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .setup-subtitle {
+        color: #888;
+        margin-bottom: 2rem;
+    }
+
+    .button-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .btn-seed, .btn-validate {
+        padding: 0.75rem 2rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        font-weight: bold;
+        letter-spacing: 0.1em;
+        border: none;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: all 0.2s;
+    }
+
+    .btn-seed {
+        background: #ff003c;
+        color: #000;
+    }
+
+    .btn-seed:hover:not(:disabled) {
+        background: #ff3366;
+        box-shadow: 0 0 12px #ff003c;
+    }
+
+    .btn-validate {
+        background: transparent;
+        color: #00e5ff;
+        border: 1px solid #00e5ff;
+    }
+
+    .btn-validate:hover:not(:disabled) {
+        background: #00e5ff22;
+        box-shadow: 0 0 12px #00e5ff;
+    }
+
+    .btn-seed:disabled, .btn-validate:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .report-panel {
+        border: 1px solid;
+        padding: 1.5rem;
+    }
+
+    .report-success {
+        border-color: #00e5ff;
+        background: #00e5ff08;
+    }
+
+    .report-failure {
+        border-color: #ff003c;
+        background: #ff003c08;
+    }
+
+    .report-status {
+        font-size: 1.2rem;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.5rem;
+    }
+
+    .report-success .report-status { color: #00e5ff; }
+    .report-failure .report-status { color: #ff003c; }
+
+    .report-message {
+        color: #aaa;
+        margin-bottom: 1.5rem;
+    }
+
+    .record-counts {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .count-card {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid #333;
+        background: #111;
+    }
+
+    .count-label {
+        font-size: 0.75rem;
+        color: #888;
+        letter-spacing: 0.15em;
+        margin-bottom: 0.4rem;
+    }
+
+    .count-value {
+        font-size: 2rem;
+        color: #ff003c;
+        font-weight: bold;
+    }
+
+    .warnings-section h3, .errors-section h3, .collections-section h3 {
+        font-size: 0.8rem;
+        letter-spacing: 0.15em;
+        color: #888;
+        margin-bottom: 0.5rem;
+    }
+
+    .warning-item { color: #ffcc00; list-style: none; margin-bottom: 0.3rem; }
+    .error-item   { color: #ff003c; list-style: none; margin-bottom: 0.3rem; }
+
+    .counts-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .counts-table th {
+        text-align: left;
+        color: #888;
+        padding: 0.3rem 0.5rem;
+        border-bottom: 1px solid #333;
+    }
+
+    .counts-table td {
+        padding: 0.3rem 0.5rem;
+        color: #e0e0e0;
+    }
+</style>
+
+@code {
+    private SeedReport? _report;
+    private bool _isWorking;
+
+    private async Task RunSeed()
+    {
+        _isWorking = true;
+        _report = null;
+        try
+        {
+            _report = await SeedApi.RunSeedAsync();
+        }
+        catch (Exception ex)
+        {
+            _report = new SeedReport { Success = false, Message = "Connection error.", Errors = [ex.Message] };
+        }
+        finally
+        {
+            _isWorking = false;
+        }
+    }
+
+    private async Task RunValidate()
+    {
+        _isWorking = true;
+        _report = null;
+        try
+        {
+            _report = await SeedApi.ValidateAsync();
+        }
+        catch (Exception ex)
+        {
+            _report = new SeedReport { Success = false, Message = "Connection error.", Errors = [ex.Message] };
+        }
+        finally
+        {
+            _isWorking = false;
+        }
+    }
+}

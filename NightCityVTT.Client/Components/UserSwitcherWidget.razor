@@ -1,0 +1,411 @@
+@using NightCityVTT.Shared.Models
+@inject UserSessionService Session
+@inject UserApiService UserApi
+@inject NavigationManager Nav
+@implements IDisposable
+
+@if (Session.IsLoggedIn)
+{
+    <div class="usw-root">
+        @if (_panelOpen)
+        {
+            <div class="usw-backdrop" @onclick="ClosePanel"></div>
+            <div class="usw-panel">
+                <div class="usw-panel-header">
+                    <span>// OPERATOR SWITCH //</span>
+                    <button class="usw-close" @onclick="ClosePanel">✕</button>
+                </div>
+
+                @if (_subMode == SubMode.List)
+                {
+                    <div class="usw-section-label">SELECT IDENTITY</div>
+                    <div class="usw-user-list">
+                        @foreach (var u in _allUsers)
+                        {
+                            bool isCurrent = u.Id == Session.CurrentUser!.Id;
+                            <button class="usw-user-row @(isCurrent ? "current" : "") @(_pendingUser?.Id == u.Id ? "pending" : "")"
+                                    @onclick="() => SelectPending(u)"
+                                    disabled="@isCurrent">
+                                <span class="usw-nick">@u.Nickname.ToUpper()</span>
+                                <span class="usw-badge @(u.Role == UserRole.GameMaster ? "gm" : "")">
+                                    @(isCurrent ? "ACTIVE" : u.Role == UserRole.GameMaster ? "GM" : "PLR")
+                                </span>
+                            </button>
+                        }
+                    </div>
+
+                    @if (_pendingUser != null)
+                    {
+                        <div class="usw-field">
+                            <label>ACCESS CODE FOR @_pendingUser.Nickname.ToUpper()</label>
+                            <input class="usw-input" type="password" placeholder="••••••••"
+                                   @bind="_switchPass" @bind:event="oninput"
+                                   @onkeydown="OnSwitchKeyDown" />
+                        </div>
+                        @if (!string.IsNullOrEmpty(_error))
+                        {
+                            <div class="usw-error">[!] @_error</div>
+                        }
+                        <button class="usw-confirm" @onclick="DoSwitch" disabled="@_busy">
+                            @(_busy ? "..." : $"SWITCH TO {_pendingUser.Nickname.ToUpper()}")
+                        </button>
+                    }
+
+                    <button class="usw-new" @onclick="() => { _subMode = SubMode.Register; _error = null; }">
+                        + NEW OPERATOR
+                    </button>
+                }
+                else if (_subMode == SubMode.Register)
+                {
+                    <div class="usw-section-label">REGISTER NEW OPERATOR</div>
+
+                    <div class="usw-role-row">
+                        <button class="usw-role-btn @(_regRole == UserRole.Player ? "active" : "")"
+                                @onclick="() => _regRole = UserRole.Player">PLAYER</button>
+                        <button class="usw-role-btn @(_regRole == UserRole.GameMaster ? "active gm" : "")"
+                                @onclick="() => _regRole = UserRole.GameMaster">GAME MASTER</button>
+                    </div>
+                    <div class="usw-field">
+                        <label>HANDLE</label>
+                        <input class="usw-input" type="text" placeholder="CALLSIGN..."
+                               @bind="_regNick" @bind:event="oninput" maxlength="24" />
+                    </div>
+                    <div class="usw-field">
+                        <label>ACCESS CODE</label>
+                        <input class="usw-input" type="password" placeholder="••••••••"
+                               @bind="_regPass" @bind:event="oninput" />
+                    </div>
+                    <div class="usw-field">
+                        <label>CONFIRM ACCESS CODE</label>
+                        <input class="usw-input" type="password" placeholder="••••••••"
+                               @bind="_regPass2" @bind:event="oninput"
+                               @onkeydown="OnRegisterKeyDown" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(_error))
+                    {
+                        <div class="usw-error">[!] @_error</div>
+                    }
+                    <button class="usw-confirm" @onclick="DoRegister" disabled="@_busy">
+                        @(_busy ? "..." : "REGISTER & SWITCH")
+                    </button>
+                    <button class="usw-new" @onclick="() => { _subMode = SubMode.List; _error = null; }">
+                        ← BACK
+                    </button>
+                }
+            </div>
+        }
+
+        <button class="usw-trigger" @onclick="TogglePanel">
+            <span class="usw-trigger-nick">@Session.CurrentUser!.Nickname.ToUpper()</span>
+            <span class="usw-trigger-role @(Session.CurrentUser.Role == UserRole.GameMaster ? "gm" : "")">
+                @(Session.CurrentUser.Role == UserRole.GameMaster ? "GM" : "PLR")
+            </span>
+        </button>
+    </div>
+}
+
+<style>
+    .usw-root {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        z-index: 1000;
+        font-family: var(--font-mono);
+    }
+
+    .usw-trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--nc-dark);
+        border: 1px solid var(--nc-border);
+        border-bottom: 2px solid var(--nc-red);
+        padding: 0.5rem 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+    .usw-trigger:hover { border-color: var(--nc-red); box-shadow: 0 0 15px rgba(255,0,60,0.2); }
+    .usw-trigger-nick { font-size: 0.8rem; color: var(--nc-cream); letter-spacing: 0.08em; }
+    .usw-trigger-role {
+        font-size: 0.6rem;
+        padding: 0.1rem 0.3rem;
+        border: 1px solid var(--nc-cyan);
+        color: var(--nc-cyan);
+        letter-spacing: 0.1em;
+    }
+    .usw-trigger-role.gm { border-color: var(--nc-gold); color: var(--nc-gold); }
+
+    .usw-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 999;
+    }
+
+    .usw-panel {
+        position: absolute;
+        bottom: calc(100% + 0.5rem);
+        right: 0;
+        width: 300px;
+        background: var(--nc-panel);
+        border: 1px solid var(--nc-border);
+        border-top: 2px solid var(--nc-red);
+        padding: 1rem;
+        z-index: 1001;
+        box-shadow: 0 0 30px rgba(255,0,60,0.15);
+    }
+
+    .usw-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.65rem;
+        color: var(--nc-dim);
+        letter-spacing: 0.15em;
+        margin-bottom: 1rem;
+        border-bottom: 1px dotted var(--nc-border);
+        padding-bottom: 0.5rem;
+    }
+    .usw-close {
+        background: none;
+        border: none;
+        color: var(--nc-dim);
+        cursor: pointer;
+        font-size: 0.8rem;
+        padding: 0;
+    }
+    .usw-close:hover { color: var(--nc-red); }
+
+    .usw-section-label {
+        font-size: 0.6rem;
+        color: var(--nc-dim);
+        letter-spacing: 0.18em;
+        margin-bottom: 0.75rem;
+    }
+
+    .usw-user-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .usw-user-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--nc-dark);
+        border: 1px solid var(--nc-border);
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        font-family: var(--font-mono);
+        width: 100%;
+        transition: all 0.15s;
+    }
+    .usw-user-row:hover:not(:disabled) { border-color: var(--nc-cyan); }
+    .usw-user-row.pending { border-color: var(--nc-red); background: rgba(255,0,60,0.06); }
+    .usw-user-row.current { opacity: 0.45; cursor: default; }
+    .usw-nick { font-size: 0.8rem; color: var(--nc-cream); }
+    .usw-badge {
+        font-size: 0.55rem;
+        padding: 0.1rem 0.3rem;
+        border: 1px solid var(--nc-cyan);
+        color: var(--nc-cyan);
+        letter-spacing: 0.08em;
+    }
+    .usw-badge.gm { border-color: var(--nc-gold); color: var(--nc-gold); }
+
+    .usw-field { margin-bottom: 0.75rem; }
+    .usw-field label {
+        display: block;
+        font-size: 0.6rem;
+        color: var(--nc-dim);
+        letter-spacing: 0.1em;
+        margin-bottom: 0.25rem;
+    }
+    .usw-input {
+        width: 100%;
+        background: var(--nc-dark);
+        border: 1px solid var(--nc-border);
+        border-bottom-color: var(--nc-cyan);
+        color: var(--nc-cream);
+        padding: 0.4rem 0.5rem;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .usw-input:focus { border-bottom-color: var(--nc-red); }
+
+    .usw-error {
+        color: var(--nc-red);
+        font-size: 0.7rem;
+        margin-bottom: 0.5rem;
+        padding-left: 0.5rem;
+        border-left: 2px solid var(--nc-red);
+    }
+
+    .usw-confirm {
+        width: 100%;
+        background: var(--nc-red);
+        border: none;
+        color: var(--nc-black);
+        padding: 0.5rem;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: bold;
+        letter-spacing: 0.1em;
+        cursor: pointer;
+        margin-bottom: 0.4rem;
+    }
+    .usw-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .usw-new {
+        width: 100%;
+        background: transparent;
+        border: 1px dashed var(--nc-border);
+        color: var(--nc-dim);
+        padding: 0.4rem;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .usw-new:hover { border-color: var(--nc-cyan); color: var(--nc-cyan); }
+
+    .usw-role-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
+    }
+    .usw-role-btn {
+        background: var(--nc-dark);
+        border: 1px solid var(--nc-border);
+        color: var(--nc-dim);
+        padding: 0.4rem;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        cursor: pointer;
+    }
+    .usw-role-btn.active { border-color: var(--nc-cyan); color: var(--nc-cyan); }
+    .usw-role-btn.active.gm { border-color: var(--nc-gold); color: var(--nc-gold); }
+</style>
+
+@code {
+    private enum SubMode { List, Register }
+
+    private bool        _panelOpen  = false;
+    private SubMode     _subMode    = SubMode.List;
+    private bool        _busy       = false;
+    private string?     _error;
+    private List<UserDto> _allUsers = new();
+
+    private UserDto? _pendingUser;
+    private string   _switchPass = string.Empty;
+
+    private string   _regNick  = string.Empty;
+    private string   _regPass  = string.Empty;
+    private string   _regPass2 = string.Empty;
+    private UserRole _regRole  = UserRole.Player;
+
+    protected override void OnInitialized() =>
+        Session.OnChange += HandleSessionChange;
+
+    private void HandleSessionChange()
+    {
+        _panelOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task TogglePanel()
+    {
+        _panelOpen = !_panelOpen;
+        if (_panelOpen)
+        {
+            _subMode    = SubMode.List;
+            _pendingUser = null;
+            _switchPass  = string.Empty;
+            _error       = null;
+            _allUsers = await UserApi.GetAllAsync();
+        }
+    }
+
+    private void ClosePanel()
+    {
+        _panelOpen   = false;
+        _pendingUser = null;
+        _error       = null;
+    }
+
+    private void SelectPending(UserDto u)
+    {
+        _pendingUser = _pendingUser?.Id == u.Id ? null : u;
+        _switchPass  = string.Empty;
+        _error       = null;
+    }
+
+    private async Task DoSwitch()
+    {
+        if (_pendingUser is null || string.IsNullOrWhiteSpace(_switchPass)) return;
+        _busy = true; _error = null;
+
+        var (user, err) = await UserApi.LoginAsync(new LoginRequest
+        {
+            Nickname = _pendingUser.Nickname,
+            Password = _switchPass
+        });
+
+        if (user is not null)
+        {
+            await Session.SetUserAsync(user);
+            Nav.NavigateTo("/", forceLoad: true);
+        }
+        else
+        {
+            _error = err ?? "Authentication failed.";
+        }
+        _busy = false;
+    }
+
+    private async Task DoRegister()
+    {
+        if (string.IsNullOrWhiteSpace(_regNick) || string.IsNullOrWhiteSpace(_regPass))
+        {
+            _error = "Handle and access code required.";
+            return;
+        }
+        if (_regPass != _regPass2)
+        {
+            _error = "Access codes do not match.";
+            return;
+        }
+        _busy = true; _error = null;
+
+        var (user, err) = await UserApi.RegisterAsync(new RegisterRequest
+        {
+            Nickname = _regNick,
+            Password = _regPass,
+            Role     = _regRole
+        });
+
+        if (user is not null)
+        {
+            await Session.SetUserAsync(user);
+            Nav.NavigateTo("/", forceLoad: true);
+        }
+        else
+        {
+            _error = err ?? "Registration failed.";
+        }
+        _busy = false;
+    }
+
+    private async Task OnSwitchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await DoSwitch();
+    }
+
+    private async Task OnRegisterKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await DoRegister();
+    }
+
+    public void Dispose() => Session.OnChange -= HandleSessionChange;
+}

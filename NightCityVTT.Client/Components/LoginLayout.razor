@@ -1,0 +1,21 @@
+@inherits LayoutComponentBase
+
+<div class="login-shell">
+    @Body
+</div>
+
+<div id="blazor-error-ui">
+    ⚠ SYSTEM ERROR — <a href="" class="reload">REBOOT</a>
+    <a class="dismiss">✕</a>
+</div>
+
+<style>
+    .login-shell {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--nc-black);
+        font-family: var(--font-mono);
+    }
+</style>

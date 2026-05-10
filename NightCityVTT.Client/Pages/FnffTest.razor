@@ -1,0 +1,430 @@
+@page "/fnff-test"
+@using NightCityVTT.Shared.Models
+@using NightCityVTT.Shared.Services
+@using NightCityVTT.Client.Services
+@inject CharacterApiService CharApi
+@inject GearApiService GearApi
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>
+    <span class="lang-en">FNFF Combat Simulator</span>
+    <span class="lang-ru">Симулятор боя FNFF</span>
+    <span class="lang-pl">Symulator walki FNFF</span>
+</PageTitle>
+
+<div class="fnff-page">
+    <div class="fnff-header">
+        <h1 class="lang-en">FRIDAY NIGHT FIREFIGHT // COMBAT SIMULATOR</h1>
+        <h1 class="lang-ru">FRIDAY NIGHT FIREFIGHT // СИМУЛЯТОР БОЯ</h1>
+        <h1 class="lang-pl">FRIDAY NIGHT FIREFIGHT // SYMULATOR WALKI</h1>
+        <p class="subtitle">Test combat logic against database entities using CP2020 mechanics.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="ncc-loading">
+            <div class="ncc-empty-icon">⬡</div>
+            <div class="ncc-empty-sub">LOADING COMBAT ASSETS...</div>
+        </div>
+    }
+    else
+    {
+        <div class="fnff-layout">
+            <!-- LEFT PANEL: Controls -->
+            <div class="fnff-controls">
+                <div class="control-section">
+                    <h3>TARGET ASSET</h3>
+                    <div class="wiz-field">
+                        <label>SELECT TARGET CHARACTER</label>
+                        <select class="ncc-select" @onchange="OnTargetSelected">
+                            <option value="">— SELECT TARGET —</option>
+                            @foreach (var c in _characters)
+                            {
+                                <option value="@c.Id">@c.Handle.ToUpper() (@c.Role)</option>
+                            }
+                        </select>
+                    </div>
+
+                    @if (_targetState != null && _selectedCharacter != null)
+                    {
+                        <div class="target-status">
+                            <div class="status-row"><span>BODY:</span> <strong>@_targetState.BODY</strong></div>
+                            <div class="status-row"><span>BTM:</span> <strong>@_targetState.BTM</strong></div>
+                            <div class="status-row">
+                                <span>WOUND STATE:</span> 
+                                <strong class="@GetWoundClass(_targetState.CurrentWoundState)">@_targetState.CurrentWoundState</strong>
+                            </div>
+                            <div class="status-row"><span>TOTAL DMG:</span> <strong>@_targetState.TotalDamageTaken</strong></div>
+                            <div class="status-row"><span>STUN PENALTY:</span> <strong>@_targetState.StunSaveModifier</strong></div>
+                            <button class="ncc-btn-submit" style="margin-top:0.5rem; width:100%; font-size:0.7rem;" @onclick="ResetTarget">RESET TARGET HEALTH</button>
+                        </div>
+                    }
+                </div>
+
+                <div class="control-section">
+                    <h3>ATTACK PARAMETERS</h3>
+                    <div class="wiz-field">
+                        <label>SELECT ATTACKING WEAPON</label>
+                        <select class="ncc-select" @onchange="OnWeaponSelected">
+                            <option value="">— SELECT WEAPON —</option>
+                            @foreach (var w in _weapons)
+                            {
+                                <option value="@w.Id">@w.Name (WA: @w.Acc, DMG: @w.Damage)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="stats-grid" style="margin-top: 1rem;">
+                        <div class="wiz-field">
+                            <label>RANGE (METERS)</label>
+                            <input type="number" class="ncc-input" @bind="_range" min="1" />
+                        </div>
+                        <div class="wiz-field">
+                            <label>ATTACKER REF + SKILL</label>
+                            <input type="number" class="ncc-input" @bind="_attackerSkillBase" min="0" />
+                        </div>
+                        <div class="wiz-field">
+                            <label>MODIFIERS (AIM, SIGHTS, ETC)</label>
+                            <input type="number" class="ncc-input" @bind="_attackModifiers" />
+                        </div>
+                        <div class="wiz-field">
+                            <label>COVER SP (TARGET)</label>
+                            <input type="number" class="ncc-input" @bind="_coverSp" min="0" />
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--nc-dim);">
+                            <input type="checkbox" @bind="_armorLayering" style="accent-color:var(--nc-red);" />
+                            TARGET HAS LAYERED ARMOR (+5 SP PROXY)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>TARGETING SYSTEM</h3>
+                    <div class="wiz-field">
+                        <label style="text-align: center;">CALLED SHOT (-4 TO HIT) // TOGGLE TO AIM</label>
+                        <div class="paper-doll">
+                            <div class="pd-head @(_calledShotLocation == HitLocation.Head ? "active" : "")" @onclick="() => ToggleCalledShot(HitLocation.Head)">HEAD</div>
+                            <div class="pd-mid">
+                                <div class="pd-arm @(_calledShotLocation == HitLocation.RightArm ? "active" : "")" @onclick="() => ToggleCalledShot(HitLocation.RightArm)">R.ARM</div>
+                                <div class="pd-torso @(_calledShotLocation == HitLocation.Torso ? "active" : "")" @onclick="() => ToggleCalledShot(HitLocation.Torso)">TORSO</div>
+                                <div class="pd-arm @(_calledShotLocation == HitLocation.LeftArm ? "active" : "")" @onclick="() => ToggleCalledShot(HitLocation.LeftArm)">L.ARM</div>
+                            </div>
+                            <div class="pd-legs">
+                                <div class="pd-leg @(_calledShotLocation == HitLocation.RightLeg ? "active" : "")" @onclick="() => ToggleCalledShot(HitLocation.RightLeg)">R.LEG</div>
+                                <div class="pd-leg @(_calledShotLocation == HitLocation.LeftLeg ? "active" : "")" @onclick="() => ToggleCalledShot(HitLocation.LeftLeg)">L.LEG</div>
+                            </div>
+                        </div>
+                        @if (_calledShotLocation.HasValue)
+                        {
+                            <div style="text-align: center; margin-top: 0.8rem; color: var(--nc-red); font-size: 0.8rem; font-weight: bold; letter-spacing: 0.1em; animation: blink 1s infinite;">
+                                [ LOCKING ON: @_calledShotLocation.ToString().ToUpper() ]
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="control-section actions-section">
+                    <h3>COMBAT ACTIONS</h3>
+                    <button class="action-btn" @onclick="ExecuteToHit" disabled="@(_targetState == null || _selectedWeaponStats == null)">
+                        1. ROLL TO HIT
+                    </button>
+                    <button class="action-btn" @onclick="ExecuteDamage" disabled="@(!_lastHitSuccess || _targetState == null || _selectedWeaponStats == null)">
+                        2. ROLL HIT LOCATION & DAMAGE
+                    </button>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:0.5rem;">
+                        <button class="action-btn warning" @onclick="ExecuteStunSave" disabled="@(_targetState == null)">
+                            MAKE STUN SAVE
+                        </button>
+                        <button class="action-btn danger" @onclick="ExecuteDeathSave" disabled="@(_targetState == null || _targetState.CurrentWoundState < WoundState.Mortal0)">
+                            MAKE DEATH SAVE
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Log -->
+            <div class="fnff-log-container">
+                <h3>// COMBAT LOG //</h3>
+                <div class="dt-log" id="fnffLog">
+                    @foreach (var log in _combatLogs)
+                    {
+                        <div class="log-line @log.CssClass">@((MarkupString)log.Message)</div>
+                    }
+                </div>
+                <div class="dt-footer">
+                    <button class="wiz-btn" @onclick="ClearLog">CLEAR LOG</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .fnff-page { padding: 2rem; max-width: 1200px; margin: 0 auto; color: var(--nc-cream); font-family: var(--font-mono); }
+    .fnff-header { border-bottom: 2px solid var(--nc-border); padding-bottom: 1rem; margin-bottom: 1.5rem; }
+    .fnff-header h1 { font-family: var(--font-display); font-size: 2rem; color: var(--nc-red); margin: 0; letter-spacing: 0.1em; }
+    
+    .fnff-layout { display: grid; grid-template-columns: 350px 1fr; gap: 2rem; }
+    
+    .control-section { background: var(--nc-panel); border: 1px solid var(--nc-border); padding: 1.2rem; margin-bottom: 1rem; border-left: 4px solid var(--nc-cyan); }
+    .control-section h3 { color: var(--nc-cyan); font-size: 0.9rem; letter-spacing: 0.1em; margin-bottom: 1rem; border-bottom: 1px dotted var(--nc-border); padding-bottom: 0.5rem; }
+    .actions-section { border-left-color: var(--nc-gold); }
+    .actions-section h3 { color: var(--nc-gold); }
+
+    .wiz-field { margin-bottom: 1rem; }
+    .wiz-field label { display: block; font-size: 0.7rem; color: var(--nc-dim); margin-bottom: 0.3rem; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+    .target-status { background: var(--nc-dark); padding: 0.8rem; border: 1px solid var(--nc-border); font-size: 0.8rem; margin-top: 1rem; }
+    .status-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .status-row span { color: var(--nc-dim); }
+    
+    .action-btn { background: var(--nc-dark); border: 1px solid var(--nc-cyan); color: var(--nc-cyan); padding: 0.6rem; width: 100%; text-align: left; font-family: var(--font-mono); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; margin-bottom: 0.5rem; }
+    .action-btn:hover:not(:disabled) { background: rgba(0,229,255,0.1); }
+    .action-btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--nc-dim); color: var(--nc-dim); }
+    .action-btn.warning { border-color: var(--nc-gold); color: var(--nc-gold); text-align: center; }
+    .action-btn.warning:hover:not(:disabled) { background: rgba(255,191,36,0.1); }
+    .action-btn.danger { border-color: var(--nc-red); color: var(--nc-red); text-align: center; }
+    .action-btn.danger:hover:not(:disabled) { background: rgba(255,0,60,0.1); }
+
+    .fnff-log-container { background: var(--nc-panel); border: 1px solid var(--nc-border); display: flex; flex-direction: column; }
+    .fnff-log-container h3 { padding: 1rem; margin: 0; font-size: 0.9rem; color: var(--nc-red); border-bottom: 1px solid var(--nc-border); background: var(--nc-dark); }
+    
+    .dt-log { flex: 1; padding: 1rem; overflow-y: auto; font-size: 0.85rem; position: relative; background: #080a0c; min-height: 400px; }
+    .dt-log::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px); pointer-events: none; }
+    .log-line { padding: 0.3rem 0; line-height: 1.4; color: var(--nc-cream); border-bottom: 1px dotted rgba(255,255,255,0.05); }
+    .log-result { color: var(--nc-cyan); }
+    .log-crit { color: var(--nc-gold); font-weight: bold; }
+    .log-fumble { color: var(--nc-red); font-weight: bold; }
+    .log-dim { color: var(--nc-dim); font-style: italic; }
+    
+    .dt-footer { padding: 1rem; border-top: 1px solid var(--nc-border); text-align: right; background: var(--nc-dark); }
+
+    .ws-uninjured { color: var(--nc-green); }
+    .ws-light { color: var(--nc-gold); }
+    .ws-serious { color: #ff8c00; }
+    .ws-critical { color: var(--nc-red); }
+    .ws-mortal { color: var(--nc-red); font-weight: bold; animation: blink 1s infinite; }
+
+    /* PAPER DOLL (CALLED SHOTS) */
+    .paper-doll { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 1rem; user-select: none; }
+    .pd-head { width: 45px; height: 45px; border: 1px solid var(--nc-cyan); border-radius: 40% 40% 50% 50%; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; cursor: pointer; color: var(--nc-cyan); transition: all 0.2s; background: var(--nc-dark); }
+    .pd-mid { display: flex; gap: 4px; }
+    .pd-arm { width: 35px; height: 90px; border: 1px solid var(--nc-cyan); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; cursor: pointer; writing-mode: vertical-rl; color: var(--nc-cyan); transition: all 0.2s; background: var(--nc-dark); }
+    .pd-torso { width: 70px; height: 100px; border: 1px solid var(--nc-cyan); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; cursor: pointer; color: var(--nc-cyan); transition: all 0.2s; background: var(--nc-dark); }
+    .pd-legs { display: flex; gap: 4px; }
+    .pd-leg { width: 33px; height: 100px; border: 1px solid var(--nc-cyan); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; cursor: pointer; writing-mode: vertical-rl; color: var(--nc-cyan); transition: all 0.2s; background: var(--nc-dark); }
+
+    .pd-head:hover, .pd-arm:hover, .pd-torso:hover, .pd-leg:hover { background: rgba(0, 229, 255, 0.2); box-shadow: 0 0 10px var(--nc-cyan); }
+    .pd-head.active, .pd-arm.active, .pd-torso.active, .pd-leg.active { background: var(--nc-red); border-color: var(--nc-red); color: var(--nc-black); font-weight: bold; box-shadow: 0 0 15px var(--nc-red); }
+</style>
+
+@code {
+    private bool _loading = true;
+    private List<CharacterSheet> _characters = new();
+    private List<GearItemDto> _weapons = new();
+
+    private CharacterSheet? _selectedCharacter;
+    private CharacterCombatState? _targetState;
+    private GearItemDto? _selectedWeapon;
+    private WeaponStats? _selectedWeaponStats;
+
+    // Inputs
+    private int _range = 10;
+    private int _attackerSkillBase = 12; // REF + Skill average
+    private int _attackModifiers = 0;
+    private int _coverSp = 0;
+    private bool _armorLayering = false;
+
+    // State
+    private bool _lastHitSuccess = false;
+    private HitLocation? _calledShotLocation = null;
+    private readonly FnffEngine _engine = new();
+    private List<(string Message, string CssClass)> _combatLogs = new();
+
+    private void ToggleCalledShot(HitLocation loc)
+    {
+        if (_calledShotLocation == loc) _calledShotLocation = null;
+        else _calledShotLocation = loc;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var charsTask = CharApi.GetAllAsync();
+        var gearTask = GearApi.GetAllAsync();
+        await Task.WhenAll(charsTask, gearTask);
+        
+        _characters = charsTask.Result ?? new();
+        _weapons = gearTask.Result?.Where(g => g.Category == "Weapon").ToList() ?? new();
+        _loading = false;
+    }
+
+    private void OnTargetSelected(ChangeEventArgs e)
+    {
+        var id = e.Value?.ToString();
+        _selectedCharacter = _characters.FirstOrDefault(c => c.Id == id);
+        ResetTarget();
+    }
+
+    private void ResetTarget()
+    {
+        if (_selectedCharacter == null) return;
+        
+        // Map CharacterSheet to CharacterCombatState
+        _targetState = new CharacterCombatState
+        {
+            REF = _selectedCharacter.REF,
+            BODY = _selectedCharacter.BT,
+            COOL = _selectedCharacter.COOL,
+            TotalDamageTaken = 0
+        };
+        
+        // Simplified Armor Mapping (assigning uniform SP if they have clothes/armor)
+        // In a full implementation, you'd parse their Gear. For testing, we derive a base SP.
+        int baseSp = 0;
+        if (_selectedCharacter.Clothes.Contains("Armor") || _selectedCharacter.Clothes.Contains("Kevlar")) baseSp = 10;
+        else if (_selectedCharacter.Clothes != "Nude") baseSp = 2; // thick clothes
+        
+        _targetState.ArmorSP[HitLocation.Head] = baseSp;
+        _targetState.ArmorSP[HitLocation.Torso] = baseSp;
+        _targetState.ArmorSP[HitLocation.RightArm] = baseSp;
+        _targetState.ArmorSP[HitLocation.LeftArm] = baseSp;
+        _targetState.ArmorSP[HitLocation.RightLeg] = baseSp;
+        _targetState.ArmorSP[HitLocation.LeftLeg] = baseSp;
+
+        _lastHitSuccess = false;
+        Log($"Target [<strong>{_selectedCharacter.Handle}</strong>] loaded. BODY: {_targetState.BODY}, Base SP: {baseSp}.", "log-dim");
+    }
+
+    private void OnWeaponSelected(ChangeEventArgs e)
+    {
+        var id = e.Value?.ToString();
+        _selectedWeapon = _weapons.FirstOrDefault(w => w.Id == id);
+        
+        if (_selectedWeapon != null)
+        {
+            int wa = 0;
+            if (int.TryParse(_selectedWeapon.Acc.Replace("+", ""), out int parsedWa)) wa = parsedWa;
+            
+            int bRange = 50;
+            if (_selectedWeapon.Range.Contains("m")) 
+                int.TryParse(_selectedWeapon.Range.Replace("m", ""), out bRange);
+            else if (_selectedWeapon.Range == "Melee") bRange = 2;
+
+            _selectedWeaponStats = new WeaponStats
+            {
+                WA = wa,
+                DamageDice = _selectedWeapon.Damage,
+                BaseRange = bRange > 0 ? bRange : 50
+            };
+            
+            Log($"Weapon [<strong>{_selectedWeapon.Name}</strong>] readied. WA: {wa}, DMG: {_selectedWeaponStats.DamageDice}.", "log-dim");
+        }
+    }
+
+    private void ExecuteToHit()
+    {
+        if (_targetState == null || _selectedWeaponStats == null) return;
+        
+        var dummyAttacker = new CharacterCombatState(); // We are using explicit skill base input
+        
+        Log("---", "");
+        Log($"Firing at <strong>{_selectedCharacter!.Handle}</strong> (Range: {_range}m)...", "");
+        
+        // Manual override of the RollToHit to use our direct integer input for skill base
+        int targetNumber = _range <= 1 ? 10 : _range <= _selectedWeaponStats.BaseRange / 4 ? 15 : _range <= _selectedWeaponStats.BaseRange / 2 ? 20 : _range <= _selectedWeaponStats.BaseRange ? 25 : 30;
+        
+        int roll = _engine.RollExploding1D10(out bool fumble, out bool crit);
+        int total = fumble ? roll : roll + _attackerSkillBase + _selectedWeaponStats.WA + _attackModifiers;
+        
+        _lastHitSuccess = !fumble && (total >= targetNumber);
+
+        if (fumble)
+        {
+            Log($"Roll: <strong>1</strong> <span class='log-fumble'>[FUMBLE!]</span> vs Target: {targetNumber}", "log-fumble");
+            Log("Attack completely missed.", "log-fumble");
+        }
+        else
+        {
+            string critTag = crit ? "<span class='log-crit'>[CRITICAL EXPLOSION]</span>" : "";
+            string resultTag = _lastHitSuccess ? "<span class='log-result'>[HIT]</span>" : "<span class='log-dim'>[MISS]</span>";
+            Log($"Roll: {roll} {critTag} + Skill({_attackerSkillBase}) + WA({_selectedWeaponStats.WA}) + Mod({_attackModifiers}) = <strong>{total}</strong> vs Target: <strong>{targetNumber}</strong>", "");
+            Log($"Result: {resultTag}", _lastHitSuccess ? "log-result" : "log-dim");
+        }
+    }
+
+    private void ExecuteDamage()
+    {
+        if (_targetState == null || _selectedWeaponStats == null || !_lastHitSuccess) return;
+
+        Log("---", "");
+        var location = _calledShotLocation ?? _engine.RollHitLocation();
+        string locType = _calledShotLocation.HasValue ? "CALLED SHOT" : "RANDOM ROLL";
+        Log($"Hit Location ({locType}): <strong>{location.ToString().ToUpper()}</strong>", "");
+
+        var result = _engine.CalculateDamage(_targetState, _selectedWeaponStats.DamageDice, location, _coverSp, _armorLayering);
+        
+        string layerTag = _armorLayering ? " (Layering +5 SP applied)" : "";
+        Log($"Raw Damage: <strong>{result.RawDamage}</strong> vs Armor SP: {result.RawDamage - result.PenetratingDamage} {layerTag}", "");
+        
+        if (result.PenetratingDamage <= 0)
+        {
+            Log($"Armor stopped the impact. No damage taken.", "log-dim");
+        }
+        else
+        {
+            string hsTag = location == HitLocation.Head ? "<span class='log-crit'>[HEADSHOT x2!]</span>" : "";
+            Log($"Armor penetrated! {hsTag} Applying BTM ({_targetState.BTM})...", "");
+            Log($"Final Damage Taken: <strong style='color:var(--nc-red)'>{result.FinalDamageApplied}</strong>", "log-result");
+            Log($"New Wound State: <strong class='{GetWoundClass(result.NewWoundState)}'>{result.NewWoundState.ToString().ToUpper()}</strong>", "");
+            
+            if (result.RequiresDeathSave) Log("<strong>[!] IMMEDIATE DEATH SAVE REQUIRED</strong>", "log-fumble");
+            else if (result.RequiresStunSave) Log("<strong>[!] STUN/SHOCK SAVE REQUIRED</strong>", "log-crit");
+        }
+        
+        _lastHitSuccess = false; // Reset hit flag
+    }
+
+    private void ExecuteStunSave()
+    {
+        if (_targetState == null) return;
+        Log("---", "");
+        Log($"Rolling Stun Save (BODY: {_targetState.BODY}, Penalty: {_targetState.StunSaveModifier})...", "");
+        bool pass = _engine.MakeStunSave(_targetState);
+        
+        if (pass) Log("<span class='log-result'>[SAVE PASSED]</span> Target remains active.", "log-result");
+        else Log("<span class='log-fumble'>[SAVE FAILED]</span> Target is STUNNED.", "log-fumble");
+    }
+
+    private void ExecuteDeathSave()
+    {
+        if (_targetState == null) return;
+        Log("---", "");
+        Log($"Rolling Death Save (BODY: {_targetState.BODY}, Wound State: {_targetState.CurrentWoundState})...", "");
+        bool pass = _engine.MakeDeathSave(_targetState);
+        
+        if (pass) Log("<span class='log-result'>[SAVE PASSED]</span> Target clings to life.", "log-result");
+        else Log("<span class='log-fumble'>[SAVE FAILED]</span> Target is DEAD.", "log-fumble");
+    }
+
+    private void Log(string message, string cssClass)
+    {
+        _combatLogs.Add((message, cssClass));
+    }
+
+    private void ClearLog()
+    {
+        _combatLogs.Clear();
+    }
+
+    private string GetWoundClass(WoundState ws) => ws switch
+    {
+        WoundState.Uninjured => "ws-uninjured",
+        WoundState.Light => "ws-light",
+        WoundState.Serious => "ws-serious",
+        WoundState.Critical => "ws-critical",
+        _ => "ws-mortal"
+    };
+}

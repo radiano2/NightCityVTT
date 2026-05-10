@@ -1,0 +1,754 @@
+@page "/characters"
+@using NightCityVTT.Shared.Models
+@using NightCityVTT.Client.Services
+@using System.Text.Json
+@inject CharacterApiService CharApi
+@inject UserSessionService Session
+@inject UserApiService UserApi
+@inject IJSRuntime JS
+@implements IDisposable
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>
+    <span class="lang-en hide-in-eec">Personnel Registry</span>
+    <span class="lang-eec">Operative Dossiers</span>
+    <span class="lang-ru">Картотека кадров</span>
+    <span class="lang-pl">Rejestr personelu</span>
+</PageTitle>
+
+<div class="char-suite">
+    @if (!_isCreating)
+    {
+        <!-- ═══ ROSTER VIEW ═══ -->
+        <div class="roster-header">
+            <h1 class="lang-en hide-in-eec">PERSONNEL REGISTRY</h1>
+            <h1 class="lang-eec">OPERATIVE DOSSIERS</h1>
+            <h1 class="lang-ru">КАРТОТЕКА КАДРОВ</h1>
+            <h1 class="lang-pl">REJESTR PERSONELU</h1>
+            
+            <button class="ncc-btn-submit" @onclick="StartCreation">
+                <span class="lang-en hide-in-eec">NEW ASSET ⊕</span>
+                <span class="lang-eec">NEW OPERATIVE ⊕</span>
+                <span class="lang-ru">НОВЫЙ ОБЪЕКТ ⊕</span>
+                <span class="lang-pl">NOWY WPIS ⊕</span>
+            </button>
+        </div>
+
+        @if (_loading)
+        {
+            <div class="ncc-loading">
+                <div class="ncc-empty-icon">⬡</div>
+                <div class="ncc-empty-sub">SYNCING RECORDS...</div>
+            </div>
+        }
+        else if (_characters.Count == 0)
+        {
+            <div class="ncc-empty">
+                <div class="ncc-empty-icon">◌</div>
+                <div class="lang-en hide-in-eec">NO ASSETS ON RECORD</div>
+                <div class="lang-eec">NO OPERATIVES DETECTED</div>
+                <div class="lang-ru">ДАННЫЕ НЕ НАЙДЕНЫ</div>
+                <div class="lang-pl">BRAK REKORDÓW</div>
+            </div>
+        }
+        else
+        {
+            <div class="char-grid">
+                @foreach (var c in _characters)
+                {
+                    <div class="char-card @(c.Role.ToLower())" @onclick="() => ShowDetail(c)">
+                        <div class="card-header">
+                            <div>
+                                <span class="card-handle">@c.Handle.ToUpper()</span>
+                                @if (Session.CurrentUser?.Role == UserRole.GameMaster && !string.IsNullOrEmpty(c.OwnerId))
+                                {
+                                    <span class="card-owner">@(_userMap.TryGetValue(c.OwnerId, out var on) ? on : "unknown")</span>
+                                }
+                            </div>
+                            <button class="card-del" @onclick:stopPropagation="true" @onclick="() => DeleteCharacter(c.Id!)">✕</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-role">@(string.IsNullOrEmpty(c.Role) ? "UNASSIGNED" : c.Role.ToUpper())</div>
+                            <div class="card-stats">
+                                <span>INT:@c.INT</span> <span>REF:@c.REF</span> <span>TECH:@c.TECH</span>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <span class="card-id">ID: @(c.Id?.Substring(Math.Max(0, c.Id.Length - 6)) ?? "---")</span>
+                            <span class="card-date">@c.CreatedAt.ToString("yy.MM.dd")</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <!-- ═══ WIZARD VIEW ═══ -->
+        <div class="wizard-container">
+            <div class="wizard-header">
+                <button class="wiz-back-btn" @onclick="CancelCreation">✕ EXIT</button>
+                <div class="wiz-stepper">
+                    @for (int i = 0; i < _stageLabels.Length; i++)
+                    {
+                        var idx = i;
+                        <div class="wiz-step @(idx == _stage ? "active" : idx < _stage ? "done" : "")">
+                            <span class="step-num">@(idx + 1)</span>
+                            <span class="step-label">@_stageLabels[idx]</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="wizard-content">
+                <!-- STAGE 0: IDENTITY -->
+                @if (_stage == 0)
+                {
+                    <div class="wiz-section">
+                        <h3>1. CORE IDENTIFICATION</h3>
+                        <div class="wiz-field">
+                            <label>HANDLE (STREET NAME) *</label>
+                            <input type="text" class="ncc-input" @bind="_handle" placeholder="Enter codename..." />
+                        </div>
+                        <div class="wiz-field">
+                            <label>LEGAL DESIGNATION (NAME)</label>
+                            <input type="text" class="ncc-input" @bind="_name" placeholder="Optional..." />
+                        </div>
+                        <div class="wiz-field">
+                            <label>ETHNIC ORIGIN</label>
+                            <select class="ncc-select" @bind="_origin">
+                                <option value="">— SELECT ORIGIN —</option>
+                                @foreach (var o in _originOpts) { <option value="@o.V">@o.En</option> }
+                            </select>
+                        </div>
+                    </div>
+                }
+
+                <!-- STAGE 1: ROLE -->
+                @if (_stage == 1)
+                {
+                    <div class="wiz-section">
+                        <h3>2. FUNCTIONAL ROLE</h3>
+                        <div class="role-selector">
+                            @foreach (var r in _roles)
+                            {
+                                <div class="role-card @(r.Name == _role ? "selected" : "")" @onclick="() => SelectRole(r)">
+                                    <div class="role-name">@r.Name.ToUpper()</div>
+                                    <div class="role-special">⊕ @r.Special</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- STAGE 2: STATS -->
+                @if (_stage == 2)
+                {
+                    <div class="wiz-section">
+                        <h3>3. CHARACTERISTICS</h3>
+                        <div class="pool-header">
+                            <span>REMAINING: <strong class="@(PointsRemaining < 0 ? "over" : "ok")">@PointsRemaining</strong> / @PointPool</span>
+                            <label class="elite-toggle">
+                                <input type="checkbox" @bind="_isElite" /> ELITE BUILD (80 PTS)
+                            </label>
+                        </div>
+                        <div class="stats-grid">
+                            @foreach (var s in _stats)
+                            {
+                                <div class="stat-row">
+                                    <div class="stat-info">
+                                        <span class="stat-name">@s.Key</span>
+                                        <span class="stat-desc">@_statDescs[s.Key]</span>
+                                    </div>
+                                    <div class="skill-ctrl">
+                                        <button @onclick="() => AdjStat(s.Key, -1)">-</button>
+                                        <span class="skill-val" style="color:var(--nc-cyan);">@s.Value</span>
+                                        <button @onclick="() => AdjStat(s.Key, 1)" disabled="@(PointsRemaining <= 0)">+</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <!-- STAGE 3: LIFEPATH -->
+                @if (_stage == 3)
+                {
+                    <div class="wiz-section">
+                        <h3>4. LIFEPATH PROTOCOL</h3>
+                        <div class="lifepath-grid">
+                            <div class="wiz-field">
+                                <label>CLOTHING STYLE</label>
+                                <select class="ncc-select" @bind="_clothes">
+                                    <option value="">— SELECT —</option>
+                                    @foreach (var o in _clothesOpts) { <option value="@o.V">@o.En</option> }
+                                </select>
+                            </div>
+                            <div class="wiz-field">
+                                <label>HAIRSTYLE</label>
+                                <select class="ncc-select" @bind="_hairstyle">
+                                    <option value="">— SELECT —</option>
+                                    @foreach (var o in _hairOpts) { <option value="@o.V">@o.En</option> }
+                                </select>
+                            </div>
+                            <div class="wiz-field">
+                                <label>AFFECTATION</label>
+                                <select class="ncc-select" @bind="_affectation">
+                                    <option value="">— SELECT —</option>
+                                    @foreach (var o in _affectOpts) { <option value="@o.V">@o.En</option> }
+                                </select>
+                            </div>
+                            <div class="wiz-field">
+                                <label>FAMILY RANKING</label>
+                                <select class="ncc-select" @bind="_familyRanking">
+                                    <option value="">— SELECT —</option>
+                                    @foreach (var o in _familyRankOpts) { <option value="@o.V">@o.En</option> }
+                                </select>
+                            </div>
+                            <div class="wiz-field">
+                                <label>FAMILY TRAGEDY</label>
+                                <select class="ncc-select" @bind="_familyTragedy">
+                                    <option value="">— SELECT —</option>
+                                    @foreach (var o in _familyTragOpts) { <option value="@o.V">@o.En</option> }
+                                </select>
+                            </div>
+                            <div class="wiz-field">
+                                <label>PERSONALITY</label>
+                                <select class="ncc-select" @bind="_personality">
+                                    <option value="">— SELECT —</option>
+                                    @foreach (var o in _personalityOpts) { <option value="@o.V">@o.En</option> }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- STAGE 4: SKILLS -->
+                @if (_stage == 4)
+                {
+                    <div class="wiz-section">
+                        <h3>5. SKILL MATRIX</h3>
+                        <div class="pool-bar">CAREER POINTS: <strong>@CareerPointsRemaining</strong> / 40</div>
+                        <div class="skills-scroll">
+                            @foreach (var skill in CurrentRole?.CareerSkills ?? Array.Empty<string>())
+                            {
+                                var val = _careerSkills.GetValueOrDefault(skill, 0);
+                                <div class="skill-row">
+                                    <div class="stat-info">
+                                        <span class="skill-name @(skill == CurrentRole?.Special ? "special" : "")">
+                                            @skill
+                                            @if (skill == CurrentRole?.Special) { <span style="font-size:0.6rem; margin-left:0.5rem; background:var(--nc-gold); color:var(--nc-black); padding:2px 4px; border-radius:2px;">RECOMMENDED</span> }
+                                        </span>
+                                        <span class="stat-desc">@(_skillDescs.GetValueOrDefault(skill, "General skill."))</span>
+                                    </div>
+                                    <div class="skill-ctrl">
+                                        <button @onclick="() => AdjSkill(_careerSkills, skill, -1)">-</button>
+                                        <span class="skill-val">@val</span>
+                                        <button @onclick="() => AdjSkill(_careerSkills, skill, 1)" disabled="@(CareerPointsRemaining <= 0 || val >= 10)">+</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="pool-bar" style="margin-top: 1rem;">PICKUP POINTS: <strong>@PickupPointsRemaining</strong> / @PickupPool</div>
+                        <div class="skills-scroll">
+                            @foreach (var skill in _pickupSkillNames)
+                            {
+                                var val = _pickupSkills.GetValueOrDefault(skill, 0);
+                                <div class="skill-row">
+                                    <div class="stat-info">
+                                        <span class="skill-name">@skill</span>
+                                        <span class="stat-desc">@(_skillDescs.GetValueOrDefault(skill, "General skill."))</span>
+                                    </div>
+                                    <div class="skill-ctrl">
+                                        <button @onclick="() => AdjSkill(_pickupSkills, skill, -1)">-</button>
+                                        <span class="skill-val">@val</span>
+                                        <button @onclick="() => AdjSkill(_pickupSkills, skill, 1)" disabled="@(PickupPointsRemaining <= 0 || val >= 10)">+</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="wizard-footer">
+                @if (!string.IsNullOrEmpty(_error)) { <div class="ncc-msg ncc-msg-err">✕ @_error</div> }
+                <div class="wiz-nav">
+                    <button class="wiz-btn" @onclick="PrevStage" disabled="@(_stage == 0)">BACK</button>
+                    @if (_stage < 4)
+                    {
+                        <button class="wiz-btn primary" @onclick="NextStage" disabled="@(!CanAdvance)">NEXT</button>
+                    }
+                    else
+                    {
+                        <button class="wiz-btn primary" @onclick="SaveCharacter" disabled="@_saving">
+                            @(_saving ? "SYNCING..." : "COMMIT TO NET ◈")
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- DETAIL POPUP -->
+@if (_detailChar is not null)
+{
+    <div class="detail-overlay" @onclick="CloseDetail">
+        <div class="detail-box" @onclick:stopPropagation="true">
+            <div class="detail-header">
+                <h2>@_detailChar.Handle.ToUpper()</h2>
+                <div class="detail-role">@_detailChar.Role // @_detailChar.SpecialAbility</div>
+                @if (Session.CurrentUser?.Role == UserRole.GameMaster && !string.IsNullOrEmpty(_detailChar.OwnerId))
+                {
+                    <div class="detail-owner">
+                        OPERATOR: @(_userMap.TryGetValue(_detailChar.OwnerId, out var on) ? on.ToUpper() : "UNKNOWN")
+                    </div>
+                }
+                <button class="detail-close" @onclick="CloseDetail">✕</button>
+            </div>
+            <div class="detail-grid">
+                <div class="detail-stats">
+                    <div class="stat-chip">INT: @_detailChar.INT</div>
+                    <div class="stat-chip">REF: @_detailChar.REF</div>
+                    <div class="stat-chip">TECH: @_detailChar.TECH</div>
+                    <div class="stat-chip">COOL: @_detailChar.COOL</div>
+                    <div class="stat-chip">LK: @_detailChar.LK</div>
+                    <div class="stat-chip">ATT: @_detailChar.ATT</div>
+                    <div class="stat-chip">MA: @_detailChar.MA</div>
+                    <div class="stat-chip">EMP: @_detailChar.EMP</div>
+                    <div class="stat-chip">BT: @_detailChar.BT</div>
+                </div>
+                <div class="detail-derived">
+                    <div class="der-row"><span>HUMANITY</span> <strong>@_detailChar.Humanity</strong></div>
+                    <div class="der-row"><span>MOBILITY</span> <strong>@_detailChar.Mobility</strong></div>
+                    <div class="der-row"><span>RESILIENCE</span> <strong>@_detailChar.Resilience</strong></div>
+                    <div class="der-row"><span>FUNDS</span> <strong style="color:var(--nc-gold);">€$@_detailChar.Eurobucks</strong></div>
+                </div>
+            </div>
+            <div class="detail-info">
+                <h3>LIFEPATH</h3>
+                <p><strong>ORIGIN:</strong> @_detailChar.EthnicOrigin</p>
+                <p><strong>STYLE:</strong> @_detailChar.Clothes, @_detailChar.Hairstyle, @_detailChar.Affectation</p>
+                <p><strong>FAMILY:</strong> @_detailChar.FamilyRanking — @_detailChar.FamilyTragedy</p>
+                <p><strong>PERSONALITY:</strong> @_detailChar.PersonalityTrait</p>
+            </div>
+            
+            @if (_detailChar.Inventory != null && _detailChar.Inventory.Any())
+            {
+                <div class="detail-info" style="margin-top: 1rem;">
+                    <h3>INVENTORY (@_detailChar.Inventory.Count)</h3>
+                    <div style="max-height: 180px; overflow-y: auto; font-size: 0.8rem; color: var(--nc-cream); border: 1px solid var(--nc-border); padding: 0.5rem;">
+                        @foreach (var item in _detailChar.Inventory)
+                        {
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dotted rgba(255,255,255,0.1); padding:0.25rem 0;">
+                                <span>@item.Name</span>
+                                <div style="display:flex; gap:0.8rem; align-items:center;">
+                                    <span style="color:var(--nc-dim); font-size:0.75rem;">[@item.Category]</span>
+                                    @if (item.CostEurobucks > 0)
+                                    {
+                                        <span style="color:var(--nc-gold); font-size:0.75rem;">€$@item.CostEurobucks</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .char-suite { padding: 2rem; max-width: 1400px; margin: 0 auto; min-height: 80vh; }
+    .roster-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--nc-border); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+    .roster-header h1 { font-family: var(--font-display); font-size: 2rem; color: var(--nc-red); margin: 0; letter-spacing: 0.1em; }
+
+    /* GRID */
+    .char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+    .char-card { background: var(--nc-panel); border: 1px solid var(--nc-border); padding: 1rem; position: relative; cursor: pointer; transition: transform 0.2s, border-color 0.2s; border-left: 4px solid var(--nc-red); }
+    .char-card:hover { transform: translateY(-4px); border-color: var(--nc-red); }
+    .char-card.solo { border-left-color: #ff4444; }
+    .char-card.netrunner { border-left-color: #00e5ff; }
+    .char-card.techie { border-left-color: #f5c518; }
+    
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem; }
+    .card-handle { font-family: var(--font-display); font-size: 1.1rem; color: var(--nc-cream); }
+    .card-del { background: transparent; border: none; color: var(--nc-dim); cursor: pointer; font-size: 1.2rem; }
+    .card-del:hover { color: var(--nc-red); }
+    .card-role { font-size: 0.75rem; color: var(--nc-red); font-weight: bold; margin-bottom: 0.5rem; letter-spacing: 0.1em; }
+    .card-stats { font-size: 0.8rem; color: var(--nc-dim); display: flex; gap: 0.8rem; }
+    .card-owner { font-size: 0.6rem; color: var(--nc-dim); letter-spacing: 0.08em; margin-top: 2px; display: block; }
+    .card-footer { margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--nc-dim); }
+
+    /* WIZARD */
+    .wizard-container { background: var(--nc-panel); border: 1px solid var(--nc-border); border-top: 4px solid var(--nc-red); }
+    .wizard-header { padding: 1.5rem; border-bottom: 1px solid var(--nc-border); display: flex; align-items: center; gap: 2rem; }
+    .wiz-back-btn { background: var(--nc-dark); border: 1px solid var(--nc-border); color: var(--nc-red); padding: 0.4rem 1rem; cursor: pointer; font-family: var(--font-mono); font-size: 0.8rem; }
+    .wiz-stepper { flex: 1; display: flex; justify-content: space-around; }
+    .wiz-step { display: flex; flex-direction: column; align-items: center; opacity: 0.3; }
+    .wiz-step.active { opacity: 1; color: var(--nc-red); }
+    .wiz-step.done { opacity: 0.8; color: var(--nc-green); }
+    .step-num { font-size: 1.2rem; font-weight: bold; margin-bottom: 0.2rem; }
+    .step-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+    .wizard-content { padding: 2rem; max-width: 900px; margin: 0 auto; min-height: 500px; }
+    .wiz-section h3 { color: var(--nc-red); margin-bottom: 1.5rem; letter-spacing: 0.1em; border-bottom: 1px solid var(--nc-red); padding-bottom: 0.5rem; }
+    .wiz-field { margin-bottom: 1.5rem; }
+    .wiz-field label { display: block; font-size: 0.75rem; color: var(--nc-dim); margin-bottom: 0.5rem; }
+
+    .role-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+    .role-card { background: var(--nc-dark); border: 1px solid var(--nc-border); padding: 1rem; cursor: pointer; }
+    .role-card.selected { border-color: var(--nc-red); background: rgba(255,0,60,0.05); }
+    .role-name { font-weight: bold; margin-bottom: 0.4rem; color: var(--nc-cream); }
+    .role-special { font-size: 0.7rem; color: var(--nc-dim); }
+
+    .pool-header { display: flex; justify-content: space-between; align-items: center; background: var(--nc-dark); padding: 1rem; margin-bottom: 1.5rem; border: 1px solid var(--nc-border); }
+    .pool-header strong.ok { color: var(--nc-green); }
+    .pool-header strong.over { color: var(--nc-red); animation: blink 1s infinite; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 3rem; }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; }
+    .stat-info { display: flex; flex-direction: column; }
+    .stat-name { font-weight: bold; color: var(--nc-cream); }
+    .stat-desc { font-size: 0.65rem; color: var(--nc-dim); }
+    .stat-input { width: 60px; background: var(--nc-dark); border: 1px solid var(--nc-border); color: var(--nc-red); padding: 0.4rem; text-align: center; }
+
+    .lifepath-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2rem; }
+    .pool-bar { background: var(--nc-dark); padding: 0.5rem 1rem; font-size: 0.8rem; border-left: 3px solid var(--nc-cyan); margin-bottom: 1rem; }
+    .skills-scroll { max-height: 300px; overflow-y: auto; border: 1px solid var(--nc-border); padding: 1rem; background: rgba(0,0,0,0.2); margin-bottom: 1rem; }
+    .skill-row { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .skill-name.special { color: var(--nc-gold); font-weight: bold; }
+    .skill-ctrl { display: flex; align-items: center; gap: 0.8rem; }
+    .skill-ctrl button { background: var(--nc-dark); border: 1px solid var(--nc-border); color: var(--nc-cream); width: 24px; height: 24px; cursor: pointer; }
+    .skill-val { min-width: 20px; text-align: center; font-weight: bold; color: var(--nc-red); }
+
+    .wizard-footer { padding: 1.5rem; border-top: 1px solid var(--nc-border); display: flex; justify-content: flex-end; align-items: center; gap: 2rem; }
+    .wiz-btn { background: transparent; border: 1px solid var(--nc-border); color: var(--nc-cream); padding: 0.6rem 2rem; cursor: pointer; font-family: var(--font-mono); }
+    .wiz-btn.primary { background: var(--nc-red); border-color: var(--nc-red); color: var(--nc-black); font-weight: bold; }
+    .wiz-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* DETAIL POPUP */
+    .detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    .detail-box { background: var(--nc-panel); border: 1px solid var(--nc-red); width: 100%; max-width: 700px; padding: 2rem; position: relative; }
+    .detail-header { border-bottom: 2px solid var(--nc-red); padding-bottom: 1rem; margin-bottom: 1.5rem; position: relative; }
+    .detail-close { position: absolute; top: 0; right: 0; background: transparent; border: none; color: var(--nc-red); font-size: 1.5rem; cursor: pointer; }
+    .detail-role { color: var(--nc-dim); font-size: 0.9rem; }
+    .detail-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-bottom: 1.5rem; }
+    .stat-chip { background: var(--nc-dark); border: 1px solid var(--nc-border); padding: 0.4rem; text-align: center; font-size: 0.75rem; color: var(--nc-cyan); }
+    .detail-derived { display: flex; gap: 2rem; background: rgba(0,229,255,0.05); padding: 1rem; margin-bottom: 1.5rem; }
+    .der-row { display: flex; flex-direction: column; }
+    .der-row span { font-size: 0.6rem; color: var(--nc-dim); }
+    .der-row strong { font-size: 1.1rem; color: var(--nc-cyan); }
+    .detail-owner { font-size: 0.7rem; color: var(--nc-gold); letter-spacing: 0.1em; margin-top: 0.3rem; }
+    .detail-info h3 { font-size: 0.9rem; color: var(--nc-red); margin-bottom: 0.8rem; border-bottom: 1px solid var(--nc-border); }
+    .detail-info p { font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--nc-dim); }
+    .detail-info strong { color: var(--nc-cream); }
+
+    @@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+
+@code {
+    private List<CharacterSheet> _characters = new();
+    private Dictionary<string, string> _userMap = new();
+    private bool _loading = true;
+    private bool _isCreating = false;
+    private CharacterSheet? _detailChar;
+
+    // Wizard State
+    private int _stage = 0;
+    private string[] _stageLabels = ["IDENTITY", "ROLE", "STATS", "LIFEPATH", "SKILLS"];
+    
+    // Character Fields
+    private string _handle = "";
+    private string _name = "";
+    private string _origin = "";
+    private string _role = "";
+    private string _specialAbility = "";
+    private bool _isElite = false;
+    private Dictionary<string, int> _stats = new() { ["INT"]=5, ["REF"]=5, ["TECH"]=5, ["COOL"]=5, ["LK"]=5, ["ATT"]=5, ["MA"]=5, ["EMP"]=5, ["BT"]=5 };
+    private string _clothes = "";
+    private string _hairstyle = "";
+    private string _affectation = "";
+    private string _familyRanking = "";
+    private string _familyTragedy = "";
+    private string _personality = "";
+    private Dictionary<string, int> _careerSkills = new();
+    private Dictionary<string, int> _pickupSkills = new();
+
+    private bool _saving = false;
+    private string _error = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.InitializeAsync();
+
+        if (Session.CurrentUser?.Role == UserRole.GameMaster)
+            _userMap = (await UserApi.GetAllAsync()).ToDictionary(u => u.Id, u => u.Nickname);
+
+        await LoadCharacters();
+    }
+
+    private async Task LoadCharacters()
+    {
+        _loading = true;
+        try
+        {
+            var ownerId = Session.CurrentUser?.Role == UserRole.Player
+                ? Session.CurrentUser.Id
+                : null;
+            _characters = await CharApi.GetAllAsync(ownerId);
+        }
+        catch { _characters = new(); }
+        _loading = false;
+    }
+
+    private void StartCreation()
+    {
+        ResetForm();
+        _isCreating = true;
+    }
+
+    private void CancelCreation() => _isCreating = false;
+
+    private void ResetForm()
+    {
+        _stage = 0;
+        _handle = _name = _origin = _role = _specialAbility = _clothes = _hairstyle = _affectation = _familyRanking = _familyTragedy = _personality = "";
+        _isElite = false;
+        foreach (var k in _stats.Keys.ToList()) _stats[k] = 5;
+        _careerSkills.Clear();
+        _pickupSkills.Clear();
+    }
+
+    private int PointPool => _isElite ? 80 : 75;
+    private int PointsRemaining => PointPool - _stats.Values.Sum();
+    private int PickupPool => _stats["INT"] + _stats["REF"];
+    private int CareerPointsRemaining => 40 - _careerSkills.Values.Sum();
+    private int PickupPointsRemaining => PickupPool - _pickupSkills.Values.Sum();
+
+    private void AdjStat(string key, int delta)
+    {
+        int cur = _stats[key];
+        _stats[key] = Math.Clamp(cur + delta, 2, 10);
+    }
+
+    private void SetStat(string key, string? raw)
+    {
+        if (int.TryParse(raw, out var v)) _stats[key] = Math.Clamp(v, 2, 10);
+    }
+
+    private void SelectRole(RoleDef r)
+    {
+        _role = r.Name;
+        _specialAbility = r.Special;
+        _careerSkills.Clear();
+        foreach (var s in r.CareerSkills) _careerSkills[s] = 0;
+    }
+
+    private void AdjSkill(Dictionary<string, int> dict, string key, int delta)
+    {
+        dict.TryGetValue(key, out var cur);
+        dict[key] = Math.Max(0, Math.Min(10, cur + delta));
+    }
+
+    private bool CanAdvance => _stage switch
+    {
+        0 => !string.IsNullOrWhiteSpace(_handle) && !string.IsNullOrEmpty(_origin),
+        1 => !string.IsNullOrEmpty(_role),
+        2 => PointsRemaining == 0,
+        3 => !string.IsNullOrEmpty(_clothes) && !string.IsNullOrEmpty(_familyRanking),
+        _ => true
+    };
+
+    private void NextStage() { if (CanAdvance) _stage++; }
+    private void PrevStage() { if (_stage > 0) _stage--; }
+
+    private async Task SaveCharacter()
+    {
+        _error = "";
+        _saving = true;
+        try
+        {
+            var allSkills = new Dictionary<string, int>(_careerSkills);
+            foreach (var kv in _pickupSkills) allSkills[kv.Key] = allSkills.GetValueOrDefault(kv.Key) + kv.Value;
+
+            int saLevel = _careerSkills.GetValueOrDefault(_specialAbility, 0);
+            if (saLevel < 1) saLevel = 1;
+
+            var sheet = new CharacterSheet
+            {
+                OwnerId = Session.CurrentUser?.Id ?? string.Empty,
+                Handle = _handle.Trim(), Name = _name.Trim(),
+                EthnicOrigin = _origin, Role = _role, SpecialAbility = _specialAbility,
+                INT = _stats["INT"], REF = _stats["REF"], TECH = _stats["TECH"],
+                COOL = _stats["COOL"], LK = _stats["LK"], ATT = _stats["ATT"],
+                MA = _stats["MA"], EMP = _stats["EMP"], BT = _stats["BT"],
+                IsElite = _isElite,
+                Clothes = _clothes, Hairstyle = _hairstyle, Affectation = _affectation,
+                FamilyRanking = _familyRanking, FamilyTragedy = _familyTragedy,
+                PersonalityTrait = _personality,
+                SkillsJson = JsonSerializer.Serialize(allSkills),
+                Humanity = _stats["EMP"] * 10,
+                Mobility = _stats["MA"] * 3,
+                Resilience = _stats["BT"] switch { <= 4 => 0, <= 7 => 1, <= 9 => 2, _ => 3 },
+                Eurobucks = CalculateStartingFunds(_role, saLevel),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var result = await CharApi.CreateAsync(sheet);
+            if (result is not null)
+            {
+                _isCreating = false;
+                await LoadCharacters();
+            }
+            else { _error = "DATABASE CONNECTION FAILURE."; }
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+
+    private async Task DeleteCharacter(string id)
+    {
+        await CharApi.DeleteAsync(id);
+        await LoadCharacters();
+    }
+
+    private void ShowDetail(CharacterSheet c) => _detailChar = c;
+    private void CloseDetail() => _detailChar = null;
+
+    private int CalculateStartingFunds(string role, int level)
+    {
+        int[] g1 = {1000, 1000, 1500, 2000, 3000, 4000, 5000, 7000, 9000, 12000};
+        int[] g2 = {1000, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000, 7000};
+        int[] g3 = {1500, 1500, 2000, 2500, 3000, 4000, 5000, 7000, 9000, 12000};
+        int[] g4 = {1000, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 7000, 9000};
+
+        int[] table = role switch {
+            "Rockerboy" or "Solo" or "Cop" or "Media" or "Fixer" => g1,
+            "Techie" or "Medtech" or "Netrunner" => g2,
+            "Corporate" => g3,
+            "Nomad" => g4,
+            _ => g1
+        };
+        int index = Math.Clamp(level, 1, 10) - 1;
+        return table[index];
+    }
+
+    public void Dispose() { }
+
+    // ── DATA ──
+    private record RoleDef(string Name, string Special, string[] CareerSkills);
+    private RoleDef? CurrentRole => _roles.FirstOrDefault(r => r.Name == _role);
+    private readonly RoleDef[] _roles = [
+        new("Solo", "Combat Sense", ["Combat Sense","Awareness/Notice","Handguns","Heavy Weapons","Melee","Shoulder Arms","Streetwise","Tactics","Athletics","Brawling"]),
+        new("Rocker", "Charismatic Leadership", ["Charismatic Leadership","Play Instrument","Composition","Seduction","Persuasion","Streetwise","Awareness/Notice","Wardrobe & Style","Personal Grooming","Perform"]),
+        new("Netrunner", "Interface", ["Interface","System Knowledge","Electronics","Basic Tech","Computer","Cyberdeck Design","Library Search","Awareness/Notice","Education","Cryptography"]),
+        new("Techie", "Jury Rig", ["Jury Rig","Basic Tech","Cybertech","Electronics","Electronic Security","Gyro Tech","Pick Lock","Awareness/Notice","Education","Weaponsmith"]),
+        new("Medtech", "Medical Tech", ["Medical Tech","First Aid","Cryotank Operation","Pharmaceuticals","Diagnose Illness","Library Search","Awareness/Notice","Basic Tech","Education","Human Perception"]),
+        new("Media", "Resources", ["Resources","Streetwise","Human Perception","Social","Awareness/Notice","Persuasion","Education","Library Search","Photography","Interview"]),
+        new("Cop", "Authority", ["Authority","Streetwise","Human Perception","Awareness/Notice","Social","Athletics","Intimidate","Investigation","Law","Interrogation"]),
+        new("Corporate", "Resources", ["Resources","Awareness/Notice","Human Perception","Social","Persuasion","Education","Library Search","Wardrobe & Style","Personal Grooming","Accounting"]),
+        new("Fixer", "Streetwise", ["Streetwise","Human Perception","Social","Awareness/Notice","Persuasion","Education","Library Search","Forgery","Bribery","Personal Grooming"]),
+        new("Nomad", "Family", ["Family","Awareness/Notice","Survival","Endurance","Melee","Handguns","Athletics","Brawling","First Aid","Operate Heavy Machinery"]),
+    ];
+
+    private readonly Dictionary<string, string> _statDescs = new() { ["INT"]="Intelligence", ["REF"]="Reflexes", ["TECH"]="Technical Ability", ["COOL"]="Cool", ["LK"]="Luck", ["ATT"]="Attractiveness", ["MA"]="Movement Allowance", ["EMP"]="Empathy", ["BT"]="Body Type" };
+    
+    private readonly Dictionary<string, string> _skillDescs = new()
+    {
+        ["Awareness/Notice"] = "Ability to observe details, spot ambushes, and notice concealed items.",
+        ["Biology"] = "Knowledge of living organisms and life processes.",
+        ["Chemistry"] = "Understanding of chemical compounds, reactions, and synthesis.",
+        ["Composition"] = "Ability to write songs, stories, or other creative works.",
+        ["Diagnose Illness"] = "Identify diseases, infections, and medical conditions.",
+        ["Education & General Knowledge"] = "General academic knowledge across multiple disciplines.",
+        ["Expert"] = "Deep knowledge in a single specialized field.",
+        ["Gamble"] = "Knowledge of gambling games, odds, and cheating techniques.",
+        ["Geology"] = "Knowledge of rocks, minerals, and terrain types.",
+        ["Hide/Evade"] = "Lose a tail, hide from pursuers, and avoid detection.",
+        ["History"] = "Knowledge of historical events up to the present day.",
+        ["Know Language"] = "Ability to read and write in a foreign language.",
+        ["Library Search"] = "Use databases, the Net, and libraries to find information.",
+        ["Mathematics"] = "Understanding of mathematical concepts and computation.",
+        ["Physics"] = "Understanding of physical laws and applied mechanics.",
+        ["Programming"] = "Write and modify software; essential for netrunners.",
+        ["Shadow/Track"] = "Follow a target without being detected.",
+        ["Stock Market"] = "Understand and manipulate financial markets.",
+        ["System Knowledge"] = "Knowledge of computer architectures and operating systems.",
+        ["Teaching"] = "Ability to instruct others in skills you possess.",
+        ["Wilderness Survival"] = "Find food, shelter, and navigate in the wilderness.",
+        ["Archery"] = "Use of bows, crossbows, and other archery weapons.",
+        ["Athletics"] = "General athletic ability: running, jumping, climbing.",
+        ["Brawling"] = "Unarmed combat using punches, kicks, and takedowns.",
+        ["Dance"] = "Formal and informal dance styles.",
+        ["Dodge & Escape"] = "Avoid attacks and escape grapples.",
+        ["Driving"] = "Operate ground vehicles: cars, trucks, APCs.",
+        ["Fencing"] = "Formal sword-fighting techniques.",
+        ["Handgun"] = "Use of pistols and revolvers.",
+        ["Heavy Weapons"] = "Operate crew-served and heavy weapons: rocket launchers, miniguns.",
+        ["Martial Arts"] = "Formal unarmed combat discipline.",
+        ["Melee"] = "Use of knives, clubs, swords, and other hand-held weapons.",
+        ["Motorcycle"] = "Operate motorcycles and powered two-wheelers.",
+        ["Operate Heavy Machinery"] = "Use construction equipment, industrial machines, and heavy vehicles.",
+        ["Pilot (Fixed Wing)"] = "Fly fixed-wing aircraft: jets and propeller planes.",
+        ["Pilot (Gyro)"] = "Fly rotary-wing aircraft: helicopters and gyrocraft.",
+        ["Pilot (Vectored Thrust)"] = "Fly AV-style vectored thrust aircraft.",
+        ["Pilot (Dirigible)"] = "Operate dirigibles and lighter-than-air craft.",
+        ["Rifle"] = "Use of rifles, shotguns, and long arms.",
+        ["Stealth"] = "Move quietly, conceal yourself, and avoid notice.",
+        ["Submachine Gun"] = "Use of SMGs and automatic pistols in full-auto mode.",
+        ["AV Tech"] = "Repair and maintain AV and vectored-thrust vehicles.",
+        ["Basic Tech"] = "General mechanical and electronic repair.",
+        ["Cryotank Operation"] = "Operate cryogenic storage tanks for preserving critically injured.",
+        ["Cyberdeck Design"] = "Design and build custom cyberdecks.",
+        ["Cybertech"] = "Install, remove, and repair cyberware.",
+        ["Demo & Explosives"] = "Set, disarm, and detonate explosive devices.",
+        ["Electronics"] = "Build and repair electronic devices and circuits.",
+        ["Electronic Security"] = "Bypass alarms, cameras, and electronic locks.",
+        ["First Aid"] = "Stabilize wounds, stop bleeding, and provide emergency care.",
+        ["Forgery"] = "Create convincing fake documents, currency, and IDs.",
+        ["Gyrotech"] = "Repair and maintain gyrocraft and rotor systems.",
+        ["Paint or Draw"] = "Create visual art through painting and drawing.",
+        ["Photo & Film"] = "Operate cameras and edit photo/video media.",
+        ["Pick Lock"] = "Open mechanical locks without the correct key.",
+        ["Pick Pocket"] = "Steal items from a person without being detected.",
+        ["Play Instrument"] = "Play a musical instrument with skill.",
+        ["Weaponsmith"] = "Fabricate, repair, and modify firearms and melee weapons.",
+        ["Interrogation"] = "Extract information from unwilling subjects through psychological pressure.",
+        ["Intimidate"] = "Frighten others into compliance through physical or psychological threat.",
+        ["Oratory"] = "Inspire and move crowds through public speaking.",
+        ["Personal Grooming"] = "Maintain physical appearance and hygiene for social situations.",
+        ["Persuasion & Fast Talk"] = "Convince others to do what you want through logical or rapid-fire argument.",
+        ["Resist Torture/Drugs"] = "Withstand physical and chemical interrogation.",
+        ["Streetwise"] = "Navigate the criminal underworld, find contacts, and read the streets.",
+        ["Wardrobe & Style"] = "Dress to impress for any social occasion.",
+        ["Endurance"] = "Maintain peak performance through extended physical hardship.",
+        ["Strength Feat"] = "Perform feats of extraordinary strength: bend bars, lift vehicles.",
+        ["Swimming"] = "Swim in any conditions.",
+        ["Human Perception"] = "Detect lies, sense emotions, and read intent.",
+        ["Interview"] = "Draw out information through skillful questioning.",
+        ["Leadership"] = "Inspire and command a group under pressure.",
+        ["Seduction"] = "Attract and influence others through romantic appeal.",
+        ["Social"] = "General social interactions: etiquette, networking, schmoozing.",
+        ["Combat Sense"] = "[Solo] Sense danger before it strikes; adds to Initiative and awareness rolls.",
+        ["Authority"] = "[Cop] Power of arrest and command; can commandeer resources within jurisdiction.",
+        ["Charismatic Leadership"] = "[Rockerboy] Lead a crowd or band; inspire mass action through performance.",
+        ["Credibility"] = "[Media] Your word is trusted; can publish and broadcast with authority.",
+        ["Family"] = "[Nomad] Call on pack resources, safe houses, and Nomad contacts.",
+        ["Interface"] = "[Netrunner] Access, control, and attack systems through the Net.",
+        ["Jury Rig"] = "[Tech] Improvise repairs and create devices from available parts.",
+        ["Medical Tech"] = "[Medtech] Perform surgery, install cyberware, and treat serious trauma.",
+        ["Resources"] = "[Corporate] Access corporate funding, personnel, and infrastructure.",
+        ["Streetdeal"] = "[Fixer] Connect buyers with sellers; know who has what and what it costs."
+    };
+
+    private readonly string[] _pickupSkillNames = ["Athletics","Awareness/Notice","Basic Tech","Brawling","Driving","Education","Electronics","First Aid","Handguns","Human Perception","Library Search","Melee","Persuasion","Seduction","Social","Stealth","Streetwise","Swimming","Tracking","Wardrobe & Style"];
+    private record Opt(string V, string En);
+    private readonly Opt[] _clothesOpts = [ new("Biker leathers","Biker leathers"), new("Blue jeans","Blue jeans"), new("Corporate Suits","Corporate Suits"), new("Jumpsuits","Jumpsuits"), new("Miniskirts","Miniskirts"), new("High Fashion","High Fashion"), new("Cammos","Cammos"), new("Normal clothes","Normal clothes"), new("Nude","Nude"), new("Bag Lady chic","Bag Lady chic") ];
+    private readonly Opt[] _hairOpts = [ new("Mohawk","Mohawk"), new("Long & Ratty","Long & Ratty"), new("Short & Spiked","Short & Spiked"), new("Wild & all over","Wild & all over"), new("Bald","Bald"), new("Striped","Striped"), new("Tinted","Tinted"), new("Neat short","Neat short"), new("Short curly","Short curly"), new("Long straight","Long straight") ];
+    private readonly Opt[] _affectOpts = [ new("Tatoos","Tatoos"), new("Mirrorshades","Mirrorshades"), new("Ritual Scars","Ritual Scars"), new("Spiked gloves","Spiked gloves"), new("Nose Rings","Nose Rings"), new("Earrings","Earrings"), new("Long fingernails","Long fingernails"), new("Spike heeled boots","Spike heeled boots"), new("Weird Contact Lenses","Weird Contact Lenses"), new("Fingerless gloves","Fingerless gloves") ];
+    private readonly Opt[] _originOpts = [ new("African","African"), new("Anglo-American","Anglo-American"), new("Central European/Soviet","Central European/Soviet"), new("Japanese/Korean","Japanese/Korean"), new("Pacific Islander","Pacific Islander"), new("Chinese/Southeast Asian","Chinese/Southeast Asian"), new("Black American","Black American"), new("Hispanic American","Hispanic American"), new("Central/South American","Central/South American"), new("European","European") ];
+    private readonly Opt[] _familyRankOpts = [ new("Corporate Executive","Corporate Executive"), new("Corporate Manager","Corporate Manager"), new("Corporate Technician","Corporate Technician"), new("Nomad Pack","Nomad Pack"), new("Pirate Fleet","Pirate Fleet"), new("Gang Family","Gang Family"), new("Crime Lord","Crime Lord"), new("Combat Zone Poor","Combat Zone Poor"), new("Urban homeless","Urban homeless"), new("Arcology family","Arcology family") ];
+    private readonly Opt[] _familyTragOpts = [ new("Betrayal","Family lost everything through betrayal"), new("Mismanagement","Family lost everything through bad management"), new("Exiled","Family exiled from their original home"), new("Imprisoned","Family is imprisoned and you alone escaped"), new("Vanished","Family vanished. You are the only remaining member"), new("Murdered","Family was murdered and you were the only survivor"), new("Conspiracy","Family is involved in a longterm conspiracy"), new("Scattered","Family scattered to the winds due to misfortune"), new("Feud","Family is cursed with a hereditary feud"), new("Debt","You are the inheritor of a family debt") ];
+    private readonly Opt[] _personalityOpts = [ new("Shy & secretive","Shy and secretive"), new("Rebellious","Rebellious, antisocial, violent"), new("Arrogant","Arrogant, proud and aloof"), new("Moody","Moody, rash and headstrong"), new("Picky","Picky, fussy and nervous"), new("Stable & serious","Stable and serious"), new("Silly","Silly and fluffheaded"), new("Sneaky","Sneaky and deceptive"), new("Intellectual","Intellectual and detached"), new("Friendly","Friendly and outgoing") ];
+}

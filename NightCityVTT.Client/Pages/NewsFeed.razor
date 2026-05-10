@@ -1,0 +1,317 @@
+@page "/news"
+@using NightCityVTT.Client.Components
+
+<PageTitle>News Feed & Market Watch</PageTitle>
+
+<div class="news-page">
+    <div class="news-header">
+        <h1 class="lang-en hide-in-eec">NETWORK 54 // APPROVED BULLETINS</h1>
+        <h1 class="lang-eec">EUROPRESS // STRATEGIC DIRECTIVES</h1>
+        <h1 class="lang-ru">ТАСС // НОВОСТНАЯ СВОДКА</h1>
+        <h1 class="lang-pl">KURIER WARSZAWSKI // WIADOMOŚCI</h1>
+        <div class="news-date">
+            <span class="lang-en hide-in-eec">DATE: 2020.05.08 // TIME: 14:02:44 PST</span>
+            <span class="lang-eec">DATE: 08.05.2020 // HEURE: 23:02 CET</span>
+            <span class="lang-ru">ДАТА: 08.05.2020 // ВРЕМЯ: 01:02 MSK</span>
+            <span class="lang-pl">DATA: 08.05.2020 // CZAS: 23:02 CET</span>
+        </div>
+    </div>
+
+    <div class="news-grid">
+        <!-- Main News Column -->
+        <div class="news-main">
+            <!-- EN News: Satirical Corporate Dystopia -->
+            <div class="news-article lang-en hide-in-eec">
+                <div class="article-meta"><span class="article-tag urgent">RED ALERT</span> // NIGHT CITY</div>
+                <h2>GANG WARFARE IN THE COMBAT ZONE REACHES BOILING POINT</h2>
+                <p>NCPD has officially cordoned off Sector 4 of the Combat Zone following a massive firefight between the Blood Razors and the Iron Sights. Trauma Team has suspended all standard coverage in the area, offering only Platinum-tier extractions. Reports of rogue heavy weaponry, including Arasaka-sourced miniguns, suggest a terrifying new level of urban instability. Citizens are reminded that property damage is a crime; unauthorized dying is punishable by fine.</p>
+            </div>
+            <div class="news-article lang-en hide-in-eec">
+                <div class="article-meta"><span class="article-tag">CORP WATCH</span> // TOKYO</div>
+                <h2>ARASAKA ANNOUNCES NEW LINE OF CYBERWARE AMIDST MILITECH TENSION</h2>
+                <p>Arasaka Corporation unveiled its new "Kenshin" line of reflex boosters today. Stock prices surged 3% as analysts predict record-breaking sales. However, rumors of a massive naval mobilization in the South China Sea suggest the Cold War with Militech is heating up. "We are simply protecting our logistical assets," a spokesperson stated. Analysts recommend buying Arasaka stock and home-defense turrets immediately.</p>
+            </div>
+            <div class="news-article lang-en hide-in-eec">
+                <div class="article-meta"><span class="article-tag">NET WATCH</span> // NODE-7</div>
+                <h2>NETWATCH ISSUES LEVEL 5 WARNING: BLACKWALL INSTABILITY</h2>
+                <p>Ghost-signals resembling Pre-DataCrash architecture have been detected near the BlackWall. NetWatch has authorized lethal feedback for any runner detected in restricted subnets. "Your data is our priority, your nervous system is your responsibility," the bulletin read. Avoid deep-dives; NetWatch is watching, always.</p>
+            </div>
+
+            <!-- EEC News: Professional Euro Bureaucracy -->
+            <div class="news-article lang-eec">
+                <div class="article-meta"><span class="article-tag urgent">EURO-FLASH</span> // FRANKFURT</div>
+                <h2>EUROBANK SETS NEW LIMITS ON CORPORATE LOANS AMID GLOBAL INSTABILITY</h2>
+                <p>In a direct response to recent Militech market aggression, the EC Council has authorized Eurobank to restrict high-volume lending to American megacorporations. European markets reacted positively to the protectionist measure, prioritizing continental stability over transatlantic trade. Professionalism and regulation remain our strongest shields against the chaos of the fractured States.</p>
+            </div>
+            <div class="news-article lang-eec">
+                <div class="article-meta"><span class="article-tag">ORBITAL</span> // L1</div>
+                <h2>ESA COMPLETES NEW MASS DRIVER INSTALLATION - "ORBITAL PEACEKEEPER"</h2>
+                <p>The European Space Agency has confirmed the operational status of the Olympus Mass Driver. While Interpol claims it is for "asteroid mitigation," leaked Euro-Dockets suggest target-locking on major non-compliant manufacturing hubs in the Americas. The "High Ground" remains firmly under European control. Compliance with EEC space-law is no longer optional.</p>
+            </div>
+            <div class="news-article lang-eec">
+                <div class="article-meta"><span class="article-tag">SECURITY</span> // PARIS</div>
+                <h2>INTERPOL NEUTRALIZES MILITECH SPY RING IN 16TH ARRONDISSEMENT</h2>
+                <p>Interpol "Euro-Solos" executed a flawless tactical raid this morning, neutralizing a cell of foreign operatives. The EC Council has formally protested the "unprecedented violation of European sovereignty" to the remains of the US government. Professional standards of security have been heightened across all member-state nodes.</p>
+            </div>
+
+            <!-- RU News: Direct Translation -->
+            <div class="news-article lang-ru">
+                <div class="article-meta"><span class="article-tag urgent">КРАСНАЯ ТРЕВОГА</span> // НАЙТ-СИТИ</div>
+                <h2>БАНДИТСКИЕ ВОЙНЫ В БОЕВОЙ ЗОНЕ ДОСТИГЛИ ТОЧКИ КИПЕНИЯ</h2>
+                <p>Полиция Найт-Сити официально оцепила Сектор 4 Боевой зоны после массированной перестрелки между бандами Blood Razors и Iron Sights. Trauma Team приостановила стандартное обслуживание в этом районе, предлагая только эвакуацию платинового уровня. Сообщения о применении тяжелого вооружения, включая миниганы Arasaka, указывают на пугающий уровень городской нестабильности. Гражданам напоминают, что повреждение имущества является преступлением; несанкционированная смерть карается штрафом.</p>
+            </div>
+            <div class="news-article lang-ru">
+                <div class="article-meta"><span class="article-tag">КОРП-МОНИТОРИНГ</span> // ТОКИО</div>
+                <h2>ARASAKA АНОНСИРУЕТ НОВУЮ ЛИНИЮ КИБЕРПРОГРАММ НА ФОНЕ НАПРЯЖЕННОСТИ С MILITECH</h2>
+                <p>Корпорация Arasaka представила сегодня свою новую линейку рефлекторных бустеров «Kenshin». Цены на акции выросли на 3%, так как аналитики предсказывают рекордные продажи. Однако слухи о массовой мобилизации флота в Южно-Китайском море позволяют предположить, что холодная война с Militech обостряется. «Мы просто защищаем наши логистические активы», — заявил представитель корпорации. Аналитики рекомендуют немедленно покупать акции Arasaka и турели для домашней обороны.</p>
+            </div>
+            <div class="news-article lang-ru">
+                <div class="article-meta"><span class="article-tag">СЕТЕВОЙ ДОЗОР</span> // УЗЕЛ-7</div>
+                <h2>СЕТЕВОЙ ДОЗОР ПРЕДУПРЕЖДАЕТ: НЕСТАБИЛЬНОСТЬ BLACKWALL</h2>
+                <p>Рядом с BlackWall были обнаружены призрачные сигналы, напоминающие архитектуру до ДатаКрэша. Сетевой дозор разрешил смертельную обратную связь для любого раннера, обнаруженного в запрещенных подсетях. «Ваши данные — наш приоритет, ваша нервная система — ваша ответственность», — говорится в бюллетене. Избегайте глубоких погружений; Сетевой дозор следит за вами, всегда.</p>
+            </div>
+
+            <!-- PL News: Direct Translation -->
+            <div class="news-article lang-pl">
+                <div class="article-meta"><span class="article-tag urgent">CZERWONY ALARM</span> // NIGHT CITY</div>
+                <h2>WOJNY GANGÓW W STREFIE WALKI OSIĄGAJĄ PUNKT KRYTYCZNY</h2>
+                <p>NCPD oficjalnie odcięło Sektor 4 Strefy Walki po potężnej strzelaninie między Blood Razors a Iron Sights. Trauma Team zawiesiła standardową obsługę w tym rejonie, oferując jedynie ewakuację na poziomie Platinum. Doniesienia o użyciu ciężkiej broni, w tym minigunów od Arasaka, sugerują przerażający poziom niestabilności miejskiej. Obywatelom przypomina się, że niszczenie mienia jest przestępstwem; nieautoryzowana śmierć podlega grzywnie.</p>
+            </div>
+            <div class="news-article lang-pl">
+                <div class="article-meta"><span class="article-tag">MONITORING KORPORACYJNY</span> // TOKIO</div>
+                <h2>ARASAKA OGŁASZA NOWĄ LINIE CYBERNETYKI W OBLICZU NAPIĘĆ Z MILITECH</h2>
+                <p>Korporacja Arasaka zaprezentowała dziś nową linię boosterów refleksu „Kenshin”. Ceny akcji wzrosły o 3%, ponieważ analitycy przewidują rekordową sprzedaż. Jednak pogłoski o masowej mobilizacji morskiej na Morzu Południowochińskim sugerują, że zimna wojna z Militech zaostrza się. „Po prostu chronimy nasze aktywa logistyczne” – oświadczył rzecznik. Analitycy zalecają natychmiastowy zakup akcji Arasaka i wieżyczek do obrony domu.</p>
+            </div>
+            <div class="news-article lang-pl">
+                <div class="article-meta"><span class="article-tag">NET WATCH</span> // WĘZEŁ-7</div>
+                <h2>NETWATCH WYDAJE OSTRZEŻENIE 5. POZIOMU: NIESTABILNOŚĆ BLACKWALL</h2>
+                <p>W pobliżu BlackWall wykryto sygnały-widma przypominające architekturę sprzed DataCrash. NetWatch autoryzował zabójcze sprzężenie zwrotne dla każdego runnera wykrytego w zastrzeżonych podsieciach. „Twoje dane są naszym priorytetem, twój układ nerwowy jest twoją odpowiedzialnością” – głosi biuletyn. Unikaj głębokich nurkowań; NetWatch patrzy, zawsze.</p>
+            </div>
+        </div>
+
+        <!-- Sidebar / Stocks -->
+        <div class="news-sidebar">
+            <div class="market-panel">
+                <div class="security-level">
+                    <span class="sl-label">THREAT LEVEL:</span>
+                    <span class="sl-value urgent">CRITICAL</span>
+                </div>
+                <h3 class="panel-title">
+                    <span class="lang-en hide-in-eec">WORLD MARKET INDEX</span>
+                    <span class="lang-eec">EUROBOURSE INDEX</span>
+                    <span class="lang-ru">ИНДЕКС РЫНКА</span>
+                    <span class="lang-pl">INDEKS GIEŁDOWY</span>
+                </h3>
+                <ul class="stock-list">
+                    <li class="stock-item down">
+                        <span class="stock-name">MILITECH (USA)</span>
+                        <span class="stock-price">124.50</span>
+                        <span class="stock-change">-2.4%</span>
+                    </li>
+                    <li class="stock-item up">
+                        <span class="stock-name">ARASAKA (JPN)</span>
+                        <span class="stock-price">340.20</span>
+                        <span class="stock-change">+3.1%</span>
+                    </li>
+                    <li class="stock-item up">
+                        <span class="stock-name">BIOTECHNICA</span>
+                        <span class="stock-price">98.30</span>
+                        <span class="stock-change">+0.5%</span>
+                    </li>
+                    <li class="stock-item down">
+                        <span class="stock-name">PETROCHEM</span>
+                        <span class="stock-price">185.15</span>
+                        <span class="stock-change">-1.2%</span>
+                    </li>
+                    <li class="stock-item up">
+                        <span class="stock-name lang-en hide-in-eec">EUROBANK</span>
+                        <span class="stock-name lang-eec">EUROBANK (EEC)</span>
+                        <span class="stock-name lang-ru">EUROBANK</span>
+                        <span class="stock-name lang-pl">EUROBANK</span>
+                        <span class="stock-price">412.10</span>
+                        <span class="stock-change">+1.2%</span>
+                    </li>
+                    <li class="stock-item down">
+                        <span class="stock-name">TRAUMA TEAM</span>
+                        <span class="stock-price">210.00</span>
+                        <span class="stock-change">-0.8%</span>
+                    </li>
+                    <li class="stock-item up">
+                        <span class="stock-name">ZETATECH</span>
+                        <span class="stock-price">156.40</span>
+                        <span class="stock-change">+2.2%</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="ad-panel">
+                <div class="ad-content lang-en hide-in-eec">
+                    <strong>UPGRADE YOUR MEAT.</strong><br/>
+                    Visit Ripperdoc Clinics today for 20% off all Neuralware.
+                </div>
+                <div class="ad-content lang-eec">
+                    <strong>ELEGANCE IN CHROME.</strong><br/>
+                    European Cybernetics - The standard in high-society augmentation.
+                </div>
+                <div class="ad-content lang-ru">
+                    <strong>УЛУЧШАЙ СВОЕ ТЕЛО.</strong><br/>
+                    Посетите клиники рипердоков сегодня, чтобы получить скидку 20% на все нейропрограммы.
+                </div>
+                <div class="ad-content lang-pl">
+                    <strong>ULEPSZ SWOJE CIAŁO.</strong><br/>
+                    Odwiedź kliniki Ripperdock dzisiaj, aby otrzymać 20% zniżki na cały neuralware.
+                </div>
+            </div>
+
+            <div class="market-panel" style="margin-top: 2rem;">
+                <h3 class="panel-title">SYSTEM ALERTS</h3>
+                <div class="ad-content" style="text-align: left; font-size: 0.75rem;">
+                    <div style="color: var(--nc-red); margin-bottom: 0.5rem;">[!] UNIDENTIFIED UPLINK DETECTED</div>
+                    <div style="color: var(--nc-gold); margin-bottom: 0.5rem;">[!] ENCRYPTION KEYS ROTATED</div>
+                    <div style="color: var(--nc-cyan);">[!] DATA-STREAM STABLE</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .news-page {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        color: var(--nc-cream);
+        font-family: var(--font-mono);
+    }
+    .news-header {
+        border-bottom: 2px solid var(--nc-border);
+        padding-bottom: 1rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+    .news-header h1 {
+        font-family: var(--font-display);
+        font-size: 2rem;
+        color: var(--nc-red);
+        margin: 0;
+        letter-spacing: 0.1em;
+    }
+    .news-date {
+        font-size: 0.8rem;
+        color: var(--nc-dim);
+    }
+    .news-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+    }
+    .news-article {
+        background: var(--nc-panel);
+        border: 1px solid var(--nc-border);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid var(--nc-red);
+    }
+    .article-meta {
+        font-size: 0.7rem;
+        color: var(--nc-dim);
+        margin-bottom: 0.5rem;
+        letter-spacing: 0.1em;
+    }
+    .article-tag {
+        color: var(--nc-cyan);
+    }
+    .article-tag.urgent {
+        color: var(--nc-gold);
+        font-weight: bold;
+    }
+    .news-article h2 {
+        font-size: 1.4rem;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+    }
+    .news-article p {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: var(--nc-cream);
+        opacity: 0.8;
+    }
+    .market-panel {
+        background: var(--nc-dark);
+        border: 1px solid var(--nc-border);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .panel-title {
+        font-size: 1rem;
+        letter-spacing: 0.1em;
+        border-bottom: 1px solid var(--nc-border);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        color: var(--nc-red);
+    }
+    .security-level {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        font-weight: bold;
+        padding: 0.5rem;
+        background: rgba(255, 0, 60, 0.1);
+        border: 1px solid var(--nc-red);
+    }
+    .sl-label { font-size: 0.75rem; }
+    .sl-value.urgent { color: var(--nc-red); animation: blink 1s infinite; }
+    
+    .stock-list {
+        list-style: none;
+        padding: 0;
+    }
+    .stock-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px dotted var(--nc-border);
+        font-size: 0.85rem;
+    }
+    .stock-item:last-child {
+        border-bottom: none;
+    }
+    .stock-name {
+        flex: 1;
+    }
+    .stock-price {
+        width: 80px;
+        text-align: right;
+    }
+    .stock-change {
+        width: 60px;
+        text-align: right;
+        font-weight: bold;
+    }
+    .stock-item.up .stock-change { color: var(--nc-green); }
+    .stock-item.down .stock-change { color: #ff4444; }
+    
+    .ad-panel {
+        border: 2px dashed var(--nc-dim);
+        padding: 1.5rem;
+        text-align: center;
+        background: repeating-linear-gradient(45deg, var(--nc-dark), var(--nc-dark) 10px, var(--nc-panel) 10px, var(--nc-panel) 20px);
+    }
+    .ad-content {
+        font-size: 0.9rem;
+        color: var(--nc-cream);
+    }
+    .ad-content strong {
+        color: var(--nc-red);
+        font-size: 1.2rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    
+    :root[data-theme="luna"] .news-header h1,
+    :root[data-theme="luna"] .news-article h2 { font-family: var(--font-cyrillic); }
+
+    @@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+</style>

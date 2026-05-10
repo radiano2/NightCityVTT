@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Russo+One&family=Share+Tech+Mono&family=Special+Elite&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="NightCityVTT.styles.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <!-- Restore theme before first paint to avoid flash -->
+    <script>(function(){var t=localStorage.getItem('nc-theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
+    <HeadOutlet />
+</head>
+
+<body>
+    <div id="hacking-overlay-js">
+        <div class="hacking-content">
+            <div class="hacking-glitch">[ SYSTEM INTRUSION DETECTED ]</div>
+            <div class="hacking-terminal">
+                <div class="terminal-line">> INITIATING UPLINK...</div>
+                <div class="terminal-line">> BYPASSING FIREWALL...</div>
+                <div class="terminal-line">> INJECTING PAYLOAD...</div>
+            </div>
+            <div class="hacking-progress"><div class="progress-bar-js" id="pb-js"></div></div>
+        </div>
+    </div>
+
+    <Routes />
+
+    <!-- CRT phosphor overlay -->
+    <div id="crt-overlay" aria-hidden="true"></div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script>
+        // ── Hacking Overlay Trigger ─────────────────────────────
+        window.addEventListener('click', (e) => {
+            const target = e.target.closest('a');
+            if (target && target.getAttribute('href') !== null && !target.getAttribute('href').startsWith('#')) {
+                const isInternal = !target.href.startsWith('http') || target.href.startsWith(window.location.origin);
+                if (isInternal && target.getAttribute('target') !== '_blank') {
+                    e.preventDefault();
+                    triggerHacking(target.href);
+                }
+            }
+        });
+
+        async function triggerHacking(url) {
+            const overlay = document.getElementById('hacking-overlay-js');
+            const pb = document.getElementById('pb-js');
+            const glitch = overlay.querySelector('.hacking-glitch');
+            const terminal = overlay.querySelector('.hacking-terminal');
+
+            if (!overlay || overlay.classList.contains('active')) {
+                if (url) window.location.href = url;
+                return;
+            }
+            
+            const intervalStr = localStorage.getItem('nc-anim-interval');
+            const totalMs = intervalStr ? parseInt(intervalStr) : 5000;
+            const theme = document.documentElement.getAttribute('data-theme') || '';
+            
+            if (totalMs <= 0) {
+                if (url) window.location.href = url;
+                return;
+            }
+
+            // Localized Flavor Text with Randomization
+            const local = {
+                'luna': {
+                    intrusion: [
+                        '[ ОБНАРУЖЕНО ВТОРЖЕНИЕ В СИСТЕМУ ]',
+                        '[ НЕСАНКЦИОНИРОВАННЫЙ ДОСТУП ]',
+                        '[ КРИТИЧЕСКАЯ ОШИБКА БЕЗОПАСНОСТИ ]'
+                    ],
+                    lines: [
+                        ['> ИНИЦИАЛИЗАЦИЯ СВЯЗИ...', '> ОБХОД КОРПОРАТИВНОГО БРАНДМАУЭРА...', '> ВНЕДРЕНИЕ ПОЛЕЗНОЙ НАГРУЗКИ...'],
+                        ['> ПОДКЛЮЧЕНИЕ К УЗЛУ...', '> ВЗЛОМ ШИФРОВАНИЯ...', '> ЗАГРУЗКА ДАННЫХ...'],
+                        ['> АВТОРИЗАЦИЯ...', '> ОБХОД ПРОТОКОЛОВ СЛУЖБЫ БЕЗОПАСНОСТИ...', '> ТЕРМИНАЛ АКТИВЕН...']
+                    ]
+                },
+                'heroldowie': {
+                    intrusion: [
+                        '[ WYKRYTO INTRUZJĘ SYSTEMU ]',
+                        '[ NIEAUTORYZOWANY DOSTĘP ]',
+                        '[ ALARM POZIOMU CZERWONEGO ]'
+                    ],
+                    lines: [
+                        ['> INICJOWANIE ŁĄCZA...', '> OMINIĘCIE FIREWALLA BIUROKRACJI...', '> WSTRZYKIWANIE ŁADUNKU...'],
+                        ['> ŁĄCZENIE Z SERWEREM...', '> DEKRYPTACJA KLUCZY...', '> POBIERANIE AKT...'],
+                        ['> PROTOKÓŁ DOSTĘPU...', '> ZŁAMANIE ZABEZPIECZEŃ AGENCJI...', '> SYSTEM GOTOWY...']
+                    ]
+                },
+                'eec': {
+                    intrusion: [
+                        '[ INTERPOL SECURITY INTRUSION ALERT ]',
+                        '[ EUROPOL ACCESS VIOLATION ]',
+                        '[ ESA ORBITAL OVERWATCH ALERT ]'
+                    ],
+                    lines: [
+                        ['> AUTHORIZING EURO-DOCKET ACCESS...', '> ESTABLISHING SECURE ESA UPLINK...', '> EXECUTING ELEGANT DECRYPTION...'],
+                        ['> INTERPOL HANDSHAKE INITIATED...', '> BYPASSING NATIONAL FIREWALLS...', '> ACCESSING EURO-DATABASE...'],
+                        ['> HIGH-ORBIT HANDSHAKE...', '> DECRYPTING DIPLOMATIC PACKETS...', '> SECURE TERMINAL ESTABLISHED...']
+                    ]
+                },
+                'default': {
+                    intrusion: [
+                        '[ SYSTEM INTRUSION DETECTED ]',
+                        '[ UNAUTHORIZED ACCESS DETECTED ]',
+                        '[ ICE BREACHED ]'
+                    ],
+                    lines: [
+                        ['> INITIATING UPLINK...', '> BYPASSING CORPORATE FIREWALL...', '> INJECTING PAYLOAD...'],
+                        ['> CONNECTING TO GRID...', '> CRACKING ENCRYPTION...', '> UPLOADING VIRUS...'],
+                        ['> ACCESSING MAIN_FRAME...', '> OVERRIDING SECURITY PROTOCOLS...', '> TERMINAL READY...']
+                    ]
+                }
+            };
+
+            const themeSet = local[theme] || local['default'];
+            const randomIntrusion = themeSet.intrusion[Math.floor(Math.random() * themeSet.intrusion.length)];
+            const randomLines = themeSet.lines[Math.floor(Math.random() * themeSet.lines.length)];
+
+            glitch.innerText = randomIntrusion;
+            terminal.innerHTML = randomLines.map(line => `<div class="terminal-line">${line}</div>`).join('');
+            
+            overlay.classList.add('active');
+            pb.style.width = '0%';
+            
+            const stepMs = totalMs / 5;
+            
+            await new Promise(r => setTimeout(r, stepMs));
+            pb.style.width = '15%';
+            await new Promise(r => setTimeout(r, stepMs));
+            pb.style.width = '40%';
+            await new Promise(r => setTimeout(r, stepMs));
+            pb.style.width = '65%';
+            await new Promise(r => setTimeout(r, stepMs));
+            pb.style.width = '85%';
+            await new Promise(r => setTimeout(r, stepMs));
+            pb.style.width = '100%';
+            
+            await new Promise(r => setTimeout(r, 200));
+            overlay.classList.remove('active');
+            
+            if (url) window.location.href = url;
+        }
+
+        window.triggerSuccessAnimation = async (message) => {
+            const overlay = document.getElementById('hacking-overlay-js');
+            const pb = document.getElementById('pb-js');
+            const glitch = overlay.querySelector('.hacking-glitch');
+            const terminal = overlay.querySelector('.hacking-terminal');
+            const originalText = glitch.innerText;
+            const originalTerminal = terminal.innerHTML;
+            
+            glitch.innerText = message;
+            terminal.innerHTML = '';
+            overlay.classList.add('active');
+            pb.style.width = '100%';
+            
+            await new Promise(r => setTimeout(r, 2000));
+            
+            overlay.classList.remove('active');
+            setTimeout(() => { 
+                glitch.innerText = originalText; 
+                terminal.innerHTML = originalTerminal;
+            }, 500);
+        };
+
+        // ── CRT filter ──────────────────────────────────────────
+        function ncSetCrt(enabled) {
+            const overlay = document.getElementById('crt-overlay');
+            if (!overlay) return;
+            overlay.classList.toggle('crt-active', enabled);
+            document.body.classList.toggle('crt-body', enabled);
+        }
+
+        // ── Shared theme dispatcher ─────────────────────────────
+        function _ncSetTheme(theme) {
+            const root = document.documentElement;
+            if (theme) {
+                root.setAttribute('data-theme', theme);
+                localStorage.setItem('nc-theme', theme);
+            } else {
+                root.removeAttribute('data-theme');
+                localStorage.removeItem('nc-theme');
+            }
+            window.dispatchEvent(new CustomEvent('nc-theme-changed', {
+                detail: { theme: theme }
+            }));
+        }
+
+        // ── Luna theme (Soviet) ─────────────────────────────────
+        function ncToggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            _ncSetTheme(current === 'luna' ? '' : 'luna');
+        }
+
+        // ── Heroldowie theme (Polish) ───────────────────────────
+        function ncToggleHeroldowie() {
+            const current = document.documentElement.getAttribute('data-theme');
+            _ncSetTheme(current === 'heroldowie' ? '' : 'heroldowie');
+        }
+
+        // ── Theme change subscription (WASM components) ─────────
+        function ncOnThemeChange(dotNetRef) {
+            window.addEventListener('nc-theme-changed', function(e) {
+                // Pass the full theme string so components can handle EN/RU/PL
+                dotNetRef.invokeMethodAsync('OnThemeChanged', e.detail.theme ?? (e.detail.luna ? 'luna' : ''));
+            });
+        }
+
+        // ── Sidebar collapse ────────────────────────────────────
+        function ncToggleSidebar() {
+            const sidebar = document.getElementById('ncSidebar');
+            if (!sidebar) return;
+            const collapsed = sidebar.classList.toggle('collapsed');
+            localStorage.setItem('nc-sidebar-collapsed', collapsed ? '1' : '0');
+        }
+
+        // ── Restore state on load ───────────────────────────────
+        (function () {
+            const theme = localStorage.getItem('nc-theme');
+            if (theme === 'luna')        document.getElementById('themeBtn')?.classList.add('theme-btn-on');
+            if (theme === 'heroldowie')  document.getElementById('hrwBtn')?.classList.add('theme-btn-on');
+
+            if (localStorage.getItem('nc-sidebar-collapsed') === '1') {
+                document.getElementById('ncSidebar')?.classList.add('collapsed');
+            }
+        })();
+    </script>
+</body>
+
+</html>

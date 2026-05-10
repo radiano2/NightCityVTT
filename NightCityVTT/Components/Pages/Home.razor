@@ -1,0 +1,500 @@
+@page "/"
+@using NightCityVTT.Client.Components
+
+<PageTitle>Night City VTT</PageTitle>
+
+<!-- TOP TICKER -->
+<div class="nc-ticker-wrap">
+    <div class="nc-ticker-track lang-en hide-in-eec">
+        <span>NCPD: GANG VIOLENCE ESCALATES IN COMBAT ZONE</span><span class="t-hi"> /// </span>
+        <span>MARKET WATCH: MILITECH SHARES DROP 2.4% AFTER BORDER SKIRMISH</span><span class="t-hi"> /// </span>
+        <span class="t-jp">アラサカ</span><span class="t-hi"> /// </span>
+        <span>N54 NEWS: MAYORAL CANDIDATE ASSASSINATED IN GLEN AREA</span><span class="t-hi"> /// </span>
+        <span>TRAUMA TEAM ADVISES PLATINUM UPGRADES AHEAD OF CORPORATE WAR</span><span class="t-hi"> /// </span>
+        <span class="t-jp">バイоテクニка</span><span class="t-hi"> /// </span>
+        <span>WEATHER: ACID RAIN EXPECTED IN CITY CENTER TONIGHT</span><span class="t-hi"> /// </span>
+        <span>RUMOR: ROGUE AI SUSPECTED IN ORBITAL AIR NETWORK CRASH</span><span class="t-hi"> /// </span>
+        <span>NETWORK 54: NEW BRAINDANCE 'STREET SAMURAI' BREAKS SALES RECORDS</span><span class="t-hi"> /// </span>
+        <span>PETROCHEM ANNOUNCES NEW CHOOH2 REFINERY IN BADLANDS</span><span class="t-hi"> /// </span>
+    </div>
+    <div class="nc-ticker-track lang-ru">
+        <span class="t-hi">☭</span>
+        <span>СОВОЙЛ ОТЧИТЫВАЕТСЯ О РЕКОРДНОЙ ДОБЫЧЕ НЕФТИ В СИБИРИ</span><span class="t-hi"> /// </span>
+        <span>ТАСС: ЕВРОБАНК ПРЕДЛАГАЕТ НОВЫЕ КРЕДИТЫ ПОД ЗАЛОГ КИБЕРНЕТИКИ</span><span class="t-hi"> ☭ </span>
+        <span>МИНИСТЕРСТВО ИНФОРМАЦИИ: ЗАПРЕЩЕН ВВОЗ ЗАПАДНЫХ БРЕЙНДАНСОВ</span><span class="t-hi"> /// </span>
+        <span>КГБ: РАСКРЫТА СЕТЬ КОРПОРАТИВНЫХ ШПИОНОВ МИЛИТЕХ В МОСКВЕ</span><span class="t-hi"> ☭ </span>
+        <span>ПРОГНОЗ: РАДИАЦИОННАЯ БУРЯ НАД УРАЛОМ, РЕКОМЕНДОВАНА ЗАЩИТА SP15</span><span class="t-hi"> /// </span>
+        <span>НОВЫЙ ЗАВОД ТЯЖЕЛОГО ОРУЖИЯ ОТКРЫТ В НОВОСИБИРСКЕ</span><span class="t-hi"> ☭ </span>
+        <span>АВИАЦИЯ: СУ-24М ПРОШЛИ УСПЕШНУЮ МОДЕРНИЗАЦИЮ АВИОНИКИ</span><span class="t-hi"> /// </span>
+    </div>
+    <div class="nc-ticker-track lang-pl">
+        <span class="t-hi">⚔</span>
+        <span>WIADOMOŚCI: STRAJK PRACOWNIKÓW W ZAKŁADACH ORZEŁ-TECH</span><span class="t-hi"> /// </span>
+        <span>RYNEK: AKCJE VISTULA CORP SPADAJĄ PO SKANDALU ZANIECZYSZCZEŃ</span><span class="t-hi"> ⚔ </span>
+        <span>WYWIAD: POWSTRZYMANO ATAK HAKERSKI NA ARCHIWA KRAJOWE</span><span class="t-hi"> /// </span>
+        <span>POGODA: GĘSTA MGŁA SMOGOWA W WARSZAWIE, ZALECA SIĘ MASKI</span><span class="t-hi"> ⚔ </span>
+        <span>NOWE PRZEPISY DOTYCZĄCE LIMITÓW WSZCZEPÓW DLA CYWILI</span><span class="t-hi"> /// </span>
+        <span>GIEŁDA EUROPEJSKA OTWIERA SIĘ NA PLUSIE</span><span class="t-hi"> ⚔ </span>
+        <span>ROZPOCZĘTO BUDOWĘ NOWEJ LINI MAGLEV DO BERLINA</span><span class="t-hi"> /// </span>
+    </div>
+    <div class="nc-ticker-track lang-eec">
+        <span class="t-hi">★</span>
+        <span>LE MONDE: LE CONSEIL EUROPÉEN VOTE DE NOUVELLES SANCTIONS CONTRE ARASAKA</span><span class="t-hi"> /// </span>
+        <span>DER SPIEGEL: BND DECKT US-WIRTSCHAFTSSPIONAGE IN FRANKFURT AUF</span><span class="t-hi"> ★ </span>
+        <span>ESA: SUCCESSFUL DEPLOYMENT OF NEW ORBITAL MASS DRIVER SURVEILLANCE</span><span class="t-hi"> /// </span>
+        <span>LA REPUBBLICA: MILITECH ASSETS SEIZED IN MILAN BY INTERPOL COMMAND</span><span class="t-hi"> /// </span>
+        <span>EL PAÍS: EL EURODÓLAR ALCANZA MÁXIMOS HISTÓRICOS TRAS LA CAÍDA DE WALL STREET</span><span class="t-hi"> ★ </span>
+        <span>REUTERS: EUROPEAN SPACE AGENCY DENIES INVOLVEMENT IN COLORADO SPRINGS INCIDENT</span><span class="t-hi"> /// </span>
+        <span>FINANCIAL TIMES: EUROBANK RAISES INTEREST RATES ON CYBERWARE LOANS</span><span class="t-hi"> /// </span>
+    </div>
+</div>
+
+<!-- HERO -->
+<div class="nc-page-container">
+    <div class="nc-hero nc-cornered nc-cornered-b">
+        <div class="nc-hero-eyebrow lang-en hide-in-eec">PORTAL 1 OF 5 &nbsp;// SYSTEM ONLINE</div>
+        <div class="nc-hero-eyebrow lang-ru">ПОРТАЛ 1 ИЗ 5 &nbsp;// СИСТЕМА ОНЛАЙН</div>
+        <div class="nc-hero-eyebrow lang-pl">PORTAL 1 Z 5 &nbsp;// SYSTEM ONLINE</div>
+        <div class="nc-hero-eyebrow lang-eec">SECURE UPLINK &nbsp;// EUROPOL ENCRYPTED</div>
+        <div class="nc-hero-title lang-en hide-in-eec">
+            NIGHT<span class="title-accent"> CITY</span>
+        </div>
+        <div class="nc-hero-title lang-ru">
+            СОВ<span class="title-accent"> ОИЛ</span>
+        </div>
+        <div class="nc-hero-title lang-pl">
+            NIGHT<span class="title-accent"> CITY</span>
+        </div>
+        <div class="nc-hero-title lang-eec">
+            EUROPOL<span class="title-accent"> NET</span>
+        </div>
+        <div class="nc-hero-meta">
+            <div class="meta-item">
+                <span class="lang-en hide-in-eec">SYSTEM</span>
+                <span class="lang-eec">NODE ID</span>
+                <span class="lang-ru">СИСТЕМА</span>
+                <span class="lang-pl">SYSTEM</span>
+                <strong>001</strong>
+            </div>
+            <div class="meta-item">
+                <span class="lang-en hide-in-eec">EDITION</span>
+                <span class="lang-eec">PROTOCOL</span>
+                <span class="lang-ru">ИЗДАНИЕ</span>
+                <span class="lang-pl">EDYCJA</span>
+                <strong>CP2020</strong>
+            </div>
+            <div class="meta-item">
+                <span class="lang-en hide-in-eec">STATUS</span>
+                <span class="lang-eec">UPLINK</span>
+                <span class="lang-ru">СТАТУС</span>
+                <span class="lang-pl">STATUS</span>
+                <strong class="meta-online">
+                    <span class="lang-en hide-in-eec">ONLINE</span>
+                    <span class="lang-eec">SECURE</span>
+                    <span class="lang-ru">ОНЛАЙН</span>
+                    <span class="lang-pl">ONLINE</span>
+                </strong>
+            </div>
+            <div class="meta-item">
+                <span class="lang-en hide-in-eec">VERSION</span>
+                <span class="lang-eec">ARCH</span>
+                <span class="lang-ru">ВЕРСИЯ</span>
+                <span class="lang-pl">WERSJA</span>
+                <strong>.NET 10</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECOND TICKER -->
+<div class="nc-ticker-wrap ticker-bottom">
+    <div class="nc-ticker-track lang-en hide-in-eec">
+        <span class="t-jp">ポータル</span><span> PORTAL ENTRANCE </span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span> GM TERMINAL ALPHA </span><span class="t-jp">ミント</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span> BOOT SEQUENCE INITIATED </span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span class="t-jp">サイバー</span><span> CYBERWARE ONLINE </span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span> NIGHT CITY GRID — SECTOR CLEAR </span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span class="t-jp">データ</span><span> DATA UPLINK STABLE </span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span> ROLL ENGINE READY </span>
+    </div>
+    <div class="nc-ticker-track lang-ru">
+        <span>ПОРТАЛ ВХОДА</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>ТЕРМИНАЛ МАСТЕРА АЛЬФА</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>ЗАПРОС ПРИНЯТ</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>КИБЕРВЭР ОНЛАЙН</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>ДАННЫЕ ЗАГРУЖАЮТСЯ</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>СЕТЬ НАЙТ СИТИ — СЕКТОР ЧИСТ</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>КАНАЛ ДАННЫХ СТАБИЛЕН</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>ПРОТОКОЛ ЗАПУЩЕН</span>
+    </div>
+    <div class="nc-ticker-track lang-pl">
+        <span>WEJŚCIE DO PORTALU</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>TERMINAL MG ALFA</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>ŻĄDANIE PRZYJĘTE</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>CYBERWEAR ONLINE</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>DANE SIĘ ŁADUJĄ</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>SIEĆ NIGHT CITY — SEKTOR WOLNY</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>ŁĄCZE DANYCH STABILNE</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>PROTOKÓŁ URUCHOMIONY</span>
+    </div>
+    <div class="nc-ticker-track lang-eec">
+        <span>EURO-PORTAL ENTRANCE</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>INTERPOL TERMINAL</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>ACCESS GRANTED</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>ESA ORBITAL UPLINK</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>STABILITÉ RÉSEAU</span>
+        <span class="t-hi">&#9632;&#9632;</span>
+        <span>SYSTÈME EN LIGNE</span>
+    </div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="nc-page-container">
+    <div class="nc-grid">
+
+        <!-- LEFT: System status + GM actions -->
+        <div class="nc-left-panel">
+            <div>
+                <div class="nc-panel-label">
+                    <span class="lang-en hide-in-eec">// SYSTEM STATUS //</span>
+                    <span class="lang-eec">// BUREAU STATUS //</span>
+                    <span class="lang-ru">// СТАТУС СИСТЕМЫ //</span>
+                    <span class="lang-pl">// STATUS SYSTEMU //</span>
+                </div>
+                <div class="sys-info-grid">
+                    <div class="sys-info-cell">
+                        <span class="cell-label">
+                            <span class="lang-en hide-in-eec">SYSTEM</span>
+                            <span class="lang-eec">ZONE</span>
+                            <span class="lang-ru">СИСТЕМА</span>
+                            <span class="lang-pl">SYSTEM</span>
+                        </span>
+                        <span class="cell-value">001</span>
+                    </div>
+                    <div class="sys-info-cell">
+                        <span class="cell-label">
+                            <span class="lang-en hide-in-eec">EDITION</span>
+                            <span class="lang-eec">REGULATION</span>
+                            <span class="lang-ru">ИЗДАНИЕ</span>
+                            <span class="lang-pl">EDYCJA</span>
+                        </span>
+                        <span class="cell-value val-red">CP2020</span>
+                    </div>
+                    <div class="sys-info-cell">
+                        <span class="cell-label">
+                            <span class="lang-en hide-in-eec">DATABASE</span>
+                            <span class="lang-eec">ARCHIVE</span>
+                            <span class="lang-ru">БАЗА ДАННЫХ</span>
+                            <span class="lang-pl">BAZA DANYCH</span>
+                        </span>
+                        <span class="cell-value val-cyan">MONGO</span>
+                    </div>
+                    <div class="sys-info-cell">
+                        <span class="cell-label">
+                            <span class="lang-en hide-in-eec">FRAMEWORK</span>
+                            <span class="lang-eec">ENGINE</span>
+                            <span class="lang-ru">ПЛАТФОРМА</span>
+                            <span class="lang-pl">SILNIK</span>
+                        </span>
+                        <span class="cell-value val-gold">.NET 10</span>
+                    </div>
+                    <div class="sys-info-cell">
+                        <span class="cell-label">
+                            <span class="lang-en hide-in-eec">SKILLS LOADED</span>
+                            <span class="lang-eec">SKILLS</span>
+                            <span class="lang-ru">НАВЫКИ</span>
+                            <span class="lang-pl">UMIEJĘTNOŚCI</span>
+                        </span>
+                        <span class="cell-value val-green">80+</span>
+                    </div>
+                    <div class="sys-info-cell">
+                        <span class="cell-label">
+                            <span class="lang-en hide-in-eec">ROLES</span>
+                            <span class="lang-eec">AGENTS</span>
+                            <span class="lang-ru">РОЛИ</span>
+                            <span class="lang-pl">ROLE</span>
+                        </span>
+                        <span class="cell-value">10</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nc-gm-block">
+                <div class="nc-panel-label">
+                    <span class="lang-en hide-in-eec">// GM ACTIONS //</span>
+                    <span class="lang-eec">// DIRECTORATE //</span>
+                    <span class="lang-ru">// ДЕЙСТВИЯ ГМ //</span>
+                    <span class="lang-pl">// AKCJE MG //</span>
+                </div>
+                <SeedWidget @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))" />
+            </div>
+        </div>
+
+        <!-- RIGHT: Dice Terminal widget -->
+        <div class="nc-right-panel">
+            <DiceTerminal @rendermode="@(new InteractiveWebAssemblyRenderMode(prerender: false))" />
+        </div>
+
+    </div>
+
+    <!-- LINK PANELS -->
+    <div class="nc-link-panels">
+        <a href="/dice-test" class="nc-link-panel">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// ROLL ENGINE //</span>
+                <span class="nlp-label lang-eec">// ORBITAL METRICS //</span>
+                <span class="nlp-label lang-ru">// ДВИЖОК БРОСКОВ //</span>
+                <span class="nlp-label lang-pl">// SILNIK KOŚCI //</span>
+                <span class="nlp-jp lang-en hide-in-eec">ダイス</span>
+            </div>
+            <div class="nlp-icon">⬡</div>
+            <div class="nlp-title lang-en hide-in-eec">DICE TERMINAL</div>
+            <div class="nlp-title lang-eec">PROBABILITY MATRIX</div>
+            <div class="nlp-title lang-ru">ДАЙС ТЕРМИНАЛ</div>
+            <div class="nlp-title lang-pl">TERMINAL KOŚCI</div>
+            <div class="nlp-sub lang-en hide-in-eec">Full roll testing suite — skill checks, damage, initiative, saves</div>
+            <div class="nlp-sub lang-eec">Predictive modeling for Euro-operatives — variables and outcomes</div>
+            <div class="nlp-sub lang-ru">Тестирование бросков — навыки, урон, инициатива, спасброски</div>
+            <div class="nlp-sub lang-pl">Pełny test kości — sprawdzenia, obrażenia, inicjatywa, rzuty obronne</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-002</span>
+                <span class="nlp-id lang-eec">INT-002</span>
+                <span class="nlp-id lang-ru">СИС-002</span>
+                <span class="nlp-id lang-pl">SYS-002</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+
+        <a href="/fixer-board" class="nc-link-panel nlp-featured">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// CLASSIFIED //</span>
+                <span class="nlp-label lang-eec">// BLACK OPS //</span>
+                <span class="nlp-label lang-ru">// СЕКРЕТНО //</span>
+                <span class="nlp-label lang-pl">// TAJNE //</span>
+                <span class="nlp-jp lang-en hide-in-eec">仕事</span>
+            </div>
+            <div class="nlp-icon">◈</div>
+            <div class="nlp-title lang-en hide-in-eec">FIXER'S BOARD</div>
+            <div class="nlp-title lang-eec">AGENCY DOSSIERS</div>
+            <div class="nlp-title lang-ru">ДОСКА ФИКСЕРА</div>
+            <div class="nlp-title lang-pl">TABLICA ZLECEŃ</div>
+            <div class="nlp-sub lang-en hide-in-eec">Edge runner job listings — high risk, high reward</div>
+            <div class="nlp-sub lang-eec">Classified Interpol and EC Council directives and targets</div>
+            <div class="nlp-sub lang-ru">Задания бегущих по краю — высокий риск, высокая награда</div>
+            <div class="nlp-sub lang-pl">Zlecenia biegaczy krawędzi — wysokie ryzyko, wysoka nagroda</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-003</span>
+                <span class="nlp-id lang-eec">INT-003</span>
+                <span class="nlp-id lang-ru">СИС-003</span>
+                <span class="nlp-id lang-pl">SYS-003</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+
+        <a href="/setup" class="nc-link-panel">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// GM ACCESS //</span>
+                <span class="nlp-label lang-eec">// DIRECTORATE //</span>
+                <span class="nlp-label lang-ru">// ДОСТУП ГМ //</span>
+                <span class="nlp-label lang-pl">// DOSTĘP MG //</span>
+                <span class="nlp-jp lang-en hide-in-eec">セットアップ</span>
+            </div>
+            <div class="nlp-icon">⬡</div>
+            <div class="nlp-title lang-en hide-in-eec">GM SETUP</div>
+            <div class="nlp-title lang-eec">NETWORK INIT</div>
+            <div class="nlp-title lang-ru">НАСТРОЙКА ГМ</div>
+            <div class="nlp-title lang-pl">KONFIGURACJA MG</div>
+            <div class="nlp-sub lang-en hide-in-eec">Database seeding, schema validation, configuration</div>
+            <div class="nlp-sub lang-eec">Initialize interpol secure network architecture and nodes</div>
+            <div class="nlp-sub lang-ru">Наполнение базы, проверка схемы, конфигурация</div>
+            <div class="nlp-sub lang-pl">Wypełnianie bazy, weryfikacja schematu, konfiguracja</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-004</span>
+                <span class="nlp-id lang-eec">INT-004</span>
+                <span class="nlp-id lang-ru">СИС-004</span>
+                <span class="nlp-id lang-pl">SYS-004</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+
+        <a href="/characters" class="nc-link-panel">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// PERSONNEL //</span>
+                <span class="nlp-label lang-eec">// AGENTS //</span>
+                <span class="nlp-label lang-ru">// ПЕРСОНАЛ //</span>
+                <span class="nlp-label lang-pl">// PERSONEL //</span>
+                <span class="nlp-jp lang-en hide-in-eec">キャラクター</span>
+            </div>
+            <div class="nlp-icon">◌</div>
+            <div class="nlp-title lang-en hide-in-eec">CHARACTERS</div>
+            <div class="nlp-title lang-eec">OPERATIVES</div>
+            <div class="nlp-title lang-ru">ПЕРСОНАЖИ</div>
+            <div class="nlp-title lang-pl">POSTACIE</div>
+            <div class="nlp-sub lang-en hide-in-eec">Create and manage Night City personnel — backgrounds, styles, motivations</div>
+            <div class="nlp-sub lang-eec">Euro-operative registry: skills, augmentations, and active status</div>
+            <div class="nlp-sub lang-ru">Создание персонажей — происхождение, стиль, мотивация</div>
+            <div class="nlp-sub lang-pl">Twórz postacie Night City — historia, styl, motywacja</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-005</span>
+                <span class="nlp-id lang-eec">INT-005</span>
+                <span class="nlp-id lang-ru">СИС-005</span>
+                <span class="nlp-id lang-pl">SYS-005</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+
+        <a href="/settings" class="nc-link-panel">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// CONFIG //</span>
+                <span class="nlp-label lang-eec">// PREFERENCES //</span>
+                <span class="nlp-label lang-ru">// НАСТРОЙКИ //</span>
+                <span class="nlp-label lang-pl">// USTAWIENIA //</span>
+                <span class="nlp-jp lang-en hide-in-eec">設定</span>
+            </div>
+            <div class="nlp-icon">⚙</div>
+            <div class="nlp-title lang-en hide-in-eec">SETTINGS</div>
+            <div class="nlp-title lang-eec">SETTINGS</div>
+            <div class="nlp-title lang-ru">НАСТРОЙКИ</div>
+            <div class="nlp-title lang-pl">USTAWIENIA</div>
+            <div class="nlp-sub lang-en hide-in-eec">System configuration, visuals, and networking parameters</div>
+            <div class="nlp-sub lang-eec">Adjust EC protocol parameters, visuals, and link speeds</div>
+            <div class="nlp-sub lang-ru">Конфигурация системы, визуализация и параметры сети</div>
+            <div class="nlp-sub lang-pl">Konfiguracja systemu, wizualizacje i parametry sieci</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-006</span>
+                <span class="nlp-id lang-eec">INT-006</span>
+                <span class="nlp-id lang-ru">СИС-006</span>
+                <span class="nlp-id lang-pl">SYS-006</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+
+        <a href="/news" class="nc-link-panel">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// NEWS FEED //</span>
+                <span class="nlp-label lang-eec">// EUROPRESS //</span>
+                <span class="nlp-label lang-ru">// НОВОСТИ //</span>
+                <span class="nlp-label lang-pl">// WIADOMOŚCI //</span>
+                <span class="nlp-jp lang-en hide-in-eec">ニュース</span>
+            </div>
+            <div class="nlp-icon">🖂</div>
+            <div class="nlp-title lang-en hide-in-eec">GLOBAL NEWS FEED</div>
+            <div class="nlp-title lang-eec">EUROPEAN INTEL</div>
+            <div class="nlp-title lang-ru">ГЛОБАЛЬНЫЕ НОВОСТИ</div>
+            <div class="nlp-title lang-pl">WIADOMOŚCI Z ŚWIATA</div>
+            <div class="nlp-sub lang-en hide-in-eec">Live updates, corporate movements, and market watch.</div>
+            <div class="nlp-sub lang-eec">EC Council updates, market indices, and regional security alerts.</div>
+            <div class="nlp-sub lang-ru">Прямые трансляции, корпоративные движения и мониторинг рынка.</div>
+            <div class="nlp-sub lang-pl">Aktualizacje na żywo, ruchy korporacji i obserwacja rynku.</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-007</span>
+                <span class="nlp-id lang-eec">INT-007</span>
+                <span class="nlp-id lang-ru">СИС-007</span>
+                <span class="nlp-id lang-pl">SYS-007</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+
+        <a href="/marketplace" class="nc-link-panel">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// MARKETPLACE //</span>
+                <span class="nlp-label lang-eec">// LOGISTICS //</span>
+                <span class="nlp-label lang-ru">// СНАБЖЕНИЕ //</span>
+                <span class="nlp-label lang-pl">// ZAPASY //</span>
+                <span class="nlp-jp lang-en hide-in-eec">市場</span>
+            </div>
+            <div class="nlp-icon">⚙</div>
+            <div class="nlp-title lang-en hide-in-eec">BLACK MARKET</div>
+            <div class="nlp-title lang-eec">EURO-MARKET</div>
+            <div class="nlp-title lang-ru">ЧЕРНЫЙ РЫНОК</div>
+            <div class="nlp-title lang-pl">CZARNY RYNEK</div>
+            <div class="nlp-sub lang-en hide-in-eec">Weapons, Armor, Cyberware, and everything you need to survive.</div>
+            <div class="nlp-sub lang-eec">Standardized EC compliant logistics and defense acquisitions.</div>
+            <div class="nlp-sub lang-ru">Оружие, броня, инструменты и препараты. Без лишних вопросов.</div>
+            <div class="nlp-sub lang-pl">Broń, pancerze i sprzęt do zadań specjalnych. Ceny rynkowe.</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-008</span>
+                <span class="nlp-id lang-eec">INT-008</span>
+                <span class="nlp-id lang-ru">СИС-008</span>
+                <span class="nlp-id lang-pl">SYS-008</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+
+        <a href="/story-editor" class="nc-link-panel">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// GM OVERRIDE //</span>
+                <span class="nlp-label lang-eec">// OPERATIONS //</span>
+                <span class="nlp-label lang-ru">// СВОДКА ГМ //</span>
+                <span class="nlp-label lang-pl">// MISJE //</span>
+                <span class="nlp-jp lang-en hide-in-eec">物語</span>
+            </div>
+            <div class="nlp-icon">◈</div>
+            <div class="nlp-title lang-en hide-in-eec">STORY EDITOR</div>
+            <div class="nlp-title lang-eec">DIRECTIVE PLANNING</div>
+            <div class="nlp-title lang-ru">СОЗДАТЕЛЬ СЮЖЕТА</div>
+            <div class="nlp-title lang-pl">KREATOR SCENARIUSZY</div>
+            <div class="nlp-sub lang-en hide-in-eec">Design multi-stage operations and assign skill checks for your players.</div>
+            <div class="nlp-sub lang-eec">Draft and deploy classified operational directives for agents.</div>
+            <div class="nlp-sub lang-ru">Планирование операций и распределение целевых нормативов.</div>
+            <div class="nlp-sub lang-pl">Tworzenie i zarządzanie misjami dla zespołów uderzeniowych.</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-009</span>
+                <span class="nlp-id lang-eec">INT-009</span>
+                <span class="nlp-id lang-ru">СИС-009</span>
+                <span class="nlp-id lang-pl">SYS-009</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+
+        <a href="/fnff-test" class="nc-link-panel nlp-featured">
+            <div class="nlp-top">
+                <span class="nlp-label lang-en hide-in-eec">// LETHALITY //</span>
+                <span class="nlp-label lang-eec">// ORBITAL METRICS //</span>
+                <span class="nlp-label lang-ru">// ИСПЫТАНИЯ //</span>
+                <span class="nlp-label lang-pl">// PRÓBA SPRZĘTU //</span>
+                <span class="nlp-jp lang-en hide-in-eec">戦闘</span>
+            </div>
+            <div class="nlp-icon">◈</div>
+            <div class="nlp-title lang-en hide-in-eec">FNFF SIMULATOR</div>
+            <div class="nlp-title lang-eec">COMBAT SIMULATOR</div>
+            <div class="nlp-title lang-ru">СИМУЛЯТОР БОЯ</div>
+            <div class="nlp-title lang-pl">SYMULATOR WALKI</div>
+            <div class="nlp-sub lang-en hide-in-eec">Execute Friday Night Firefight mechanics against active database assets.</div>
+            <div class="nlp-sub lang-eec">Predictive threat analysis and operative survival projections.</div>
+            <div class="nlp-sub lang-ru">Тестирование боевых сценариев и оценка урона по стандартам ГОСТ.</div>
+            <div class="nlp-sub lang-pl">Symulacja walki i testowanie pancerzy w warunkach polowych.</div>
+            <div class="nlp-footer">
+                <span class="nlp-id lang-en hide-in-eec">SYS-010</span>
+                <span class="nlp-id lang-eec">INT-010</span>
+                <span class="nlp-id lang-ru">СИС-010</span>
+                <span class="nlp-id lang-pl">SYS-010</span>
+                <span class="nlp-arrow">→</span>
+            </div>
+        </a>
+    </div>
+</div>

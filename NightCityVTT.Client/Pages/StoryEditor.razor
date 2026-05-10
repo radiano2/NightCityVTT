@@ -1,0 +1,397 @@
+@page "/story-editor"
+@using NightCityVTT.Shared.Models
+@using NightCityVTT.Client.Services
+@inject StoryApiService StoryApi
+@inject UserSessionService Session
+@inject NavigationManager Nav
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>
+    <span class="lang-en hide-in-eec">Campaign Architect</span>
+    <span class="lang-eec">Directive Architect</span>
+    <span class="lang-ru">Архитектор кампаний</span>
+    <span class="lang-pl">Kreator Kampanii</span>
+</PageTitle>
+
+<div class="story-page">
+    <div class="story-header">
+        <h1 class="lang-en hide-in-eec">CAMPAIGN ARCHITECT // STORY EDITOR</h1>
+        <h1 class="lang-eec">DIRECTIVE ARCHITECT // SCENARIO PLANNING</h1>
+        <h1 class="lang-ru">АРХИТЕКТОР КАМПАНИЙ // СОЗДАТЕЛЬ СЮЖЕТА</h1>
+        <h1 class="lang-pl">KREATOR KAMPANII // EDYTOR SCENARIUSZY</h1>
+        <p class="subtitle lang-en hide-in-eec">Design multi-stage operations and assign skill checks.</p>
+        <p class="subtitle lang-eec">Draft and deploy classified operational directives.</p>
+        <p class="subtitle lang-ru">Планирование операций и распределение целевых нормативов.</p>
+        <p class="subtitle lang-pl">Tworzenie i zarządzanie misjami dla zespołów uderzeniowych.</p>
+    </div>
+
+    @if (Session.CurrentUser?.Role != UserRole.GameMaster)
+    {
+        <div class="ncc-msg ncc-msg-err" style="font-size: 1.2rem; padding: 2rem; text-align: center;">
+            <span class="lang-en hide-in-eec">ACCESS DENIED. GM CLEARANCE REQUIRED.</span>
+            <span class="lang-eec">RESTRICTED DOSSIER. DIRECTORATE ACCESS REQUIRED.</span>
+            <span class="lang-ru">В ДОСТУПЕ ОТКАЗАНО. ТРЕБУЕТСЯ УРОВЕНЬ "МАСТЕР".</span>
+            <span class="lang-pl">ODMOWA DOSTĘPU. WYMAGANE UPRAWNIENIA MG.</span>
+        </div>
+    }
+    else if (_loading)
+    {
+        <div class="ncc-loading">
+            <div class="ncc-empty-icon">⬡</div>
+            <div class="ncc-empty-sub">LOADING SECURE ARCHIVES...</div>
+        </div>
+    }
+    else
+    {
+        <div class="story-layout">
+            <!-- LEFT: STORY LIST -->
+            <div class="story-list-panel">
+                <div class="panel-title">
+                    <span class="lang-en hide-in-eec">ACTIVE CAMPAIGNS</span>
+                    <span class="lang-eec">ACTIVE DIRECTIVES</span>
+                    <span class="lang-ru">АКТИВНЫЕ КАМПАНИИ</span>
+                    <span class="lang-pl">AKTYWNE KAMPANIE</span>
+                </div>
+                
+                <button class="ncc-btn-submit" style="width:100%; margin-bottom: 1rem;" @onclick="CreateNewStory">
+                    <span class="lang-en hide-in-eec">NEW CAMPAIGN ⊕</span>
+                    <span class="lang-eec">NEW DIRECTIVE ⊕</span>
+                    <span class="lang-ru">НОВАЯ КАМПАНИЯ ⊕</span>
+                    <span class="lang-pl">NOWY SCENARIUSZ ⊕</span>
+                </button>
+
+                @if (_stories.Count == 0)
+                {
+                    <div class="ncc-empty">
+                        <div class="ncc-empty-icon">◌</div>
+                        <div>NO RECORDS FOUND</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="story-items">
+                        @foreach (var story in _stories)
+                        {
+                            <div class="story-item @(_selectedStory?.Id == story.Id ? "active" : "")" @onclick="() => SelectStory(story)">
+                                <div class="si-title">@story.Title.ToUpper()</div>
+                                <div class="si-meta">@story.Stages.Count STAGES // @story.CreatedAt.ToString("yy.MM.dd")</div>
+                                @if (_selectedStory?.Id == story.Id)
+                                {
+                                    <button class="si-del" @onclick:stopPropagation="true" @onclick="() => DeleteStory(story.Id!)">✕</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- RIGHT: STORY EDITOR OR PLAYER -->
+            <div class="story-editor-panel">
+                @if (_selectedStory == null)
+                {
+                    <div class="ncc-empty" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                        <div class="ncc-empty-icon">⬡</div>
+                        <div>SELECT OR CREATE A CAMPAIGN</div>
+                    </div>
+                }
+                else if (_isPlaying)
+                {
+                    <!-- STORY PLAYER (ACTIVE RUN) -->
+                    <div class="story-player">
+                        <div class="sp-header">
+                            <h2>@_selectedStory.Title.ToUpper()</h2>
+                            <div class="sp-stage">STAGE @(_currentStageIndex + 1) OF @_selectedStory.Stages.Count</div>
+                        </div>
+                        
+                        @if (_selectedStory.Stages.Count > 0 && _currentStageIndex < _selectedStory.Stages.Count)
+                        {
+                            var stage = _selectedStory.Stages[_currentStageIndex];
+                            <div class="sp-stage-box">
+                                <h3 style="color:var(--nc-red); margin-bottom: 1rem; border-bottom:1px solid var(--nc-border); padding-bottom:0.5rem;">@stage.Title.ToUpper()</h3>
+                                <p style="line-height:1.6; color:var(--nc-cream); margin-bottom: 2rem;">@((MarkupString)stage.Description.Replace("\n", "<br/>"))</p>
+                                
+                                @if (stage.HasSkillCheck)
+                                {
+                                    <div class="sp-skill-check">
+                                        <div class="sk-label">REQUIRED ACTION</div>
+                                        <div class="sk-target"><strong>@stage.SkillName.ToUpper()</strong> // DIFFICULTY: <strong style="color:var(--nc-red)">@stage.TargetDifficulty</strong></div>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="sp-controls">
+                                <button class="wiz-btn" @onclick="() => _isPlaying = false">ABORT RUN</button>
+                                
+                                @if (_currentStageIndex < _selectedStory.Stages.Count - 1)
+                                {
+                                    <button class="wiz-btn primary" @onclick="NextStage">PROCEED TO NEXT STAGE ▷</button>
+                                }
+                                else
+                                {
+                                    <button class="wiz-btn primary" style="background:var(--nc-green); border-color:var(--nc-green);" @onclick="() => _isPlaying = false">COMPLETE CAMPAIGN ◈</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <!-- STORY EDITOR -->
+                    <div class="editor-header">
+                        <input type="text" class="title-input" @bind="_selectedStory.Title" placeholder="CAMPAIGN TITLE..." />
+                        <div style="display:flex; gap: 1rem;">
+                            <button class="wiz-btn" @onclick="() => _isPlaying = true" disabled="@(_selectedStory.Stages.Count == 0)">▶ RUN CAMPAIGN</button>
+                            <button class="wiz-btn primary" @onclick="SaveStory" disabled="@_saving">@(_saving ? "SAVING..." : "SAVE ◈")</button>
+                        </div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(_statusMsg))
+                    {
+                        <div class="ncc-msg @(_statusIsOk ? "ncc-msg-ok" : "ncc-msg-err")" style="margin-bottom: 1rem;">@_statusMsg</div>
+                    }
+
+                    <div class="stages-list">
+                        @for (int i = 0; i < _selectedStory.Stages.Count; i++)
+                        {
+                            var idx = i;
+                            var stage = _selectedStory.Stages[i];
+                            <div class="stage-editor-box">
+                                <div class="seb-header">
+                                    <div class="seb-num">STAGE @(idx + 1)</div>
+                                    <button class="seb-del" title="Delete Stage" @onclick="() => RemoveStage(stage)">✕</button>
+                                </div>
+                                <div class="wiz-field">
+                                    <label>STAGE TITLE</label>
+                                    <input type="text" class="ncc-input" @bind="stage.Title" placeholder="Enter stage title..." />
+                                </div>
+                                <div class="wiz-field">
+                                    <label>SITUATION DESCRIPTION</label>
+                                    <textarea class="ncc-input" rows="4" @bind="stage.Description" placeholder="Describe the scene, threats, or objectives..."></textarea>
+                                </div>
+                                
+                                <div class="skill-check-editor">
+                                    <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--nc-dim);margin-bottom:0.8rem;">
+                                        <input type="checkbox" @bind="stage.HasSkillCheck" style="accent-color:var(--nc-red);" />
+                                        REQUIRES SKILL CHECK
+                                    </label>
+                                    
+                                    @if (stage.HasSkillCheck)
+                                    {
+                                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1rem;">
+                                            <div class="wiz-field" style="margin-bottom:0;">
+                                                <label>SKILL / STAT REQUIRED</label>
+                                                <input type="text" class="ncc-input" @bind="stage.SkillName" placeholder="e.g. Awareness/Notice, Handgun, INT..." />
+                                            </div>
+                                            <div class="wiz-field" style="margin-bottom:0;">
+                                                <label>TARGET DIFFICULTY (DV)</label>
+                                                <input type="number" class="ncc-input" @bind="stage.TargetDifficulty" min="5" max="40" />
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <button class="add-stage-btn" @onclick="AddStage">+ ADD NEW STAGE</button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .story-page { padding: 2rem; max-width: 1400px; margin: 0 auto; color: var(--nc-cream); font-family: var(--font-mono); }
+    .story-header { border-bottom: 2px solid var(--nc-border); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+    .story-header h1 { font-family: var(--font-display); font-size: 2.2rem; color: var(--nc-red); margin: 0 0 0.5rem 0; letter-spacing: 0.1em; }
+    .subtitle { color: var(--nc-dim); font-size: 0.9rem; }
+    
+    .story-layout { display: grid; grid-template-columns: 350px 1fr; gap: 2rem; align-items: start; }
+    
+    /* LEFT PANEL */
+    .story-list-panel { background: var(--nc-panel); border: 1px solid var(--nc-border); padding: 1.5rem; }
+    .panel-title { color: var(--nc-red); font-size: 1rem; letter-spacing: 0.1em; border-bottom: 1px solid var(--nc-border); padding-bottom: 0.5rem; margin-bottom: 1rem; font-weight: bold; }
+    .story-items { display: flex; flex-direction: column; gap: 0.5rem; max-height: 600px; overflow-y: auto; }
+    .story-item { background: var(--nc-dark); border: 1px solid var(--nc-border); padding: 1rem; cursor: pointer; transition: all 0.2s; position: relative; border-left: 4px solid var(--nc-dim); }
+    .story-item:hover { border-color: var(--nc-cyan); }
+    .story-item.active { background: rgba(255,0,60,0.05); border-color: var(--nc-red); border-left-color: var(--nc-red); }
+    .si-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 0.3rem; padding-right: 20px; }
+    .si-meta { font-size: 0.7rem; color: var(--nc-dim); }
+    .si-del { position: absolute; top: 0.8rem; right: 0.8rem; background: transparent; border: none; color: var(--nc-red); cursor: pointer; font-size: 1.2rem; padding: 0; }
+    
+    /* RIGHT PANEL */
+    .story-editor-panel { background: var(--nc-panel); border: 1px solid var(--nc-border); min-height: 600px; display: flex; flex-direction: column; }
+    .editor-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 2px solid var(--nc-border); background: var(--nc-dark); }
+    .title-input { background: transparent; border: none; border-bottom: 2px dashed var(--nc-dim); color: var(--nc-red); font-family: var(--font-display); font-size: 1.5rem; width: 60%; padding: 0.5rem; transition: border-color 0.2s; }
+    .title-input:focus { outline: none; border-color: var(--nc-red); }
+    
+    .stages-list { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; overflow-y: auto; max-height: 700px; }
+    .stage-editor-box { background: var(--nc-dark); border: 1px solid var(--nc-border); padding: 1.5rem; border-left: 4px solid var(--nc-cyan); }
+    .seb-header { display: flex; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; }
+    .seb-num { color: var(--nc-cyan); font-weight: bold; font-size: 0.8rem; letter-spacing: 0.1em; }
+    .seb-del { background: transparent; border: none; color: var(--nc-dim); cursor: pointer; font-size: 1rem; }
+    .seb-del:hover { color: var(--nc-red); }
+    
+    .skill-check-editor { background: rgba(0,0,0,0.3); padding: 1rem; border: 1px dashed var(--nc-border); margin-top: 1rem; }
+    
+    .add-stage-btn { background: transparent; border: 2px dashed var(--nc-dim); color: var(--nc-dim); padding: 1.5rem; font-family: var(--font-mono); font-size: 1rem; cursor: pointer; transition: all 0.2s; }
+    .add-stage-btn:hover { border-color: var(--nc-cyan); color: var(--nc-cyan); background: rgba(0,229,255,0.05); }
+
+    .wiz-field { margin-bottom: 1rem; }
+    .wiz-field label { display: block; font-size: 0.7rem; color: var(--nc-dim); margin-bottom: 0.3rem; }
+    .wiz-btn { background: var(--nc-dark); border: 1px solid var(--nc-border); color: var(--nc-cream); padding: 0.6rem 1.5rem; cursor: pointer; font-family: var(--font-mono); font-size: 0.8rem; transition: all 0.2s; }
+    .wiz-btn:hover:not(:disabled) { background: var(--nc-panel); border-color: var(--nc-cyan); color: var(--nc-cyan); }
+    .wiz-btn.primary { background: var(--nc-red); border-color: var(--nc-red); color: var(--nc-black); font-weight: bold; }
+    .wiz-btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: var(--nc-dim); color: var(--nc-dim); background: transparent; }
+
+    /* STORY PLAYER */
+    .story-player { display: flex; flex-direction: column; height: 100%; }
+    .sp-header { padding: 2rem; background: var(--nc-dark); border-bottom: 2px solid var(--nc-red); text-align: center; }
+    .sp-header h2 { font-family: var(--font-display); font-size: 2.5rem; color: var(--nc-red); margin: 0 0 0.5rem 0; letter-spacing: 0.1em; }
+    .sp-stage { color: var(--nc-cyan); font-weight: bold; letter-spacing: 0.2em; font-size: 0.9rem; }
+    
+    .sp-stage-box { padding: 3rem; flex: 1; font-size: 1.1rem; }
+    .sp-skill-check { margin-top: 2rem; padding: 1.5rem; border: 2px solid var(--nc-red); background: rgba(255,0,60,0.05); display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+    .sk-label { font-size: 0.8rem; color: var(--nc-dim); letter-spacing: 0.2em; }
+    .sk-target { font-size: 1.2rem; }
+    
+    .sp-controls { padding: 1.5rem 3rem; border-top: 1px solid var(--nc-border); display: flex; justify-content: space-between; background: var(--nc-dark); }
+</style>
+
+@code {
+    private List<StoryDto> _stories = new();
+    private StoryDto? _selectedStory;
+    private bool _loading = true;
+    private bool _saving = false;
+    private string _statusMsg = "";
+    private bool _statusIsOk = true;
+
+    // Player State
+    private bool _isPlaying = false;
+    private int _currentStageIndex = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.CurrentUser?.Role == UserRole.GameMaster)
+        {
+            await LoadStories();
+        }
+        _loading = false;
+    }
+
+    private async Task LoadStories()
+    {
+        _stories = await StoryApi.GetAllAsync();
+        // keep selection if it still exists
+        if (_selectedStory != null)
+        {
+            _selectedStory = _stories.FirstOrDefault(s => s.Id == _selectedStory.Id);
+            if (_selectedStory == null) _isPlaying = false;
+        }
+    }
+
+    private void SelectStory(StoryDto story)
+    {
+        // clone to edit without immediately saving
+        _selectedStory = new StoryDto
+        {
+            Id = story.Id,
+            Title = story.Title,
+            AuthorId = story.AuthorId,
+            CreatedAt = story.CreatedAt,
+            Stages = story.Stages.Select(s => new StoryStageDto 
+            { 
+                Title = s.Title, 
+                Description = s.Description, 
+                HasSkillCheck = s.HasSkillCheck, 
+                SkillName = s.SkillName, 
+                TargetDifficulty = s.TargetDifficulty 
+            }).ToList()
+        };
+        _isPlaying = false;
+        _currentStageIndex = 0;
+        _statusMsg = "";
+    }
+
+    private void CreateNewStory()
+    {
+        _selectedStory = new StoryDto
+        {
+            Title = "NEW CLASSIFIED OPERATION",
+            AuthorId = Session.CurrentUser?.Id ?? "GM",
+            Stages = new List<StoryStageDto> { new StoryStageDto { Title = "PHASE ONE", Description = "Insert scenario details here..." } }
+        };
+        _isPlaying = false;
+        _statusMsg = "";
+    }
+
+    private void AddStage()
+    {
+        if (_selectedStory != null)
+        {
+            _selectedStory.Stages.Add(new StoryStageDto { Title = $"PHASE {_selectedStory.Stages.Count + 1}" });
+        }
+    }
+
+    private void RemoveStage(StoryStageDto stage)
+    {
+        _selectedStory?.Stages.Remove(stage);
+    }
+
+    private async Task SaveStory()
+    {
+        if (_selectedStory == null) return;
+        _saving = true;
+        _statusMsg = "";
+
+        try
+        {
+            StoryDto? result;
+            if (string.IsNullOrEmpty(_selectedStory.Id))
+                result = await StoryApi.CreateAsync(_selectedStory);
+            else
+                result = await StoryApi.UpdateAsync(_selectedStory);
+
+            if (result != null)
+            {
+                _statusIsOk = true;
+                _statusMsg = "CAMPAIGN ARCHIVED SUCCESSFULLY.";
+                await LoadStories();
+                _selectedStory = _stories.FirstOrDefault(s => s.Id == result.Id);
+            }
+            else
+            {
+                _statusIsOk = false;
+                _statusMsg = "ERROR SAVING CAMPAIGN TO DATABASE.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusIsOk = false;
+            _statusMsg = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task DeleteStory(string id)
+    {
+        await StoryApi.DeleteAsync(id);
+        if (_selectedStory?.Id == id) 
+        {
+            _selectedStory = null;
+            _isPlaying = false;
+        }
+        await LoadStories();
+    }
+
+    private void NextStage()
+    {
+        if (_selectedStory != null && _currentStageIndex < _selectedStory.Stages.Count - 1)
+        {
+            _currentStageIndex++;
+        }
+    }
+}
