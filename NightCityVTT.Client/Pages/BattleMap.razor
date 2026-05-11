@@ -176,6 +176,7 @@
     private IJSObjectReference? _module;
     private DotNetObjectReference<BattleMap>? _dotNetRef;
     private HubConnection? _hub;
+    private bool _canvasInitialized;
 
     private static readonly string[] TokenPalette = [
         "#ff3a3a","#3a9fff","#3aff6e","#ffb73a",
@@ -200,9 +201,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _map is null) return;
+        // Canvas is only in the DOM after _loading=false renders.
+        // Don't use firstRender — by then _loading is still true and the canvas doesn't exist.
+        if (_map is null || _canvasInitialized) return;
+        _canvasInitialized = true;
 
-        _module = await JS.InvokeAsync<IJSObjectReference>("import", "/js/map-engine.js");
+        _module    = await JS.InvokeAsync<IJSObjectReference>("import", "/js/map-engine.js");
         _dotNetRef = DotNetObjectReference.Create(this);
 
         await _module.InvokeVoidAsync("init", "battle-map-canvas",
