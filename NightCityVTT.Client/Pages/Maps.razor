@@ -1,0 +1,168 @@
+@page "/maps"
+@inject MapApiService MapApi
+@inject UserSessionService Session
+@inject NavigationManager Nav
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>Battle Maps // Night City VTT</PageTitle>
+
+<div class="maps-page">
+    <div class="maps-header">
+        <h1>// TACTICAL GRID //</h1>
+        <p class="subtitle">Battle maps for combat encounters. GM creates and manages maps.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="ncc-loading">
+            <div class="ncc-empty-icon">⬡</div>
+            <div class="ncc-empty-sub">LOADING GRID DATA...</div>
+        </div>
+    }
+    else
+    {
+        @if (_isGm)
+        {
+            <div class="map-create-panel">
+                <h3>CREATE NEW MAP</h3>
+                <div class="map-create-form">
+                    <div class="wiz-field">
+                        <label>MAP NAME</label>
+                        <input class="ncc-input" @bind="_newName" placeholder="e.g. Scavenger Warehouse" />
+                    </div>
+                    <div class="wiz-field">
+                        <label>WIDTH (tiles)</label>
+                        <input type="number" class="ncc-input" @bind="_newWidth" min="10" max="50" />
+                    </div>
+                    <div class="wiz-field">
+                        <label>HEIGHT (tiles)</label>
+                        <input type="number" class="ncc-input" @bind="_newHeight" min="10" max="50" />
+                    </div>
+                    <div class="wiz-field">
+                        <label>TILE SIZE (px)</label>
+                        <select class="ncc-select" @bind="_newTileSize">
+                            <option value="32">32px — large map</option>
+                            <option value="40">40px — standard</option>
+                            <option value="48">48px — detailed</option>
+                        </select>
+                    </div>
+                    <button class="ncc-btn-submit" @onclick="CreateMap" disabled="@_creating">
+                        @(_creating ? "CREATING..." : "CREATE MAP ⊕")
+                    </button>
+                </div>
+            </div>
+        }
+
+        @if (_maps.Count == 0)
+        {
+            <div class="ncc-empty">
+                <div class="ncc-empty-icon">⬡</div>
+                <div class="ncc-empty-sub">NO MAPS FOUND — GM MUST CREATE A BATTLE MAP FIRST</div>
+            </div>
+        }
+        else
+        {
+            <div class="map-list">
+                @foreach (var map in _maps)
+                {
+                    <div class="map-card @(map.IsActive ? "map-active" : "")">
+                        <div class="map-card-info">
+                            <div class="map-card-name">@map.Name.ToUpper()</div>
+                            <div class="map-card-meta">@map.Width × @map.Height TILES · @(map.Width * map.TileSize)×@(map.Height * map.TileSize)px · @map.Tokens.Count TOKENS</div>
+                            @if (map.IsActive) { <div class="map-active-badge">● ACTIVE</div> }
+                        </div>
+                        <div class="map-card-actions">
+                            <button class="ncc-btn-submit" @onclick="() => OpenMap(map.Id!)">OPEN</button>
+                            @if (_isGm)
+                            {
+                                <button class="ncc-btn-submit" style="background: var(--nc-accent2);" @onclick="() => ToggleActive(map)">
+                                    @(map.IsActive ? "DEACTIVATE" : "SET ACTIVE")
+                                </button>
+                                <button class="ncc-btn-danger" @onclick="() => DeleteMap(map.Id!)">DELETE</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<MapDto> _maps = new();
+    private bool _loading = true;
+    private bool _isGm;
+    private bool _creating;
+
+    private string _newName     = "New Map";
+    private int    _newWidth    = 20;
+    private int    _newHeight   = 20;
+    private int    _newTileSize = 40;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.InitializeAsync();
+        _isGm  = Session.CurrentUser?.Role == UserRole.GameMaster;
+        _maps  = await MapApi.GetAllAsync();
+        _loading = false;
+    }
+
+    private void OpenMap(string id) => Nav.NavigateTo($"/maps/{id}");
+
+    private async Task CreateMap()
+    {
+        if (string.IsNullOrWhiteSpace(_newName)) return;
+        _creating = true;
+        var created = await MapApi.CreateAsync(new MapDto {
+            Name     = _newName.Trim(),
+            Width    = _newWidth,
+            Height   = _newHeight,
+            TileSize = _newTileSize
+        });
+        if (created?.Id != null) Nav.NavigateTo($"/maps/{created.Id}");
+        _creating = false;
+    }
+
+    private async Task ToggleActive(MapDto map)
+    {
+        // Deactivate all, then activate this one (or deactivate if already active)
+        foreach (var m in _maps) m.IsActive = false;
+        map.IsActive = !map.IsActive;
+        await MapApi.UpdateAsync(map);
+        _maps = await MapApi.GetAllAsync();
+    }
+
+    private async Task DeleteMap(string id)
+    {
+        await MapApi.DeleteAsync(id);
+        _maps = _maps.Where(m => m.Id != id).ToList();
+    }
+}
+
+<style>
+    .maps-page        { max-width: 900px; padding: 2rem; }
+    .maps-header h1   { font-family: 'Orbitron', monospace; color: var(--nc-red); margin-bottom: .3rem; }
+    .maps-header .subtitle { color: var(--nc-text-dim); font-size: .8rem; margin-bottom: 2rem; }
+
+    .map-create-panel { background: var(--nc-card-bg); border: 1px solid var(--nc-border); padding: 1.5rem; margin-bottom: 2rem; }
+    .map-create-panel h3 { font-family: 'Orbitron', monospace; color: var(--nc-accent2); margin-bottom: 1rem; font-size: .85rem; }
+    .map-create-form  { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end; }
+
+    .map-list         { display: flex; flex-direction: column; gap: 1rem; }
+    .map-card         { background: var(--nc-card-bg); border: 1px solid var(--nc-border); padding: 1.2rem 1.5rem;
+                        display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .map-card.map-active { border-color: var(--nc-green); }
+    .map-card-name    { font-family: 'Orbitron', monospace; color: var(--nc-text); font-size: 1rem; }
+    .map-card-meta    { color: var(--nc-text-dim); font-size: .75rem; margin-top: .2rem; }
+    .map-active-badge { color: var(--nc-green); font-size: .7rem; margin-top: .3rem; letter-spacing: .12em; }
+    .map-card-actions { display: flex; gap: .6rem; flex-shrink: 0; }
+    .ncc-btn-danger   { background: transparent; border: 1px solid var(--nc-red); color: var(--nc-red);
+                        padding: .4rem .8rem; font-size: .7rem; cursor: pointer; letter-spacing: .08em;
+                        font-family: 'Share Tech Mono', monospace; transition: background .15s; }
+    .ncc-btn-danger:hover { background: rgba(255,0,60,.15); }
+
+    @@media (max-width: 700px) {
+        .map-create-form { grid-template-columns: 1fr 1fr; }
+        .map-card { flex-direction: column; align-items: flex-start; }
+    }
+</style>

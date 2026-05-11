@@ -1,0 +1,498 @@
+@page "/maps/{MapId}"
+@inject IJSRuntime JS
+@inject MapApiService MapApi
+@inject CharacterApiService CharApi
+@inject UserSessionService Session
+@inject NavigationManager Nav
+@implements IAsyncDisposable
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>@(_map?.Name ?? "Battle Map") // Night City VTT</PageTitle>
+
+<div class="bm-page">
+
+    @if (_loading)
+    {
+        <div class="ncc-loading">
+            <div class="ncc-empty-icon">⬡</div>
+            <div class="ncc-empty-sub">INITIALIZING TACTICAL GRID...</div>
+        </div>
+    }
+    else if (_map is null)
+    {
+        <div class="ncc-empty">
+            <div class="ncc-empty-icon">◌</div>
+            <div class="ncc-empty-sub">MAP NOT FOUND</div>
+            <button class="ncc-btn-submit" @onclick='() => Nav.NavigateTo("/maps")'>BACK TO MAPS</button>
+        </div>
+    }
+    else
+    {
+        <!-- ── TOOLBAR ─────────────────────────────────────────────────── -->
+        <div class="bm-toolbar">
+            <div class="bm-toolbar-left">
+                <button class="bm-back-btn" @onclick='() => Nav.NavigateTo("/maps")'>◁ MAPS</button>
+                <span class="bm-map-title">// @_map.Name.ToUpper() //</span>
+                <span class="bm-map-size">@_map.Width×@_map.Height</span>
+            </div>
+
+            @if (_isGm)
+            {
+                <div class="bm-toolbar-center">
+                    <button class="bm-tool-btn @(_editorMode == "" ? "bm-tool-active" : "")"
+                            @onclick='() => SetEditor("")' title="Select / Move tokens">SELECT</button>
+                    <button class="bm-tool-btn @(_editorMode == "floor" ? "bm-tool-active" : "")"
+                            @onclick='() => SetEditor("floor")' title="Paint floor tiles">FLOOR</button>
+                    <button class="bm-tool-btn @(_editorMode == "wall" ? "bm-tool-active" : "")"
+                            @onclick='() => SetEditor("wall")' title="Paint wall tiles">WALL</button>
+                    <button class="bm-tool-btn @(_editorMode == "door" ? "bm-tool-active" : "")"
+                            @onclick='() => SetEditor("door")' title="Paint door tiles">DOOR</button>
+                    <span class="bm-tool-sep">|</span>
+                    <button class="bm-tool-btn" @onclick="FillFloor" title="Fill entire map with floor">FILL FLOOR</button>
+                    <button class="bm-tool-btn" @onclick="ClearMap" title="Clear all tiles">CLEAR</button>
+                </div>
+            }
+
+            <div class="bm-toolbar-right">
+                @if (_isGm)
+                {
+                    <button class="ncc-btn-submit bm-save-btn @(_saving ? "bm-saving" : "")"
+                            @onclick="SaveMap" disabled="@_saving">
+                        @(_saving ? "SAVING..." : "SAVE MAP")
+                    </button>
+                }
+                @if (_hubStatus == "connected")
+                {
+                    <span class="bm-status-ok">● LIVE</span>
+                }
+                else
+                {
+                    <span class="bm-status-bad">○ OFFLINE</span>
+                }
+            </div>
+        </div>
+
+        <!-- ── MAIN AREA ─────────────────────────────────────────────────── -->
+        <div class="bm-main">
+
+            <!-- Canvas -->
+            <div class="bm-canvas-wrap">
+                <canvas id="battle-map-canvas"></canvas>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="bm-sidebar">
+
+                <!-- Movement range info -->
+                @if (_selectedToken != null)
+                {
+                    <div class="bm-sidebar-section bm-selected-info">
+                        <div class="bm-section-title">SELECTED</div>
+                        <div class="bm-selected-handle" style="color:@_selectedToken.Color">
+                            ● @_selectedToken.Handle.ToUpper()
+                        </div>
+                        <div class="bm-selected-sub">Walk: @_selectedToken.MoveRange tiles</div>
+                        <div class="bm-selected-sub">Run: @(_selectedToken.MoveRange + _selectedToken.MoveRange / 2) tiles</div>
+                        <div class="bm-hint">Blue cells = walkable range</div>
+                    </div>
+                }
+
+                <!-- Tokens on map -->
+                <div class="bm-sidebar-section">
+                    <div class="bm-section-title">TOKENS ON MAP (@_map.Tokens.Count)</div>
+                    @if (_map.Tokens.Count == 0)
+                    {
+                        <div class="bm-empty-hint">No tokens yet.</div>
+                    }
+                    @foreach (var token in _map.Tokens)
+                    {
+                        <div class="bm-token-row @(token.Id == _selectedToken?.Id ? "bm-token-selected" : "")"
+                             @onclick="() => SelectTokenFromSidebar(token.Id)">
+                            <div class="bm-token-dot" style="background:@token.Color"></div>
+                            <div class="bm-token-info">
+                                <div class="bm-token-name">@token.Handle.ToUpper()</div>
+                                <div class="bm-token-pos">[@token.Col, @token.Row]</div>
+                            </div>
+                            @if (_isGm)
+                            {
+                                <button class="bm-remove-btn" @onclick:stopPropagation="true"
+                                        @onclick="() => RemoveToken(token.Id)">✕</button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- Add token (GM only) -->
+                @if (_isGm)
+                {
+                    <div class="bm-sidebar-section">
+                        <div class="bm-section-title">ADD TOKEN</div>
+                        <select class="ncc-select bm-char-select" @bind="_addCharId">
+                            <option value="">— SELECT CHARACTER —</option>
+                            @foreach (var c in _characters.Where(c => _map.Tokens.All(t => t.CharacterId != c.Id)))
+                            {
+                                <option value="@c.Id">@c.Handle.ToUpper() (@c.Role)</option>
+                            }
+                        </select>
+                        <button class="ncc-btn-submit bm-add-btn" @onclick="AddToken"
+                                disabled="@string.IsNullOrEmpty(_addCharId)">
+                            ADD TO MAP ⊕
+                        </button>
+                    </div>
+                }
+
+                <!-- Legend -->
+                <div class="bm-sidebar-section bm-legend">
+                    <div class="bm-section-title">LEGEND</div>
+                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-floor"></div> FLOOR</div>
+                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-wall"></div> WALL</div>
+                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-door"></div> DOOR</div>
+                    @if (_isGm)
+                    {
+                        <div class="bm-hint" style="margin-top:.5rem;">Right-click tile → erase</div>
+                    }
+                    <div class="bm-hint">Click token → show range</div>
+                    <div class="bm-hint">Drag token → move</div>
+                </div>
+
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string MapId { get; set; } = "";
+
+    private MapDto?            _map;
+    private List<CharacterSheet> _characters = new();
+    private bool  _isGm;
+    private bool  _loading = true;
+    private bool  _saving;
+    private string _editorMode = "";         // "" | "floor" | "wall" | "door"
+    private string _addCharId  = "";
+    private string _hubStatus  = "offline";
+    private TokenState? _selectedToken;
+
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<BattleMap>? _dotNetRef;
+    private HubConnection? _hub;
+
+    private static readonly string[] TokenPalette = [
+        "#ff3a3a","#3a9fff","#3aff6e","#ffb73a",
+        "#ff3aff","#3affff","#ff8c3a","#b83aff"
+    ];
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.InitializeAsync();
+        _isGm = Session.CurrentUser?.Role == UserRole.GameMaster;
+
+        _map = await MapApi.GetByIdAsync(MapId);
+        if (_map is null) { _loading = false; return; }
+
+        if (_isGm) _characters = await CharApi.GetAllAsync();
+
+        await ConnectHub();
+        _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _map is null) return;
+
+        _module = await JS.InvokeAsync<IJSObjectReference>("import", "/js/map-engine.js");
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        await _module.InvokeVoidAsync("init", "battle-map-canvas",
+            _map.Width, _map.Height, _map.TileSize);
+        await _module.InvokeVoidAsync("setDotnetRef", _dotNetRef);
+        await _module.InvokeVoidAsync("loadMap", _map);
+    }
+
+    // ── SignalR ────────────────────────────────────────────────────────────
+
+    private async Task ConnectHub()
+    {
+        _hub = new HubConnectionBuilder()
+            .WithUrl(Nav.ToAbsoluteUri("/hubs/game"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hub.On<string, int, int>("TokenMoved", async (tokenId, col, row) =>
+        {
+            var t = _map?.Tokens.Find(x => x.Id == tokenId);
+            if (t != null) { t.Col = col; t.Row = row; }
+            if (_module != null)
+                await _module.InvokeVoidAsync("updateToken", new { id = tokenId, col, row });
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<List<TileCell>>("MapTilesUpdated", async (tiles) =>
+        {
+            if (_map != null)
+            {
+                _map.Tiles = tiles;
+                if (_module != null) await _module.InvokeVoidAsync("loadMap", _map);
+            }
+        });
+
+        _hub.On<TokenState>("TokenAdded", async (token) =>
+        {
+            _map?.Tokens.Add(token);
+            if (_module != null) await _module.InvokeVoidAsync("updateToken", token);
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<string>("TokenRemoved", async (tokenId) =>
+        {
+            _map?.Tokens.RemoveAll(t => t.Id == tokenId);
+            if (_module != null) await _module.InvokeVoidAsync("removeToken", tokenId);
+            if (_selectedToken?.Id == tokenId) _selectedToken = null;
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hub.Reconnected   += _ => { _hubStatus = "connected"; return InvokeAsync(StateHasChanged); };
+        _hub.Reconnecting  += _ => { _hubStatus = "reconnecting"; return InvokeAsync(StateHasChanged); };
+        _hub.Closed        += _ => { _hubStatus = "offline"; return InvokeAsync(StateHasChanged); };
+
+        await _hub.StartAsync();
+        _hubStatus = "connected";
+        await _hub.SendAsync("JoinMap", MapId);
+    }
+
+    // ── JS callbacks ──────────────────────────────────────────────────────
+
+    [JSInvokable]
+    public async Task OnTokenMoved(string tokenId, int col, int row)
+    {
+        var t = _map?.Tokens.Find(x => x.Id == tokenId);
+        if (t != null) { t.Col = col; t.Row = row; }
+        if (_selectedToken?.Id == tokenId) { _selectedToken = t; }
+        await InvokeAsync(StateHasChanged);
+        if (_map != null) await MapApi.UpdateAsync(_map);
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.SendAsync("MoveToken", MapId, tokenId, col, row);
+    }
+
+    [JSInvokable]
+    public async Task OnTokenSelected(string tokenId)
+    {
+        _selectedToken = _map?.Tokens.Find(t => t.Id == tokenId);
+        if (_selectedToken != null && _module != null)
+        {
+            var cells = ComputeReachable(_selectedToken.Col, _selectedToken.Row, _selectedToken.MoveRange);
+            var jsObj = cells.Select(c => new { col = c.col, row = c.row }).ToList();
+            await _module.InvokeVoidAsync("setHighlights", jsObj);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnTilesChanged(List<TileCell> tiles)
+    {
+        if (!_isGm || _map is null) return;
+        _map.Tiles = tiles;
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.SendAsync("UpdateMapTiles", MapId, tiles);
+    }
+
+    // ── GM actions ────────────────────────────────────────────────────────
+
+    private async Task SetEditor(string mode)
+    {
+        _editorMode = mode;
+        if (_module != null)
+            await _module.InvokeVoidAsync("setEditorMode", mode == "" ? null : mode);
+        if (mode != "") { _selectedToken = null; }
+    }
+
+    private async Task FillFloor()
+    {
+        if (_map is null || _module is null) return;
+        _map.Tiles = new List<TileCell>();
+        for (int r = 0; r < _map.Height; r++)
+            for (int c = 0; c < _map.Width; c++)
+                _map.Tiles.Add(new TileCell { Col = c, Row = r, Type = 1 });
+        await _module.InvokeVoidAsync("loadMap", _map);
+    }
+
+    private async Task ClearMap()
+    {
+        if (_map is null || _module is null) return;
+        _map.Tiles.Clear();
+        await _module.InvokeVoidAsync("loadMap", _map);
+    }
+
+    private async Task SaveMap()
+    {
+        if (_map is null) return;
+        _saving = true;
+        await MapApi.UpdateAsync(_map);
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.SendAsync("UpdateMapTiles", MapId, _map.Tiles);
+        _saving = false;
+    }
+
+    private async Task AddToken()
+    {
+        if (string.IsNullOrEmpty(_addCharId) || _map is null) return;
+        var c = _characters.FirstOrDefault(x => x.Id == _addCharId);
+        if (c is null) return;
+        var color = TokenPalette[_map.Tokens.Count % TokenPalette.Length];
+        var token = new TokenState {
+            Id          = Guid.NewGuid().ToString("N")[..8],
+            CharacterId = c.Id ?? "",
+            Handle      = c.Handle,
+            Col = 1, Row = 1,
+            Color       = color,
+            MoveRange   = c.MA * 2
+        };
+        _map.Tokens.Add(token);
+        _addCharId = "";
+        if (_module != null) await _module.InvokeVoidAsync("updateToken", token);
+        await MapApi.UpdateAsync(_map);
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.SendAsync("AddToken", MapId, token);
+    }
+
+    private async Task RemoveToken(string tokenId)
+    {
+        _map?.Tokens.RemoveAll(t => t.Id == tokenId);
+        if (_selectedToken?.Id == tokenId) _selectedToken = null;
+        if (_module != null) await _module.InvokeVoidAsync("removeToken", tokenId);
+        if (_map != null) await MapApi.UpdateAsync(_map);
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.SendAsync("RemoveToken", MapId, tokenId);
+    }
+
+    private async Task SelectTokenFromSidebar(string tokenId)
+    {
+        _selectedToken = _map?.Tokens.Find(t => t.Id == tokenId);
+        if (_module != null)
+        {
+            await _module.InvokeVoidAsync("selectToken", tokenId);
+            if (_selectedToken != null)
+            {
+                var cells = ComputeReachable(_selectedToken.Col, _selectedToken.Row, _selectedToken.MoveRange);
+                var jsObj = cells.Select(c => new { col = c.col, row = c.row }).ToList();
+                await _module.InvokeVoidAsync("setHighlights", jsObj);
+            }
+        }
+    }
+
+    // ── BFS movement range ────────────────────────────────────────────────
+
+    private List<(int col, int row)> ComputeReachable(int startCol, int startRow, int range)
+    {
+        if (_map is null) return new();
+        var walls   = _map.Tiles.Where(t => t.Type == 2).Select(t => (t.Col, t.Row)).ToHashSet();
+        var result  = new List<(int, int)>();
+        var visited = new HashSet<(int, int)> { (startCol, startRow) };
+        var queue   = new Queue<(int col, int row, int dist)>();
+        queue.Enqueue((startCol, startRow, 0));
+
+        while (queue.Count > 0)
+        {
+            var (col, row, dist) = queue.Dequeue();
+            if (dist > 0) result.Add((col, row));
+            if (dist >= range) continue;
+            foreach (var (dc, dr) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+            {
+                int nc = col + dc, nr = row + dr;
+                if (nc < 0 || nr < 0 || nc >= _map.Width || nr >= _map.Height) continue;
+                if (walls.Contains((nc, nr))) continue;
+                if (visited.Add((nc, nr))) queue.Enqueue((nc, nr, dist + 1));
+            }
+        }
+        return result;
+    }
+
+    // ── Dispose ───────────────────────────────────────────────────────────
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.SendAsync("LeaveMap", MapId);
+        if (_hub != null) await _hub.DisposeAsync();
+        if (_module != null) await _module.DisposeAsync();
+        _dotNetRef?.Dispose();
+    }
+}
+
+<style>
+    .bm-page       { display: flex; flex-direction: column; height: calc(100vh - 0px); overflow: hidden; }
+
+    /* ── Toolbar ── */
+    .bm-toolbar    { display: flex; align-items: center; justify-content: space-between;
+                     gap: 1rem; padding: .6rem 1rem; background: var(--nc-card-bg);
+                     border-bottom: 1px solid var(--nc-border); flex-shrink: 0; flex-wrap: wrap; }
+    .bm-toolbar-left  { display: flex; align-items: center; gap: .8rem; }
+    .bm-toolbar-center{ display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+    .bm-toolbar-right { display: flex; align-items: center; gap: .8rem; margin-left: auto; }
+    .bm-back-btn   { background: transparent; border: 1px solid var(--nc-border); color: var(--nc-text-dim);
+                     padding: .3rem .7rem; font-size: .7rem; cursor: pointer;
+                     font-family: 'Share Tech Mono', monospace; letter-spacing: .08em; }
+    .bm-back-btn:hover { color: var(--nc-text); border-color: var(--nc-text); }
+    .bm-map-title  { font-family: 'Orbitron', monospace; color: var(--nc-red); font-size: .85rem; }
+    .bm-map-size   { color: var(--nc-text-dim); font-size: .72rem; }
+    .bm-tool-btn   { background: transparent; border: 1px solid var(--nc-border); color: var(--nc-text-dim);
+                     padding: .3rem .7rem; font-size: .68rem; cursor: pointer;
+                     font-family: 'Share Tech Mono', monospace; letter-spacing: .07em;
+                     transition: all .15s; }
+    .bm-tool-btn:hover   { color: var(--nc-text); border-color: var(--nc-accent2); }
+    .bm-tool-active      { border-color: var(--nc-accent2) !important; color: var(--nc-accent2) !important;
+                           background: rgba(0,210,255,.07) !important; }
+    .bm-tool-sep   { color: var(--nc-border); margin: 0 .2rem; }
+    .bm-save-btn   { padding: .35rem .9rem; font-size: .7rem; }
+    .bm-saving     { opacity: .6; }
+    .bm-status-ok  { color: var(--nc-green); font-size: .72rem; letter-spacing: .1em; }
+    .bm-status-bad { color: var(--nc-text-dim); font-size: .72rem; letter-spacing: .1em; }
+
+    /* ── Main ── */
+    .bm-main       { display: flex; flex: 1; overflow: hidden; }
+    .bm-canvas-wrap{ flex: 1; overflow: auto; background: #04040d;
+                     display: flex; align-items: flex-start; justify-content: flex-start; padding: 1rem; }
+    .bm-canvas-wrap canvas { display: block; image-rendering: pixelated; }
+
+    /* ── Sidebar ── */
+    .bm-sidebar    { width: 230px; flex-shrink: 0; overflow-y: auto; background: var(--nc-card-bg);
+                     border-left: 1px solid var(--nc-border); display: flex; flex-direction: column; }
+    .bm-sidebar-section { padding: 1rem; border-bottom: 1px solid var(--nc-border); }
+    .bm-section-title   { font-size: .65rem; letter-spacing: .15em; color: var(--nc-text-dim);
+                          margin-bottom: .6rem; font-family: 'Share Tech Mono', monospace; }
+    .bm-empty-hint { color: var(--nc-text-dim); font-size: .75rem; }
+    .bm-hint       { color: var(--nc-text-dim); font-size: .68rem; margin-top: .2rem; }
+
+    /* Selected token info */
+    .bm-selected-info   { background: rgba(0,210,255,.04); border-left: 2px solid var(--nc-accent2); }
+    .bm-selected-handle { font-family: 'Orbitron', monospace; font-size: .85rem; margin-bottom: .2rem; }
+    .bm-selected-sub    { color: var(--nc-text-dim); font-size: .72rem; }
+
+    /* Token rows */
+    .bm-token-row  { display: flex; align-items: center; gap: .5rem; padding: .35rem .2rem;
+                     cursor: pointer; border-radius: 2px; transition: background .1s; }
+    .bm-token-row:hover      { background: rgba(255,255,255,.04); }
+    .bm-token-selected       { background: rgba(0,210,255,.06); }
+    .bm-token-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .bm-token-info { flex: 1; min-width: 0; }
+    .bm-token-name { font-size: .78rem; font-family: 'Share Tech Mono', monospace;
+                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bm-token-pos  { font-size: .65rem; color: var(--nc-text-dim); }
+    .bm-remove-btn { background: transparent; border: none; color: var(--nc-red);
+                     cursor: pointer; font-size: .8rem; padding: 0 .2rem; flex-shrink: 0; }
+    .bm-remove-btn:hover { color: #ff6666; }
+
+    /* Add token */
+    .bm-char-select { width: 100%; margin-bottom: .5rem; font-size: .72rem; }
+    .bm-add-btn     { width: 100%; font-size: .72rem; padding: .4rem; }
+
+    /* Legend */
+    .bm-legend-row  { display: flex; align-items: center; gap: .5rem;
+                      font-size: .72rem; color: var(--nc-text-dim); margin-bottom: .3rem; }
+    .bm-legend-tile { width: 16px; height: 16px; flex-shrink: 0; }
+    .bm-tile-floor  { background: #0d1117; border: 1px solid #1a2040; }
+    .bm-tile-wall   { background: #1a0008; border: 1px solid rgba(255,0,60,.5); }
+    .bm-tile-door   { background: #001a06; border: 1px solid rgba(0,255,65,.7); }
+</style>
