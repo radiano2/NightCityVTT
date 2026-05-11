@@ -399,8 +399,8 @@ public class DatabaseSeeder
         new GearItem { Name = "Medscanner",                     Category = "Medical",     ForRole = "Solo",      Description = "Handheld medical scanner for quick diagnostics.",            CostEurobucks = 300,  Concealability = "P",   Availability = "Common", WeightKg = 0.5 },
 
         // Netrunner gear
-        new GearItem { Name = "Cyberdeck (Standard)",           Category = "Cyberware",   ForRole = "Netrunner", Description = "Standard cyberdeck; 30 MU program space, 5 options.",       CostEurobucks = 1000, Concealability = "J",   Availability = "Rare"  , WeightKg = 1.0 },
-        new GearItem { Name = "Neural Interface (Basic)",       Category = "Cyberware",   ForRole = "Netrunner", Description = "Basic neural link allowing deck connection.",                CostEurobucks = 500,  Concealability = "N/A", Availability = "Common", WeightKg = 1.0 },
+        new GearItem { Name = "Cyberdeck (Standard)",           Category = "Cyberware",   ForRole = "Netrunner", Description = "Standard cyberdeck; 30 MU program space, 5 options.",       CostEurobucks = 1000, Concealability = "J",   Availability = "Rare"  , WeightKg = 1.0, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Neural Interface (Basic)",       Category = "Cyberware",   ForRole = "Netrunner", Description = "Basic neural link allowing deck connection.",                CostEurobucks = 500,  Concealability = "N/A", Availability = "Common", WeightKg = 1.0, HumanityCostDice = "2d6" },
         new GearItem { Name = "Light Armorjack (SP14)",         Category = "Armor",       ForRole = "Netrunner", Description = "Light armored jacket — SP14.",                              CostEurobucks = 150,  Concealability = "J",   Availability = "Common", WeightKg = 2.0 },
         new GearItem { Name = "Pocket Computer",                Category = "Equipment",   ForRole = "Netrunner", Description = "Powerful handheld computer for offline work.",               CostEurobucks = 200,  Concealability = "P",   Availability = "Common", WeightKg = 1.0 },
 
@@ -534,6 +534,25 @@ public class DatabaseSeeder
         new GearItem { Name = "Airhypo Injector", Category = "Medical", Description = "Needleless drug delivery.", CostEurobucks = 95, WeightKg = 0.5 },
         new GearItem { Name = "Portable Faraday Cage", Category = "Security", Description = "Small bag blocks signals.", CostEurobucks = 310, WeightKg = 1.0 },
 
+        // ── CYBERWARE CATALOGUE ──
+        new GearItem { Name = "Interface Plugs",             Category = "Cyberware", Description = "Wrist-mounted neural interface sockets. Required for cyberdeck connection and direct hardwire jacks.",                     CostEurobucks = 200,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Chipware Socket",             Category = "Cyberware", Description = "Subdermal processor socket for skill chips and memory expansion. Fits behind the ear.",                                      CostEurobucks = 200,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "1d6" },
+        new GearItem { Name = "Cyberoptic — Targeting",      Category = "Cyberware", Description = "Replacement eye with built-in targeting reticle. +1 to all ranged attack rolls. Low-light enhancement included.",           CostEurobucks = 900,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Cyberoptic — Low-Light",      Category = "Cyberware", Description = "Enhanced optic that amplifies available light. See clearly in near-total darkness.",                                         CostEurobucks = 700,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Cyberoptic — Teleoptic",      Category = "Cyberware", Description = "Long-range zoom optic. Up to 50× optical magnification. Useful for scouting and sniper roles.",                             CostEurobucks = 800,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Cyberaudio Suite",            Category = "Cyberware", Description = "Full audio replacement: amplified hearing, radio scanner, voice stress analyser, and encrypted comms channel.",              CostEurobucks = 500,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Smartgun Link",               Category = "Cyberware", Description = "Neural interface to compatible smartguns. Eliminates iron-sight penalty; target lock via HUD. –2 to all ranged attack DNs.", CostEurobucks = 600,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Pain Editor",                 Category = "Cyberware", Description = "Blocks pain signals entirely. Ignore stun penalties from Light and Serious wounds. High Humanity cost.",                     CostEurobucks = 2800, Concealability = "N/A", Availability = "Rare",   WeightKg = 0.2, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Sandevistan (Reflex Boost)",  Category = "Cyberware", Description = "Adrenal booster that speeds neural response. +3 to Initiative once per combat. Spine installation.",                        CostEurobucks = 3200, Concealability = "N/A", Availability = "Rare",   WeightKg = 0.2, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Kerenzikov Boost",            Category = "Cyberware", Description = "Reflex enhancement that allows action during surprise rounds. +2 Initiative. Cannot combine with Sandevistan.",              CostEurobucks = 2000, Concealability = "N/A", Availability = "Rare",   WeightKg = 0.2, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Subdermal Armor (SP4)",       Category = "Cyberware", Description = "Woven carbon-ceramic plates under the skin. SP4 on all body locations; does not stack with worn armor.",                    CostEurobucks = 1200, Concealability = "N/A", Availability = "Rare",   WeightKg = 0.5, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Single Cyberarm — Strength",  Category = "Cyberware", Description = "Replacement arm with enhanced servo-motors. +2 to Strength Feat rolls, melee damage +2.",                                   CostEurobucks = 2500, Concealability = "N/A", Availability = "Common", WeightKg = 2.5, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Single Cyberleg — Speed",     Category = "Cyberware", Description = "Replacement leg with enhanced actuators. +2 MA for movement calculations.",                                                  CostEurobucks = 2500, Concealability = "N/A", Availability = "Common", WeightKg = 3.0, HumanityCostDice = "2d6" },
+        new GearItem { Name = "Linear Frame Beta",           Category = "Cyberware", Description = "Full-body exo-skeletal frame bonded to skeleton. BT treated as 12 for BTM and carry weight. Extreme humanity cost.",        CostEurobucks = 8500, Concealability = "N",   Availability = "Rare",   WeightKg = 5.0, HumanityCostDice = "3d6" },
+        new GearItem { Name = "Biomonitor",                  Category = "Cyberware", Description = "Subdermal medical monitor. Tracks vitals, toxins, drug levels. Auto-releases antidotes. Required for Trauma Team card.",     CostEurobucks = 800,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "1d6" },
+        new GearItem { Name = "Braindance Recorder",         Category = "Cyberware", Description = "Records full sensory experience for playback or broadcast. Neural link required. Media staple.",                             CostEurobucks = 1000, Concealability = "N/A", Availability = "Common", WeightKg = 0.2, HumanityCostDice = "1d6" },
+        new GearItem { Name = "Vehicle Link",                Category = "Cyberware", Description = "Direct neural interface to compatible vehicles. +2 to Driving / Pilot rolls when hard-linked.",                              CostEurobucks = 500,  Concealability = "N/A", Availability = "Common", WeightKg = 0.1, HumanityCostDice = "1d6" },
+
         new GearItem { Name = "Nomad Pack Bike", Category = "Vehicle", Description = "Rugged off-road motorcycle. Nomad favorite.", CostEurobucks = 2000, WeightKg = 300, Seats = "2", TopSpeed = "180 km/h", SDP = "40" },
         new GearItem { Name = "Brennan Apollo", Category = "Vehicle", Description = "Reliable commuter car with basic plating.", CostEurobucks = 12000, WeightKg = 1200, Seats = "4", TopSpeed = "160 km/h", SDP = "50" },
         new GearItem { Name = "Chevillon Thrax", Category = "Vehicle", Description = "Armored corporate transport. Executive luxury.", CostEurobucks = 35000, WeightKg = 2500, Seats = "4", TopSpeed = "150 km/h", SDP = "80" },
@@ -552,32 +571,33 @@ public class DatabaseSeeder
 
         var gear = GetStartingGear().ToList();
         
-        GearItemDto Map(string name) 
+        GearItemDto Map(string name)
         {
             var i = gear.First(x => x.Name == name);
             return new GearItemDto {
                 Id = i.Id, Name = i.Name, Category = i.Category, Description = i.Description,
                 CostEurobucks = i.CostEurobucks, WeightKg = i.WeightKg,
-                Damage = i.Damage, Acc = i.Acc, Range = i.Range, Capacity = i.Capacity, 
-                ROF = i.ROF, SP = i.SP, EV = i.EV, Seats = i.Seats, TopSpeed = i.TopSpeed, SDP = i.SDP
+                Damage = i.Damage, Acc = i.Acc, Range = i.Range, Capacity = i.Capacity,
+                ROF = i.ROF, SP = i.SP, EV = i.EV, Seats = i.Seats, TopSpeed = i.TopSpeed, SDP = i.SDP,
+                HumanityCostDice = i.HumanityCostDice
             };
         }
 
         var testAssets = new List<CharacterDocument>
         {
-            new CharacterDocument { 
-                Handle = "RAZOR", Role = "Solo", INT = 6, REF = 10, TECH = 5, COOL = 9, LK = 4, ATT = 6, MA = 8, EMP = 3, BT = 10, 
+            new CharacterDocument {
+                Handle = "RAZOR", Role = "Solo", INT = 6, REF = 10, TECH = 5, COOL = 9, LK = 4, ATT = 6, MA = 8, EMP = 3, BT = 10,
                 Humanity = 30, Mobility = 8, Resilience = 10, OwnerId = "SYSTEM", IsTestAsset = true, Eurobucks = 50000,
                 EthnicOrigin = "Central American", Clothes = "Combat Jumpsuit", Hairstyle = "Short", Affectation = "Ritual Scars",
                 FamilyRanking = "Corporate Executive", FamilyTragedy = "Kidnapped by Corp", PersonalityTrait = "Arrogant",
-                Inventory = new() { Map("Quadra Type-66"), Map("Militech Avenger"), Map("Militech Trooper Plate"), Map("Combat Knife") }
+                Inventory = new() { Map("Quadra Type-66"), Map("Militech Avenger"), Map("Militech Trooper Plate"), Map("Combat Knife"), Map("Subdermal Armor (SP4)"), Map("Pain Editor") }
             },
-            new CharacterDocument { 
-                Handle = "SPIDER", Role = "Netrunner", INT = 10, REF = 7, TECH = 8, COOL = 8, LK = 6, ATT = 5, MA = 6, EMP = 6, BT = 4, 
+            new CharacterDocument {
+                Handle = "SPIDER", Role = "Netrunner", INT = 10, REF = 7, TECH = 8, COOL = 8, LK = 6, ATT = 5, MA = 6, EMP = 6, BT = 4,
                 Humanity = 60, Mobility = 6, Resilience = 4, OwnerId = "SYSTEM", IsTestAsset = true, Eurobucks = 45000,
                 EthnicOrigin = "Japanese", Clothes = "High Fashion", Hairstyle = "Colored", Affectation = "Strange Contacts",
                 FamilyRanking = "Urban Homeless", FamilyTragedy = "Imprisoned", PersonalityTrait = "Quiet",
-                Inventory = new() { Map("Yaiba Kusanagi"), Map("Cyberdeck (Standard)"), Map("Eclipse Arms Specter"), Map("Netrunner Ghost Suit") }
+                Inventory = new() { Map("Yaiba Kusanagi"), Map("Cyberdeck (Standard)"), Map("Eclipse Arms Specter"), Map("Netrunner Ghost Suit"), Map("Neural Interface (Basic)"), Map("Cyberoptic — Targeting") }
             },
             new CharacterDocument { 
                 Handle = "CRASH", Role = "Rockerboy", INT = 7, REF = 8, TECH = 4, COOL = 10, LK = 8, ATT = 9, MA = 7, EMP = 8, BT = 6, 
@@ -593,12 +613,12 @@ public class DatabaseSeeder
                 FamilyRanking = "Corporate Executive", FamilyTragedy = "Exiled", PersonalityTrait = "Compassionate",
                 Inventory = new() { Map("Brennan Apollo"), Map("Trauma Team Reaper"), Map("Medscanner (Advanced)"), Map("Trauma Team Paramedic Vest") }
             },
-            new CharacterDocument { 
-                Handle = "GEARHEAD", Role = "Techie", INT = 8, REF = 7, TECH = 10, COOL = 6, LK = 7, ATT = 4, MA = 5, EMP = 5, BT = 6, 
+            new CharacterDocument {
+                Handle = "GEARHEAD", Role = "Techie", INT = 8, REF = 7, TECH = 10, COOL = 6, LK = 7, ATT = 4, MA = 5, EMP = 5, BT = 6,
                 Humanity = 50, Mobility = 5, Resilience = 6, OwnerId = "SYSTEM", IsTestAsset = true, Eurobucks = 35000,
                 EthnicOrigin = "Russian", Clothes = "Work Clothes", Hairstyle = "Greasy", Affectation = "Tools on Belt",
                 FamilyRanking = "Arcology", FamilyTragedy = "Accident", PersonalityTrait = "Practical",
-                Inventory = new() { Map("Nomad Pack Bike"), Map("Basic Tool Kit"), Map("Viper Dynamics Street Judge"), Map("Street Samurai Chrome Jacket") }
+                Inventory = new() { Map("Nomad Pack Bike"), Map("Basic Tool Kit"), Map("Viper Dynamics Street Judge"), Map("Street Samurai Chrome Jacket"), Map("Interface Plugs"), Map("Biomonitor") }
             },
             new CharacterDocument { 
                 Handle = "SUIT", Role = "Corporate", INT = 9, REF = 6, TECH = 5, COOL = 10, LK = 8, ATT = 8, MA = 6, EMP = 8, BT = 5, 

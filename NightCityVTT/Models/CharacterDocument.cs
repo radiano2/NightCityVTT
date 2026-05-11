@@ -46,6 +46,8 @@ public class CharacterDocument
     public List<GearItemDto> Inventory { get; set; } = new();
     public Dictionary<string, string> EquippedGearIds { get; set; } = new();
     public Dictionary<string, int> GridItemPositions { get; set; } = new();
+    public List<string> InstalledCyberwareIds { get; set; } = new();
+    public Dictionary<string, int> HumanityPaidByInstanceId { get; set; } = new();
 
     public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
 
@@ -64,6 +66,8 @@ public class CharacterDocument
         Humanity = Humanity, Mobility = Mobility, Resilience = Resilience,
         CreatedBy = CreatedBy, Eurobucks = Eurobucks, Inventory = Inventory,
         EquippedGearIds = EquippedGearIds, GridItemPositions = GridItemPositions,
+        InstalledCyberwareIds = InstalledCyberwareIds,
+        HumanityPaidByInstanceId = HumanityPaidByInstanceId,
         CreatedAt = CreatedAt
     };
 
@@ -83,6 +87,8 @@ public class CharacterDocument
         Humanity = s.Humanity, Mobility = s.Mobility, Resilience = s.Resilience,
         CreatedBy = s.CreatedBy, Eurobucks = s.Eurobucks, Inventory = s.Inventory,
         EquippedGearIds = s.EquippedGearIds, GridItemPositions = s.GridItemPositions,
+        InstalledCyberwareIds = s.InstalledCyberwareIds,
+        HumanityPaidByInstanceId = s.HumanityPaidByInstanceId,
         CreatedAt = s.CreatedAt == default ? DateTime.UtcNow : s.CreatedAt
     };
 }

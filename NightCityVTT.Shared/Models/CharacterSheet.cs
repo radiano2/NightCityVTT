@@ -50,6 +50,8 @@ public class CharacterSheet
     public List<GearItemDto> Inventory { get; set; } = new();
     public Dictionary<string, string> EquippedGearIds { get; set; } = new();
     public Dictionary<string, int> GridItemPositions { get; set; } = new();
+    public List<string> InstalledCyberwareIds { get; set; } = new();
+    public Dictionary<string, int> HumanityPaidByInstanceId { get; set; } = new();
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

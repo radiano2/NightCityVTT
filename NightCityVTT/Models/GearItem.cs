@@ -54,6 +54,9 @@ public class GearItem
     [BsonElement("weightKg")]
     public double WeightKg { get; set; }
 
+    [BsonElement("humanityCostDice")]
+    public string? HumanityCostDice { get; set; }
+
     [BsonElement("seats")]
     public string Seats { get; set; } = string.Empty;
 

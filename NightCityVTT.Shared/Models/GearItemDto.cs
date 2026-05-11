@@ -19,7 +19,8 @@ public class GearItemDto
     public string SP { get; set; } = string.Empty;
     public string EV { get; set; } = string.Empty;
     public double WeightKg { get; set; }
-    
+    public string? HumanityCostDice { get; set; }  // null = no humanity cost; "2d6" = roll 2d6 on install
+
     public string Seats { get; set; } = string.Empty;
     public string TopSpeed { get; set; } = string.Empty;
     public string SDP { get; set; } = string.Empty;
