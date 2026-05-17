@@ -38,7 +38,11 @@ public class GearController : ControllerBase
             Capacity = i.Capacity,
             ROF = i.ROF,
             SP = i.SP,
-            EV = i.EV
+            EV = i.EV,
+            WeightKg = i.WeightKg,
+            Seats = i.Seats,
+            TopSpeed = i.TopSpeed,
+            SDP = i.SDP
         }).ToList();
 
         return Ok(dtos);

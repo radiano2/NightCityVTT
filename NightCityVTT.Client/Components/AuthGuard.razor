@@ -1,17 +1,165 @@
+@using NightCityVTT.Shared.Models
+@using NightCityVTT.Client.Services
 @inject UserSessionService Session
 @inject UserApiService UserApi
+@inject SeedingApiService SeedApi
 @inject NavigationManager Nav
 
+@if (_checking)
+{
+    @* Silent check, no UI unless needed *@
+}
+else if (_needsSeed || _needsAccount)
+{
+    <div class="sys-init-overlay">
+        <div class="lp-card">
+            <div class="lp-header">
+                <div class="lp-slash">// SYSTEM CRITICAL //</div>
+                <h1 class="lp-title">@( _needsSeed ? "DATABASE OFFLINE" : "NO OPERATORS")</h1>
+                <p class="lp-sub">@( _needsSeed ? "The core system has not been initialized." : "No registered identities found in database.")</p>
+            </div>
+
+            @if (_needsSeed)
+            {
+                <div class="lp-error" style="background:rgba(255,191,36,0.08); border-color:var(--nc-gold); color:var(--nc-gold); margin-bottom:1rem;">
+                    [!] CORE DATABASE IS EMPTY. SYSTEM MUST BE SEEDED.
+                </div>
+                
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="lp-error">[!] @_error</div>
+                }
+                
+                <button class="lp-submit" style="background:var(--nc-gold); color:var(--nc-black);" @onclick="DoSeed" disabled="@_busy">
+                    @(_busy ? "INITIALIZING..." : "SEED DATABASE NOW")
+                </button>
+            }
+            else
+            {
+                <div class="lp-error" style="background:rgba(0,229,255,0.08); border-color:var(--nc-cyan); color:var(--nc-cyan); margin-bottom:1rem;">
+                    [!] SYSTEM READY. PLEASE REGISTER THE FIRST GM ACCOUNT.
+                </div>
+                <button class="lp-submit" @onclick='() => Nav.NavigateTo("/login", forceLoad: true)'>
+                    GOTO REGISTRATION
+                </button>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .sys-init-overlay {
+        position: fixed;
+        inset: 0;
+        background: var(--nc-black);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+    
+    /* Re-using some login styles for consistency */
+    .lp-card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--nc-panel);
+        border: 1px solid var(--nc-border);
+        border-top: 3px solid var(--nc-red);
+        padding: 2.5rem 2rem;
+        box-shadow: 0 0 40px rgba(255, 0, 60, 0.15);
+    }
+    .lp-header { margin-bottom: 2rem; text-align: center; }
+    .lp-title { font-family: var(--font-display); font-size: 1.6rem; color: var(--nc-red); margin: 0 0 0.5rem; letter-spacing: 0.1em; }
+    .lp-sub { font-size: 0.75rem; color: var(--nc-dim); margin: 0; }
+    .lp-slash { font-size: 0.7rem; color: var(--nc-dim); letter-spacing: 0.25em; margin-bottom: 0.5rem; }
+    .lp-error { color: var(--nc-red); font-size: 0.75rem; letter-spacing: 0.08em; margin-bottom: 1rem; padding: 0.4rem 0.6rem; border-left: 2px solid var(--nc-red); background: rgba(255,0,60,0.08); }
+    .lp-submit { width: 100%; background: var(--nc-red); border: none; color: var(--nc-black); padding: 0.75rem; font-family: var(--font-mono); font-size: 0.85rem; font-weight: bold; letter-spacing: 0.12em; cursor: pointer; }
+</style>
+
 @code {
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private bool _checking = true;
+    private bool _needsSeed = false;
+    private bool _needsAccount = false;
+    private bool _busy = false;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender) return;
-
-        await Session.InitializeAsync();
-
-        if (!Session.IsLoggedIn)
+        // Don't run on login page to avoid recursion
+        if (Nav.Uri.EndsWith("/login"))
         {
-            Nav.NavigateTo("/login", replace: true);
+            _checking = false;
+            return;
         }
+
+        await ValidateSystem();
+    }
+
+    private async Task ValidateSystem()
+    {
+        _checking = true;
+        try
+        {
+            await Session.InitializeAsync();
+
+            // 1. Check users
+            var users = await UserApi.GetAllAsync();
+            if (users.Count == 0)
+            {
+                _needsAccount = true;
+                // Also check if we need seed
+                try 
+                {
+                    var report = await SeedApi.ValidateAsync();
+                    if (report == null || report.GearCount == 0)
+                    {
+                        _needsSeed = true;
+                    }
+                }
+                catch 
+                {
+                    // If validation fails, assume we need a seed
+                    _needsSeed = true; 
+                }
+            }
+            else if (Session.IsLoggedIn)
+            {
+                // 2. Validate current session
+                if (!users.Any(u => u.Id == Session.CurrentUser!.Id))
+                {
+                    await Session.ClearAsync();
+                    Nav.NavigateTo("/login", replace: true);
+                }
+            }
+            else
+            {
+                // Not logged in but system is ready
+                Nav.NavigateTo("/login", replace: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "NETWORK_ERROR: " + ex.Message;
+            _needsSeed = true; // Safety default
+        }
+
+        _checking = false;
+        StateHasChanged();
+    }
+
+    private async Task DoSeed()
+    {
+        _busy = true; _error = null;
+        var res = await SeedApi.RunSeedAsync();
+        if (res?.Success == true)
+        {
+            _needsSeed = false;
+        }
+        else
+        {
+            _error = res?.Message ?? "Seeding failed.";
+        }
+        _busy = false;
     }
 }

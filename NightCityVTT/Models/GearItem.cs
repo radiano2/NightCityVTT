@@ -50,4 +50,19 @@ public class GearItem
 
     [BsonElement("ev")]
     public string EV { get; set; } = string.Empty;
+
+    [BsonElement("weightKg")]
+    public double WeightKg { get; set; }
+
+    [BsonElement("humanityCostDice")]
+    public string? HumanityCostDice { get; set; }
+
+    [BsonElement("seats")]
+    public string Seats { get; set; } = string.Empty;
+
+    [BsonElement("topSpeed")]
+    public string TopSpeed { get; set; } = string.Empty;
+
+    [BsonElement("sdp")]
+    public string SDP { get; set; } = string.Empty;
 }

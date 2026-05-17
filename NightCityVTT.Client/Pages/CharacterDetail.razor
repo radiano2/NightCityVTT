@@ -1,0 +1,667 @@
+@page "/characters/{Id}"
+@using NightCityVTT.Shared.Models
+@using NightCityVTT.Client.Services
+@using System.Text.Json
+@inject CharacterApiService CharApi
+@inject UserSessionService Session
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject DiceEngine Dice
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>@(_character?.Handle?.ToUpper() ?? "Loading Dossier...")</PageTitle>
+
+@if (_loading)
+{
+    <div class="ncc-loading">
+        <div class="ncc-empty-icon">⬡</div>
+        <div class="ncc-empty-sub">ACCESSING SECURE DOSSIER...</div>
+    </div>
+}
+else if (_character == null)
+{
+    <div class="ncc-empty">
+        <div class="ncc-empty-icon">✕</div>
+        <div>DOSSIER NOT FOUND OR CORRUPTED</div>
+        <button class="ncc-btn-submit" style="margin-top: 1rem;" @onclick='() => Nav.NavigateTo("/characters", forceLoad: true)'>RETURN TO REGISTRY</button>
+    </div>
+}
+else
+{
+    <div class="detail-page-layout">
+        <!-- HEADER -->
+        <div class="dp-header">
+            <div style="display:flex; align-items:center; gap: 2rem;">
+                <button class="back-btn" @onclick='() => Nav.NavigateTo("/characters", forceLoad: true)'>◁ BACK</button>
+                <div class="dp-title-block">
+                    <h1>@_character.Handle.ToUpper()</h1>
+                    <div class="dp-role">@_character.Role // @_character.SpecialAbility</div>
+                </div>
+            </div>
+            <div class="dp-meta">
+                <span class="funds">FUNDS: €$@_character.Eurobucks</span>
+                @if (Session.CurrentUser?.Role == UserRole.GameMaster && !string.IsNullOrEmpty(_character.OwnerId))
+                {
+                    <span class="owner">OPERATOR: @_character.OwnerId</span>
+                }
+            </div>
+        </div>
+
+        <!-- 16:9 2-COLUMN CONTENT -->
+        <div class="dp-content-grid">
+            
+            <!-- LEFT COLUMN: Stats & Lifepath -->
+            <div class="dp-col-left">
+                <div class="dp-section">
+                    <h3>NEURAL & PHYSICAL STATS</h3>
+                    <div class="dp-stats">
+                        <div class="stat-chip">INT: @_character.INT</div>
+                        <div class="stat-chip">REF: @_character.REF</div>
+                        <div class="stat-chip">TECH: @_character.TECH</div>
+                        <div class="stat-chip">COOL: @_character.COOL</div>
+                        <div class="stat-chip">LK: @_character.LK</div>
+                        <div class="stat-chip">ATT: @_character.ATT</div>
+                        <div class="stat-chip">MA: @_character.MA</div>
+                        <div class="stat-chip">EMP: @_character.EMP</div>
+                        <div class="stat-chip">BT: @_character.BT</div>
+                    </div>
+                    <div class="dp-derived">
+                        <div class="der-row"><span>MOBILITY</span> <strong>@_character.Mobility</strong></div>
+                        <div class="der-row"><span>RESILIENCE</span> <strong>@_character.Resilience</strong></div>
+                    </div>
+
+                    <!-- HUMANITY PANEL -->
+                    <div class="humanity-panel @HumanityClass">
+                        @if (_character.Humanity == 0)
+                        {
+                            <div class="cyberpsycho-banner">// CYBERPSYCHOSIS THRESHOLD BREACHED // OPERATOR RECLASSIFIED AS HOSTILE //</div>
+                        }
+                        <div class="hu-header">
+                            <span class="hu-label">HUMANITY INDEX</span>
+                            <span class="hu-status @HumanityClass">@HumanityStatus</span>
+                        </div>
+                        <div class="hu-bar-track">
+                            <div class="hu-bar-fill @HumanityClass" style="width: @_character.Humanity%"></div>
+                        </div>
+                        <div class="hu-numbers">
+                            <span class="hu-val">@_character.Humanity <span style="color:var(--nc-dim); font-size:0.7rem;">/ 100</span></span>
+                            <span class="hu-emp">EMP: <strong>@(_character.Humanity / 10)</strong></span>
+                        </div>
+                        @if (_character.InstalledCyberwareIds.Count > 0)
+                        {
+                            <div style="font-size:0.65rem; color:var(--nc-dim); margin-top:0.4rem; letter-spacing:0.08em;">
+                                @_character.InstalledCyberwareIds.Count IMPLANT(S) ACTIVE
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="dp-section">
+                    <h3>LIFEPATH PROTOCOL</h3>
+                    <div class="lp-grid">
+                        <div class="lp-item"><span>ORIGIN</span><strong>@_character.EthnicOrigin</strong></div>
+                        <div class="lp-item"><span>STYLE</span><strong>@_character.Clothes, @_character.Hairstyle, @_character.Affectation</strong></div>
+                        <div class="lp-item"><span>FAMILY</span><strong>@_character.FamilyRanking — @_character.FamilyTragedy</strong></div>
+                        <div class="lp-item"><span>PERSONALITY</span><strong>@_character.PersonalityTrait</strong></div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_character.SkillsJson))
+                {
+                    var skills = JsonSerializer.Deserialize<Dictionary<string,int>>(_character.SkillsJson) ?? new();
+                    if (skills.Count > 0)
+                    {
+                        <div class="dp-section" style="flex: 1; display:flex; flex-direction:column;">
+                            <h3>SKILL MATRIX</h3>
+                            <div class="skills-list">
+                                @foreach (var kv in skills.Where(k => k.Value > 0).OrderByDescending(k => k.Value))
+                                {
+                                    <div class="skill-row">
+                                        <span>@kv.Key</span>
+                                        <span class="skill-val">@kv.Value</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- RIGHT COLUMN: Inventory & Paper Doll -->
+            <div class="dp-col-right">
+
+                <!-- CYBERWARE BAY -->
+                <div class="dp-section cyber-bay-section" ondragover="event.preventDefault()" @ondrop="HandleCyberDrop">
+                    <h3>CYBERWARE BAY
+                        <span style="font-size:0.65rem; color:var(--nc-dim); font-weight:normal; margin-left:0.5rem;">drag cyberware here to install</span>
+                    </h3>
+
+                    @if (!string.IsNullOrEmpty(_installLog))
+                    {
+                        <div class="install-log @(_installSuccess ? "log-ok" : "log-cost")" @onclick="() => _installLog = string.Empty">
+                            @_installLog <span style="opacity:0.5; font-size:0.7rem; margin-left:0.5rem;">[click to dismiss]</span>
+                        </div>
+                    }
+
+                    @if (_character.InstalledCyberwareIds.Count == 0)
+                    {
+                        <div class="cyber-empty">NO IMPLANTS DETECTED // DRAG CYBERWARE FROM INVENTORY TO INSTALL</div>
+                    }
+                    else
+                    {
+                        <div class="cyber-list">
+                            @foreach (var instanceId in _character.InstalledCyberwareIds)
+                            {
+                                var item = _character.Inventory.FirstOrDefault(i => i.InstanceId == instanceId);
+                                if (item == null) continue;
+                                var cost = _character.HumanityPaidByInstanceId.GetValueOrDefault(instanceId, 0);
+                                <div class="cyber-item">
+                                    <div class="ci-icon">⬡</div>
+                                    <div class="ci-info">
+                                        <div class="ci-name">@item.Name.ToUpper()</div>
+                                        <div class="ci-cost">HUMANITY COST: <span style="color:var(--nc-red);">–@cost</span></div>
+                                    </div>
+                                    <button class="ci-remove" title="Uninstall" @onclick="() => UninstallCyberware(item)">REMOVE</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="dp-section" style="height: 100%; display: flex; flex-direction: column;">
+                    <h3>LOADOUT & INVENTORY</h3>
+                    
+                    <div class="inv-system">
+                        <div class="inv-paper-doll">
+                            <h3 style="color:var(--nc-cyan); font-size:0.8rem; text-align:center; margin-bottom:1rem;">EQUIPPED GEAR</h3>
+                            <div class="paper-doll">
+                                <div class="pd-head @(HasEquipped("HEAD") ? "filled" : "")" 
+                                     ondragover="event.preventDefault()" 
+                                     @ondrop='() => HandleDrop("HEAD")'>
+                                    @(GetEquippedName("HEAD") ?? "HEAD")
+                                </div>
+                                <div class="pd-mid">
+                                    <div class="pd-arm @(HasEquipped("R.ARM") ? "filled" : "")" 
+                                         ondragover="event.preventDefault()" 
+                                         @ondrop='() => HandleDrop("R.ARM")'>
+                                        @(GetEquippedName("R.ARM") ?? "R.ARM")
+                                    </div>
+                                    <div class="pd-torso @(HasEquipped("TORSO") ? "filled" : "")" 
+                                         ondragover="event.preventDefault()" 
+                                         @ondrop='() => HandleDrop("TORSO")'>
+                                        @(GetEquippedName("TORSO") ?? "TORSO")
+                                    </div>
+                                    <div class="pd-arm @(HasEquipped("L.ARM") ? "filled" : "")" 
+                                         ondragover="event.preventDefault()" 
+                                         @ondrop='() => HandleDrop("L.ARM")'>
+                                        @(GetEquippedName("L.ARM") ?? "L.ARM")
+                                    </div>
+                                </div>
+                                <div class="pd-legs">
+                                    <div class="pd-leg @(HasEquipped("R.LEG") ? "filled" : "")" 
+                                         ondragover="event.preventDefault()" 
+                                         @ondrop='() => HandleDrop("R.LEG")'>
+                                        @(GetEquippedName("R.LEG") ?? "R.LEG")
+                                    </div>
+                                    <div class="pd-leg @(HasEquipped("L.LEG") ? "filled" : "")" 
+                                         ondragover="event.preventDefault()" 
+                                         @ondrop='() => HandleDrop("L.LEG")'>
+                                        @(GetEquippedName("L.LEG") ?? "L.LEG")
+                                    </div>
+                                </div>
+                                
+                                <div class="pd-weapon @(HasEquipped("WEAPON") ? "filled" : "")" style="margin-top:0.5rem; width:100%; height:30px; border:1px dashed var(--nc-gold); display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--nc-gold);"
+                                     ondragover="event.preventDefault()" 
+                                     @ondrop='() => HandleDrop("WEAPON")'>
+                                    @(GetEquippedName("WEAPON") ?? "WEAPON SLOT")
+                                </div>
+                                <div class="pd-vehicle @(HasEquipped("VEHICLE_SLOT") ? "filled" : "")" style="margin-top:0.5rem; width:100%; height:30px; border:1px dashed #f472b6; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:#f472b6;"
+                                     ondragover="event.preventDefault()" 
+                                     @ondrop='() => HandleDrop("VEHICLE_SLOT")'>
+                                    @(GetEquippedName("VEHICLE_SLOT") ?? "VEHICLE SLOT")
+                                </div>
+                                @if (HasEquipped("VEHICLE_SLOT"))
+                                {
+                                    <button class="ncc-btn-submit" style="margin-top: 0.5rem; font-size: 0.6rem; width: 100%;" @onclick='() => ShowVehicleDetails(GetEquippedName("VEHICLE_SLOT"))'>VIEW VEHICLE</button>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="inv-grids">
+                            <div class="inv-grid-section" ondragover="event.preventDefault()" @ondrop='() => HandleDrop("BACKPACK")'>
+                                <div class="inv-header">
+                                    <span class="lbl">BACKPACK // CARRY CAP: @(_character.BT * 10) KG</span>
+                                    <span class="val">@GetWeight("BACKPACK") / @(_character.BT * 10) KG</span>
+                                </div>
+                                <div class="grid-container" style="--max-cells: @(_character.BT * 20);">
+                                    @foreach (var item in GetItemsInZone("BACKPACK"))
+                                    {
+                                        <div class="grid-item @GetItemClass(item)" 
+                                             style="--span: @GetItemSpan(item);" 
+                                             draggable="true" 
+                                             @ondragstart='() => HandleDragStart(item)'
+                                             @onclick='() => ShowItemDetails(item)'>
+                                            <span class="icon">@GetItemIcon(item)</span>
+                                            <span class="name">@item.Name</span>
+                                            <span class="weight">@item.WeightKg kg</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (HasEquipped("VEHICLE_SLOT"))
+                            {
+                                <div class="inv-grid-section" style="margin-top: 1rem;" ondragover="event.preventDefault()" @ondrop='() => HandleDrop("VEHICLE")'>
+                                    <div class="inv-header" style="color:var(--nc-cyan);">
+                                        <span class="lbl">VEHICLE TRUNK // CAP: 500 KG</span>
+                                        <span class="val">@GetWeight("VEHICLE") / 500 KG</span>
+                                    </div>
+                                    <div class="grid-container" style="--max-cells: 1000;">
+                                        @foreach (var item in GetItemsInZone("VEHICLE"))
+                                        {
+                                            <div class="grid-item @GetItemClass(item)" 
+                                                 style="--span: @GetItemSpan(item);" 
+                                                 draggable="true" 
+                                                 @ondragstart='() => HandleDragStart(item)'
+                                                 @onclick='() => ShowItemDetails(item)'>
+                                                <span class="icon">@GetItemIcon(item)</span>
+                                                <span class="name">@item.Name</span>
+                                                <span class="weight">@item.WeightKg kg</span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ITEM POPUP -->
+@if (_selectedItem != null)
+{
+    <div class="detail-overlay" @onclick="CloseItemDetails">
+        <div class="detail-box" style="max-width: 400px; border-color: var(--nc-cyan);" @onclick:stopPropagation="true">
+            <button class="detail-close" style="color: var(--nc-cyan);" @onclick="CloseItemDetails">✕</button>
+            <h2 style="color: var(--nc-cyan); margin-bottom: 0.5rem; border-bottom: 1px solid var(--nc-border); padding-bottom: 0.5rem;">@_selectedItem.Name.ToUpper()</h2>
+            <div style="font-size: 0.8rem; color: var(--nc-dim); margin-bottom: 1rem;">
+                <span style="color: var(--nc-gold);">@_selectedItem.Category.ToUpper()</span> // WGT: @_selectedItem.WeightKg KG // COST: €$@_selectedItem.CostEurobucks
+            </div>
+            <p style="font-size: 0.9rem; color: var(--nc-cream); line-height: 1.5; margin-bottom: 1.5rem;">@_selectedItem.Description</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 1rem; border: 1px dashed var(--nc-border);">
+                @if (!string.IsNullOrEmpty(_selectedItem.Damage)) { <div><strong style="color:var(--nc-red);">DMG:</strong> @_selectedItem.Damage</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Acc)) { <div><strong style="color:var(--nc-cyan);">ACC:</strong> @_selectedItem.Acc</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Range)) { <div><strong style="color:var(--nc-dim);">RNG:</strong> @_selectedItem.Range</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Capacity)) { <div><strong style="color:var(--nc-dim);">CAP:</strong> @_selectedItem.Capacity</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.ROF)) { <div><strong style="color:var(--nc-dim);">ROF:</strong> @_selectedItem.ROF</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.SP)) { <div><strong style="color:var(--nc-cyan);">SP:</strong> @_selectedItem.SP</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.EV)) { <div><strong style="color:var(--nc-dim);">EV:</strong> @_selectedItem.EV</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Concealability)) { <div><strong style="color:var(--nc-dim);">CONC:</strong> @_selectedItem.Concealability</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Availability)) { <div><strong style="color:var(--nc-dim);">AVAIL:</strong> @_selectedItem.Availability</div> }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- VEHICLE DIAGRAM POPUP -->
+@if (_selectedVehicle != null)
+{
+    <div class="detail-overlay" @onclick="CloseVehicleDetails">
+        <div class="detail-box" style="border-color: #f472b6; max-width: 800px;" @onclick:stopPropagation="true">
+            <button class="detail-close" style="color: #f472b6;" @onclick="CloseVehicleDetails">✕</button>
+            <h2 style="color: #f472b6; margin-bottom: 0.5rem; border-bottom: 1px solid var(--nc-border); padding-bottom: 0.5rem;">@_selectedVehicle.Name.ToUpper() DIAGRAM</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1rem;">
+                <div>
+                    <div style="font-size: 0.8rem; color: var(--nc-dim); margin-bottom: 1rem;">
+                        <span style="color: var(--nc-gold);">VEHICLE</span> // WGT: @_selectedVehicle.WeightKg KG // COST: €$@_selectedVehicle.CostEurobucks
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--nc-cream); line-height: 1.5; margin-bottom: 1.5rem;">@_selectedVehicle.Description</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 1rem; border: 1px dashed var(--nc-border);">
+                        @if (!string.IsNullOrEmpty(_selectedVehicle.TopSpeed)) { <div><strong style="color:var(--nc-cyan);">TOP SPEED:</strong> @_selectedVehicle.TopSpeed</div> }
+                        @if (!string.IsNullOrEmpty(_selectedVehicle.Seats)) { <div><strong style="color:var(--nc-dim);">SEATS:</strong> @_selectedVehicle.Seats</div> }
+                        @if (!string.IsNullOrEmpty(_selectedVehicle.SDP)) { <div><strong style="color:var(--nc-red);">STRUCTURAL DAMAGE POINTS (SDP):</strong> @_selectedVehicle.SDP</div> }
+                        <div><strong style="color:var(--nc-gold);">TRUNK CAPACITY:</strong> 500 KG</div>
+                    </div>
+                </div>
+                
+                <div style="border: 1px solid var(--nc-border); padding: 1rem; display: flex; align-items: center; justify-content: center; background: rgba(244, 114, 182, 0.05);">
+                    <div style="text-align: center; color: #f472b6; font-family: var(--font-mono); font-size: 0.8rem;">
+                        <pre style="margin:0; opacity:0.7;">
+      .--------.
+ ____/_______\___
+/  _   _   _   _ \
+| | | | | | | | | |
+| '-` '-` '-` '-` |
+ \________________/
+    (O)      (O)
+                        </pre>
+                        <div style="margin-top: 1rem;">[ SCHEMATIC RENDER ]</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .detail-page-layout { padding: 2rem; max-width: 1600px; margin: 0 auto; color: var(--nc-cream); font-family: var(--font-mono); min-height: 80vh; display: flex; flex-direction: column; }
+    
+    .dp-header { border-bottom: 2px solid var(--nc-red); padding-bottom: 1rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end; }
+    .back-btn { background: transparent; border: 1px solid var(--nc-border); color: var(--nc-dim); padding: 0.5rem 1rem; cursor: pointer; font-family: var(--font-mono); transition: all 0.2s; }
+    .back-btn:hover { color: var(--nc-cyan); border-color: var(--nc-cyan); }
+    .dp-title-block h1 { font-family: var(--font-display); font-size: 2.5rem; color: var(--nc-red); margin: 0 0 0.2rem 0; letter-spacing: 0.1em; }
+    .dp-role { color: var(--nc-cyan); font-weight: bold; letter-spacing: 0.2em; font-size: 0.9rem; }
+    .dp-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; }
+    .funds { font-size: 1.5rem; color: var(--nc-gold); font-weight: bold; font-family: var(--font-display); }
+    .owner { font-size: 0.7rem; color: var(--nc-dim); letter-spacing: 0.1em; }
+
+    .dp-content-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem; flex: 1; }
+
+    .dp-col-left { display: flex; flex-direction: column; gap: 1.5rem; }
+    .dp-col-right { display: flex; flex-direction: column; }
+
+    .dp-section { background: var(--nc-panel); border: 1px solid var(--nc-border); padding: 1.5rem; position: relative; border-left: 4px solid var(--nc-cyan); }
+    .dp-section h3 { color: var(--nc-cyan); font-size: 1rem; letter-spacing: 0.1em; border-bottom: 1px dashed var(--nc-border); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+
+    .dp-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+    .stat-chip { background: var(--nc-dark); border: 1px solid var(--nc-border); padding: 0.5rem; text-align: center; font-size: 0.8rem; color: var(--nc-cream); }
+    
+    .dp-derived { display: flex; justify-content: space-around; background: rgba(0,229,255,0.05); padding: 1rem; border: 1px solid var(--nc-border); }
+    .der-row { display: flex; flex-direction: column; align-items: center; }
+    .der-row span { font-size: 0.65rem; color: var(--nc-dim); margin-bottom: 0.3rem; }
+    .der-row strong { font-size: 1.2rem; color: var(--nc-cyan); }
+
+    .lp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .lp-item { display: flex; flex-direction: column; }
+    .lp-item span { font-size: 0.65rem; color: var(--nc-dim); margin-bottom: 0.2rem; }
+    .lp-item strong { font-size: 0.85rem; color: var(--nc-cream); }
+
+    /* HUMANITY PANEL */
+    .humanity-panel { margin-top: 1rem; padding: 1rem; border: 1px solid var(--nc-border); background: rgba(0,0,0,0.3); }
+    .hu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .hu-label { font-size: 0.65rem; color: var(--nc-dim); letter-spacing: 0.15em; }
+    .hu-status { font-size: 0.7rem; font-weight: bold; letter-spacing: 0.1em; padding: 0.15rem 0.4rem; border: 1px solid; }
+    .hu-bar-track { height: 6px; background: rgba(255,255,255,0.08); width: 100%; margin-bottom: 0.5rem; }
+    .hu-bar-fill { height: 100%; transition: width 0.4s ease; }
+    .hu-numbers { display: flex; justify-content: space-between; align-items: baseline; }
+    .hu-val { font-size: 1.4rem; font-weight: bold; font-family: var(--font-display); }
+    .hu-emp { font-size: 0.75rem; color: var(--nc-dim); letter-spacing: 0.1em; }
+    .hu-ok   { color: #22c55e; border-color: #22c55e; } .hu-ok .hu-bar-fill   { background: #22c55e; } .hu-ok .hu-val { color: #22c55e; }
+    .hu-warn { color: #eab308; border-color: #eab308; } .hu-warn .hu-bar-fill { background: #eab308; } .hu-warn .hu-val { color: #eab308; }
+    .hu-bad  { color: #f97316; border-color: #f97316; } .hu-bad .hu-bar-fill  { background: #f97316; } .hu-bad .hu-val  { color: #f97316; }
+    .hu-danger { color: var(--nc-red); border-color: var(--nc-red); } .hu-danger .hu-bar-fill { background: var(--nc-red); } .hu-danger .hu-val { color: var(--nc-red); }
+    .hu-critical { color: var(--nc-red); border-color: var(--nc-red); animation: blink-border 1s infinite; } .hu-critical .hu-bar-fill { background: var(--nc-red); } .hu-critical .hu-val { color: var(--nc-red); }
+    .hu-psycho { color: var(--nc-red); border-color: var(--nc-red); } .hu-psycho .hu-bar-fill { background: var(--nc-red); width: 0% !important; } .hu-psycho .hu-val { color: var(--nc-red); }
+    .cyberpsycho-banner { background: var(--nc-red); color: #000; font-weight: bold; text-align: center; padding: 0.4rem; font-size: 0.7rem; letter-spacing: 0.08em; margin-bottom: 0.75rem; animation: blink-border 0.5s infinite; }
+    @@keyframes blink-border { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+    /* CYBERWARE BAY */
+    .cyber-bay-section { border-left-color: var(--nc-red) !important; margin-bottom: 1.5rem; }
+    .cyber-empty { font-size: 0.7rem; color: var(--nc-dim); letter-spacing: 0.08em; padding: 1rem; text-align: center; border: 1px dashed rgba(255,0,60,0.3); }
+    .cyber-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .cyber-item { display: flex; align-items: center; gap: 0.75rem; background: rgba(255,0,60,0.05); border: 1px solid rgba(255,0,60,0.3); padding: 0.6rem 0.75rem; }
+    .ci-icon { color: var(--nc-red); font-size: 1rem; flex-shrink: 0; }
+    .ci-info { flex: 1; }
+    .ci-name { font-size: 0.8rem; color: var(--nc-cream); font-weight: bold; letter-spacing: 0.05em; }
+    .ci-cost { font-size: 0.65rem; color: var(--nc-dim); margin-top: 0.15rem; }
+    .ci-remove { background: transparent; border: 1px solid rgba(255,0,60,0.5); color: var(--nc-red); padding: 0.25rem 0.6rem; font-family: var(--font-mono); font-size: 0.65rem; cursor: pointer; letter-spacing: 0.08em; transition: all 0.2s; flex-shrink: 0; }
+    .ci-remove:hover { background: rgba(255,0,60,0.2); }
+    .install-log { padding: 0.4rem 0.75rem; font-size: 0.72rem; letter-spacing: 0.07em; margin-bottom: 0.75rem; cursor: pointer; border-left: 2px solid; }
+    .log-cost { color: var(--nc-red); border-color: var(--nc-red); background: rgba(255,0,60,0.08); }
+    .log-ok   { color: #22c55e;      border-color: #22c55e;      background: rgba(34,197,94,0.08); }
+
+    .skills-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 2rem; overflow-y: auto; flex: 1; padding-right: 1rem; }
+    .skill-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dotted rgba(255,255,255,0.05); padding: 0.3rem 0; font-size: 0.85rem; }
+    .skill-val { color: var(--nc-red); font-weight: bold; }
+
+    /* INVENTORY SYSTEM */
+    .inv-system { display: flex; gap: 2rem; flex: 1; }
+    .inv-paper-doll { flex: 0 0 150px; }
+    .inv-grids { flex: 1; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; padding-right: 0.5rem; }
+    
+    .inv-header { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; color: var(--nc-red); margin-bottom: 0.5rem; letter-spacing: 0.1em; }
+    
+    .grid-container { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; background: rgba(0,0,0,0.3); border: 1px solid var(--nc-border); padding: 4px; min-height: 150px; align-content: start; }
+    
+    .grid-item { background: var(--nc-panel); border: 1px solid var(--nc-border); color: var(--nc-cream); font-size: 0.6rem; padding: 0.3rem; display: flex; flex-direction: column; justify-content: space-between; cursor: grab; grid-column: span var(--span); min-height: 50px; overflow: hidden; position: relative; }
+    .grid-item:active { cursor: grabbing; opacity: 0.6; }
+    .grid-item .name { font-weight: bold; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+    .grid-item .weight { align-self: flex-end; color: var(--nc-dim); font-size: 0.55rem; z-index: 2; }
+    .grid-item .icon { position: absolute; bottom: -5px; left: -5px; font-size: 2rem; opacity: 0.1; z-index: 1; }
+
+    .cat-weapon { border-left: 3px solid var(--nc-red); }
+    .cat-armor { border-left: 3px solid var(--nc-cyan); }
+    .cat-medical { border-left: 3px solid var(--nc-green); }
+    .cat-tool { border-left: 3px solid var(--nc-gold); }
+    .cat-drug { border-left: 3px solid #b794f6; }
+    .cat-vehicle { border-left: 3px solid #f472b6; }
+    .cat-cyber { border-left: 3px solid var(--nc-red); }
+
+    /* PAPER DOLL */
+    .paper-doll { display: flex; flex-direction: column; align-items: center; gap: 4px; user-select: none; }
+    .pd-head { width: 45px; height: 45px; border: 1px dashed var(--nc-dim); border-radius: 40% 40% 50% 50%; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; color: var(--nc-dim); transition: all 0.2s; text-align:center; overflow:hidden; }
+    .pd-mid { display: flex; gap: 4px; }
+    .pd-arm { width: 35px; height: 90px; border: 1px dashed var(--nc-dim); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; writing-mode: vertical-rl; color: var(--nc-dim); transition: all 0.2s; text-align:center; overflow:hidden; }
+    .pd-torso { width: 70px; height: 100px; border: 1px dashed var(--nc-dim); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; color: var(--nc-dim); transition: all 0.2s; text-align:center; overflow:hidden; }
+    .pd-legs { display: flex; gap: 4px; }
+    .pd-leg { width: 33px; height: 100px; border: 1px dashed var(--nc-dim); border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.5rem; writing-mode: vertical-rl; color: var(--nc-dim); transition: all 0.2s; text-align:center; overflow:hidden; }
+
+    .pd-head.filled, .pd-arm.filled, .pd-torso.filled, .pd-leg.filled, .pd-weapon.filled { background: rgba(0, 229, 255, 0.1); border: 1px solid var(--nc-cyan); color: var(--nc-cyan); font-weight: bold; }
+    .pd-vehicle.filled { background: rgba(244, 114, 182, 0.1); border: 1px solid #f472b6; color: #f472b6; font-weight: bold; }
+
+    /* DETAIL POPUP */
+    .detail-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    .detail-box { background: var(--nc-panel); border: 1px solid var(--nc-red); width: 100%; padding: 2rem; position: relative; }
+    .detail-close { position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; }
+</style>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private CharacterSheet? _character;
+    private bool _loading = true;
+    private string _installLog = string.Empty;
+    private bool   _installSuccess;
+
+    // ── HUMANITY COMPUTED ──
+    private string HumanityStatus => _character?.Humanity switch {
+        >= 71 => "NOMINAL",
+        >= 41 => "STRAINED",
+        >= 21 => "DISORDER",
+        >= 11 => "PSYCHOSIS IMMINENT",
+        >= 1  => "PRE-PSYCHOTIC",
+        _     => "CYBERPSYCHO"
+    };
+    private string HumanityClass => _character?.Humanity switch {
+        >= 71 => "hu-ok",
+        >= 41 => "hu-warn",
+        >= 21 => "hu-bad",
+        >= 11 => "hu-danger",
+        >= 1  => "hu-critical",
+        _     => "hu-psycho"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.InitializeAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _character = await CharApi.GetByIdAsync(Id);
+        _loading = false;
+        StateHasChanged();
+    }
+
+    // ── CYBERWARE INSTALL / UNINSTALL ──
+    private async Task HandleCyberDrop()
+    {
+        if (_draggedItem == null || _character == null) return;
+        if (_draggedItem.Category != "Cyberware") { _draggedItem = null; return; }
+        if (_character.InstalledCyberwareIds.Contains(_draggedItem.InstanceId)) { _draggedItem = null; return; }
+
+        _character.InstalledCyberwareIds.Add(_draggedItem.InstanceId);
+
+        if (!string.IsNullOrEmpty(_draggedItem.HumanityCostDice)
+            && !_character.HumanityPaidByInstanceId.ContainsKey(_draggedItem.InstanceId))
+        {
+            var roll = Dice.RollDamage(_draggedItem.HumanityCostDice);
+            _character.HumanityPaidByInstanceId[_draggedItem.InstanceId] = roll.Total;
+            _character.Humanity = Math.Max(0, _character.Humanity - roll.Total);
+            _character.EMP = _character.Humanity / 10;
+            _installLog = $"NEURAL LINK INSTALLED — {_draggedItem.Name.ToUpper()} — HUMANITY –{roll.Total} — CURRENT: {_character.Humanity}";
+            _installSuccess = false;
+        }
+        else
+        {
+            _installLog = $"IMPLANT REGISTERED — {_draggedItem.Name.ToUpper()} — NO HUMANITY COST";
+            _installSuccess = true;
+        }
+
+        _draggedItem = null;
+        await CharApi.UpdateAsync(_character);
+        StateHasChanged();
+    }
+
+    private async Task UninstallCyberware(GearItemDto item)
+    {
+        if (_character == null) return;
+        _character.InstalledCyberwareIds.Remove(item.InstanceId);
+
+        if (_character.HumanityPaidByInstanceId.TryGetValue(item.InstanceId, out int paid))
+        {
+            _character.Humanity = Math.Min(100, _character.Humanity + paid);
+            _character.EMP = _character.Humanity / 10;
+            _character.HumanityPaidByInstanceId.Remove(item.InstanceId);
+            _installLog = $"IMPLANT EXTRACTED — {item.Name.ToUpper()} — HUMANITY +{paid} — CURRENT: {_character.Humanity}";
+            _installSuccess = true;
+        }
+        else
+        {
+            _installLog = $"IMPLANT REMOVED — {item.Name.ToUpper()}";
+            _installSuccess = true;
+        }
+
+        await CharApi.UpdateAsync(_character);
+        StateHasChanged();
+    }
+
+    // ── INVENTORY LOGIC ──
+    private GearItemDto? _draggedItem;
+    private GearItemDto? _selectedItem;
+    private GearItemDto? _selectedVehicle;
+
+    private void ShowItemDetails(GearItemDto item) => _selectedItem = item;
+    private void CloseItemDetails() => _selectedItem = null;
+
+    private void ShowVehicleDetails(string? vehicleName)
+    {
+        if (string.IsNullOrEmpty(vehicleName) || _character == null) return;
+        _selectedVehicle = _character.Inventory.FirstOrDefault(i => i.Name == vehicleName);
+    }
+    private void CloseVehicleDetails() => _selectedVehicle = null;
+
+    private void HandleDragStart(GearItemDto item)
+    {
+        _draggedItem = item;
+    }
+
+    private async Task HandleDrop(string targetZone)
+    {
+        if (_draggedItem == null || _character == null) return;
+
+        // Validation
+        bool isWeapon = _draggedItem.Category == "Weapon";
+        bool isArmor = _draggedItem.Category == "Armor" || _draggedItem.Category == "Clothing";
+        bool isVehicle = _draggedItem.Category == "Vehicle";
+
+        if (targetZone == "WEAPON" && !isWeapon) return;
+        if (targetZone == "VEHICLE_SLOT" && !isVehicle) return;
+        if ((targetZone == "HEAD" || targetZone == "TORSO" || targetZone == "R.ARM" || targetZone == "L.ARM" || targetZone == "R.LEG" || targetZone == "L.LEG") && !isArmor) return;
+        if (targetZone == "VEHICLE" && isVehicle) return; // Can't put a vehicle in a vehicle trunk
+
+        // Remove from current equip slot if it's equipped
+        if (_character.EquippedGearIds.ContainsValue(_draggedItem.InstanceId))
+        {
+            var key = _character.EquippedGearIds.FirstOrDefault(x => x.Value == _draggedItem.InstanceId).Key;
+            _character.EquippedGearIds.Remove(key);
+        }
+
+        // Add to new zone if it's an equip slot
+        if (targetZone != "BACKPACK" && targetZone != "VEHICLE")
+        {
+            _character.EquippedGearIds[targetZone] = _draggedItem.InstanceId;
+        }
+        else
+        {
+            if (targetZone == "VEHICLE")
+                _character.GridItemPositions[_draggedItem.InstanceId] = -1; // -1 means vehicle
+            else
+                _character.GridItemPositions.Remove(_draggedItem.InstanceId); // removed means backpack
+        }
+
+        await CharApi.UpdateAsync(_character);
+        _draggedItem = null;
+        StateHasChanged();
+    }
+
+    private bool HasEquipped(string slot) => _character?.EquippedGearIds.ContainsKey(slot) == true;
+    
+    private string? GetEquippedName(string slot)
+    {
+        if (_character == null || !_character.EquippedGearIds.TryGetValue(slot, out var id)) return null;
+        return _character.Inventory.FirstOrDefault(i => i.InstanceId == id)?.Name;
+    }
+
+    private IEnumerable<GearItemDto> GetItemsInZone(string zone)
+    {
+        if (_character == null) return Enumerable.Empty<GearItemDto>();
+        
+        var unequipped = _character.Inventory.Where(i => !_character.EquippedGearIds.ContainsValue(i.InstanceId));
+        
+        if (zone == "VEHICLE")
+            return unequipped.Where(i => _character.GridItemPositions.GetValueOrDefault(i.InstanceId, 0) == -1);
+        else // BACKPACK
+            return unequipped.Where(i => _character.GridItemPositions.GetValueOrDefault(i.InstanceId, 0) != -1);
+    }
+
+    private double GetWeight(string zone) => GetItemsInZone(zone).Sum(i => i.WeightKg);
+
+    private int GetItemSpan(GearItemDto item)
+    {
+        int cells = (int)Math.Ceiling(item.WeightKg / 0.5);
+        return Math.Max(1, Math.Min(10, cells)); // max span 10 columns
+    }
+
+    private string GetItemClass(GearItemDto item) => item.Category.ToLower() switch
+    {
+        "weapon" => "cat-weapon",
+        "armor" => "cat-armor",
+        "medical" => "cat-medical",
+        "tool" or "equipment" => "cat-tool",
+        "drug" => "cat-drug",
+        "vehicle" => "cat-vehicle",
+        "cyberware" => "cat-cyber",
+        _ => ""
+    };
+
+    private string GetItemIcon(GearItemDto item) => item.Category.ToLower() switch
+    {
+        "weapon" => "⚔",
+        "armor" => "⛨",
+        "medical" => "✚",
+        "tool" or "equipment" => "⚙",
+        "drug" => "⚗",
+        "vehicle" => "⛟",
+        "cyberware" => "⬡",
+        _ => "📦"
+    };
+}

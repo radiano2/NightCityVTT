@@ -39,6 +39,7 @@ public class CharacterSheet
     public int    EMP  { get; set; }
     public int    BT   { get; set; }
     public bool   IsElite    { get; set; }
+    public bool   IsTestAsset { get; set; }
     public string SkillsJson { get; set; } = string.Empty; // JSON: {skill:points}
     public int    Humanity   { get; set; }
     public int    Mobility   { get; set; }
@@ -47,6 +48,10 @@ public class CharacterSheet
 
     public int Eurobucks { get; set; }
     public List<GearItemDto> Inventory { get; set; } = new();
+    public Dictionary<string, string> EquippedGearIds { get; set; } = new();
+    public Dictionary<string, int> GridItemPositions { get; set; } = new();
+    public List<string> InstalledCyberwareIds { get; set; } = new();
+    public Dictionary<string, int> HumanityPaidByInstanceId { get; set; } = new();
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

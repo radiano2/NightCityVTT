@@ -30,6 +30,14 @@ public class CharacterController : ControllerBase
         return Ok(docs.Select(d => d.ToSheet()));
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(string id)
+    {
+        var doc = await _chars.Find(d => d.Id == id).FirstOrDefaultAsync();
+        if (doc == null) return NotFound();
+        return Ok(doc.ToSheet());
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CharacterSheet sheet)
     {
