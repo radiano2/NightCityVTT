@@ -15,18 +15,22 @@ public class MapDocument
     public int      TileSize  { get; set; } = 40;
     public bool     IsActive  { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public List<TileCell>   Tiles  { get; set; } = new();
-    public List<TokenState> Tokens { get; set; } = new();
+    public List<TileCell>       Tiles      { get; set; } = new();
+    public List<TokenState>    Tokens     { get; set; } = new();
+    public List<TeamDto>       Teams      { get; set; } = new();
+    public List<CombatLogEntry> CombatLog { get; set; } = new();
 
     public MapDto ToDto() => new()
     {
         Id = Id, Name = Name, Width = Width, Height = Height, TileSize = TileSize,
-        IsActive = IsActive, CreatedAt = CreatedAt, Tiles = Tiles, Tokens = Tokens
+        IsActive = IsActive, CreatedAt = CreatedAt, Tiles = Tiles, Tokens = Tokens,
+        Teams = Teams, CombatLog = CombatLog
     };
 
     public static MapDocument FromDto(MapDto d) => new()
     {
         Id = d.Id, Name = d.Name, Width = d.Width, Height = d.Height, TileSize = d.TileSize,
-        IsActive = d.IsActive, CreatedAt = d.CreatedAt, Tiles = d.Tiles, Tokens = d.Tokens
+        IsActive = d.IsActive, CreatedAt = d.CreatedAt, Tiles = d.Tiles, Tokens = d.Tokens,
+        Teams = d.Teams, CombatLog = d.CombatLog
     };
 }

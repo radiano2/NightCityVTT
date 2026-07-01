@@ -56,10 +56,16 @@ else
                     <h3>NEURAL & PHYSICAL STATS</h3>
                     <div class="dp-stats">
                         <div class="stat-chip">INT: @_character.INT</div>
-                        <div class="stat-chip">REF: @_character.REF</div>
+                        <div class="stat-chip @(TotalEV > 0 ? "stat-penalized" : "")" title="@(TotalEV > 0 ? $"-{TotalEV} EV Penalty" : "")">
+                            REF: @Math.Max(1, _character.REF - TotalEV) @(TotalEV > 0 ? $" (-{TotalEV})" : "")
+                        </div>
                         <div class="stat-chip">TECH: @_character.TECH</div>
                         <div class="stat-chip">COOL: @_character.COOL</div>
-                        <div class="stat-chip">LK: @_character.LK</div>
+                        <div class="stat-chip lk-chip" style="cursor:pointer; display:flex; align-items:center; gap:0.2rem;" title="Left-click to spend luck, Right-click to restore">
+                            <button style="background:transparent; border:none; color:var(--nc-cyan); cursor:pointer; font-weight:bold; font-size:1.1rem;" @onclick="DecrementLuck" @onclick:preventDefault>-</button>
+                            LK: @_character.CurrentLuck / @_character.LK
+                            <button style="background:transparent; border:none; color:var(--nc-cyan); cursor:pointer; font-weight:bold; font-size:1.1rem;" @onclick="IncrementLuck" @onclick:preventDefault>+</button>
+                        </div>
                         <div class="stat-chip">ATT: @_character.ATT</div>
                         <div class="stat-chip">MA: @_character.MA</div>
                         <div class="stat-chip">EMP: @_character.EMP</div>
@@ -112,13 +118,24 @@ else
                     if (skills.Count > 0)
                     {
                         <div class="dp-section" style="flex: 1; display:flex; flex-direction:column;">
-                            <h3>SKILL MATRIX</h3>
+                            <h3 style="display:flex; justify-content:space-between; align-items:center;">
+                                SKILL MATRIX
+                                <span style="color:var(--nc-cyan)">IP: @_character.IP</span>
+                            </h3>
                             <div class="skills-list">
                                 @foreach (var kv in skills.Where(k => k.Value > 0).OrderByDescending(k => k.Value))
                                 {
-                                    <div class="skill-row">
+                                    <div class="skill-row" style="display:flex; justify-content:space-between; align-items:center;">
                                         <span>@kv.Key</span>
-                                        <span class="skill-val">@kv.Value</span>
+                                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                                            <span class="skill-val">@kv.Value</span>
+                                            <button class="ncc-btn-submit" style="padding:0.1rem 0.3rem; font-size:0.5rem" 
+                                                    title="Upgrade (@(kv.Value == 0 ? 10 : kv.Value * 10) IP)"
+                                                    disabled="@(_character.IP < (kv.Value == 0 ? 10 : kv.Value * 10) || kv.Value >= 10)"
+                                                    @onclick="() => UpgradeSkill(kv.Key)">
+                                                +
+                                            </button>
+                                        </div>
                                     </div>
                                 }
                             </div>
@@ -180,33 +197,76 @@ else
                                      @ondrop='() => HandleDrop("HEAD")'>
                                     @(GetEquippedName("HEAD") ?? "HEAD")
                                 </div>
+                                <div class="pd-head @(HasEquipped("HEAD_OUTER") ? "filled" : "")" 
+                                     ondragover="event.preventDefault()" 
+                                     @ondrop='() => HandleDrop("HEAD_OUTER")' style="margin-top:2px;">
+                                    @(GetEquippedName("HEAD_OUTER") ?? "HEAD (OUTER)")
+                                </div>
                                 <div class="pd-mid">
-                                    <div class="pd-arm @(HasEquipped("R.ARM") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("R.ARM")'>
-                                        @(GetEquippedName("R.ARM") ?? "R.ARM")
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-arm @(HasEquipped("R.ARM") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("R.ARM")'>
+                                            @(GetEquippedName("R.ARM") ?? "R.ARM")
+                                        </div>
+                                        <div class="pd-arm @(HasEquipped("R.ARM_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("R.ARM_OUTER")'>
+                                            @(GetEquippedName("R.ARM_OUTER") ?? "R.ARM (O)")
+                                        </div>
                                     </div>
-                                    <div class="pd-torso @(HasEquipped("TORSO") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("TORSO")'>
-                                        @(GetEquippedName("TORSO") ?? "TORSO")
+                                    
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-torso @(HasEquipped("TORSO") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("TORSO")'>
+                                            @(GetEquippedName("TORSO") ?? "TORSO")
+                                        </div>
+                                        <div class="pd-torso @(HasEquipped("TORSO_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("TORSO_OUTER")'>
+                                            @(GetEquippedName("TORSO_OUTER") ?? "TORSO (OUTER)")
+                                        </div>
                                     </div>
-                                    <div class="pd-arm @(HasEquipped("L.ARM") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("L.ARM")'>
-                                        @(GetEquippedName("L.ARM") ?? "L.ARM")
+
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-arm @(HasEquipped("L.ARM") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("L.ARM")'>
+                                            @(GetEquippedName("L.ARM") ?? "L.ARM")
+                                        </div>
+                                        <div class="pd-arm @(HasEquipped("L.ARM_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("L.ARM_OUTER")'>
+                                            @(GetEquippedName("L.ARM_OUTER") ?? "L.ARM (O)")
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="pd-legs">
-                                    <div class="pd-leg @(HasEquipped("R.LEG") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("R.LEG")'>
-                                        @(GetEquippedName("R.LEG") ?? "R.LEG")
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-leg @(HasEquipped("R.LEG") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("R.LEG")'>
+                                            @(GetEquippedName("R.LEG") ?? "R.LEG")
+                                        </div>
+                                        <div class="pd-leg @(HasEquipped("R.LEG_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("R.LEG_OUTER")'>
+                                            @(GetEquippedName("R.LEG_OUTER") ?? "R.LEG (O)")
+                                        </div>
                                     </div>
-                                    <div class="pd-leg @(HasEquipped("L.LEG") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("L.LEG")'>
-                                        @(GetEquippedName("L.LEG") ?? "L.LEG")
+
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-leg @(HasEquipped("L.LEG") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("L.LEG")'>
+                                            @(GetEquippedName("L.LEG") ?? "L.LEG")
+                                        </div>
+                                        <div class="pd-leg @(HasEquipped("L.LEG_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("L.LEG_OUTER")'>
+                                            @(GetEquippedName("L.LEG_OUTER") ?? "L.LEG (O)")
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -488,6 +548,37 @@ else
         _     => "hu-psycho"
     };
 
+    private int TotalEV => GetTotalEV();
+
+    private int GetTotalEV()
+    {
+        if (_character == null || _character.EquippedGearIds == null) return 0;
+        int ev = 0;
+        foreach (var id in _character.EquippedGearIds.Values.Distinct())
+        {
+            var item = _character.Inventory.FirstOrDefault(i => i.InstanceId == id);
+            if (item != null && int.TryParse(item.EV, out int val))
+            {
+                ev += val;
+            }
+        }
+        return ev;
+    }
+
+    private async Task DecrementLuck()
+    {
+        if (_character == null || _character.CurrentLuck <= 0) return;
+        _character.CurrentLuck--;
+        await CharApi.UpdateAsync(_character);
+    }
+
+    private async Task IncrementLuck()
+    {
+        if (_character == null || _character.CurrentLuck >= _character.LK) return;
+        _character.CurrentLuck++;
+        await CharApi.UpdateAsync(_character);
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await Session.InitializeAsync();
@@ -554,6 +645,24 @@ else
         StateHasChanged();
     }
 
+    private async Task UpgradeSkill(string skillName)
+    {
+        if (_character == null) return;
+        var skills = JsonSerializer.Deserialize<Dictionary<string, int>>(_character.SkillsJson) ?? new();
+        if (skills.TryGetValue(skillName, out int level))
+        {
+            int cost = level == 0 ? 10 : level * 10;
+            
+            if (_character.IP >= cost && level < 10)
+            {
+                _character.IP -= cost;
+                skills[skillName] = level + 1;
+                _character.SkillsJson = JsonSerializer.Serialize(skills);
+                await CharApi.UpdateAsync(_character);
+            }
+        }
+    }
+
     // ── INVENTORY LOGIC ──
     private GearItemDto? _draggedItem;
     private GearItemDto? _selectedItem;
@@ -585,7 +694,7 @@ else
 
         if (targetZone == "WEAPON" && !isWeapon) return;
         if (targetZone == "VEHICLE_SLOT" && !isVehicle) return;
-        if ((targetZone == "HEAD" || targetZone == "TORSO" || targetZone == "R.ARM" || targetZone == "L.ARM" || targetZone == "R.LEG" || targetZone == "L.LEG") && !isArmor) return;
+        if ((targetZone == "HEAD" || targetZone == "TORSO" || targetZone == "R.ARM" || targetZone == "L.ARM" || targetZone == "R.LEG" || targetZone == "L.LEG" || targetZone.EndsWith("_OUTER")) && !isArmor) return;
         if (targetZone == "VEHICLE" && isVehicle) return; // Can't put a vehicle in a vehicle trunk
 
         // Remove from current equip slot if it's equipped

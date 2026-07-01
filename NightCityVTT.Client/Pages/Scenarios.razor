@@ -1,0 +1,142 @@
+@page "/scenarios"
+@inject ScenarioApiService ScenarioApi
+@inject MapApiService MapApi
+@inject UserSessionService Session
+@inject NavigationManager Nav
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+
+<PageTitle>Scenarios // Night City VTT</PageTitle>
+
+<div class="maps-page">
+    <div class="maps-header">
+        <h1>// OPERATIONS //</h1>
+        <p class="subtitle">Combat scenarios link a story, map and team rosters into one launchable encounter.</p>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="ncc-loading">
+            <div class="ncc-empty-icon">⬡</div>
+            <div class="ncc-empty-sub">LOADING OPERATIONS DATA...</div>
+        </div>
+    }
+    else
+    {
+        @if (_isGm)
+        {
+            <div class="maps-create-section">
+                <input class="ncc-input" placeholder="Operation name..." @bind="_newName" style="max-width:280px" />
+                <button class="ncc-btn-submit" @onclick="CreateScenario"
+                        disabled="@string.IsNullOrWhiteSpace(_newName)">
+                    + NEW OPERATION
+                </button>
+            </div>
+        }
+
+        @if (!_scenarios.Any())
+        {
+            <div class="ncc-empty">
+                <div class="ncc-empty-icon">◌</div>
+                <div class="ncc-empty-sub">NO OPERATIONS FOUND</div>
+                @if (_isGm)
+                {
+                    <p class="ncc-empty-tip">Create an operation above to begin.</p>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="maps-grid">
+                @foreach (var s in _scenarios)
+                {
+                    <div class="map-card @(s.Status == "Active" ? "map-card-active" : "")">
+                        <div class="map-card-header">
+                            <span class="map-card-name">@s.Name.ToUpper()</span>
+                            <span class="map-card-badge @StatusClass(s.Status)">@s.Status.ToUpper()</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(s.Description))
+                        {
+                            <div class="map-card-sub">@s.Description</div>
+                        }
+                        <div class="map-card-meta">
+                            <span>@s.Teams.Count team(s)</span>
+                            <span>@s.CreatedAt.ToString("yyyy-MM-dd")</span>
+                        </div>
+                        <div class="map-card-actions">
+                            <button class="ncc-btn-submit" style="font-size:.7rem;padding:.3rem .8rem"
+                                    @onclick='() => Nav.NavigateTo($"/scenarios/{s.Id}")'>
+                                DETAILS
+                            </button>
+                            @if (_isGm && !string.IsNullOrEmpty(s.MapId))
+                            {
+                                <button class="ncc-btn-submit" style="font-size:.7rem;padding:.3rem .8rem;background:var(--nc-red)"
+                                        @onclick="() => LaunchScenario(s.Id!)">
+                                    ▶ LAUNCH
+                                </button>
+                            }
+                            @if (_isGm)
+                            {
+                                <button class="bm-remove-btn" @onclick="() => DeleteScenario(s.Id!)">✕</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<ScenarioDto> _scenarios = new();
+    private bool _loading = true;
+    private bool _isGm;
+    private string _newName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.InitializeAsync();
+        _isGm = Session.CurrentUser?.Role == UserRole.GameMaster;
+        _scenarios = await ScenarioApi.GetAllAsync();
+        _loading = false;
+    }
+
+    private async Task CreateScenario()
+    {
+        if (string.IsNullOrWhiteSpace(_newName)) return;
+        var created = await ScenarioApi.CreateAsync(new ScenarioDto { Name = _newName });
+        if (created != null)
+        {
+            _newName = "";
+            Nav.NavigateTo($"/scenarios/{created.Id}");
+        }
+    }
+
+    private async Task DeleteScenario(string id)
+    {
+        await ScenarioApi.DeleteAsync(id);
+        _scenarios.RemoveAll(s => s.Id == id);
+    }
+
+    private async Task LaunchScenario(string id)
+    {
+        var mapUrl = await ScenarioApi.LaunchAsync(id);
+        if (mapUrl != null) Nav.NavigateTo(mapUrl);
+    }
+
+    private static string StatusClass(string status) => status switch
+    {
+        "Active"    => "badge-active",
+        "Completed" => "badge-done",
+        _           => "badge-arch"
+    };
+}
+
+<style>
+    .map-card-badge { font-size: .6rem; padding: .15rem .4rem; border-radius: 2px; letter-spacing: .08em; }
+    .badge-active   { background: rgba(58,255,110,.15); color: #3aff6e; }
+    .badge-done     { background: rgba(0,210,255,.15);  color: var(--nc-accent2); }
+    .badge-arch     { background: rgba(255,255,255,.05); color: var(--nc-text-dim); }
+    .map-card-actions { display: flex; align-items: center; gap: .5rem; margin-top: .5rem; flex-wrap: wrap; }
+    .map-card-meta  { display: flex; justify-content: space-between; font-size: .65rem; color: var(--nc-text-dim);
+                      margin-top: .3rem; }
+</style>

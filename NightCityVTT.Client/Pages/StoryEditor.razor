@@ -2,6 +2,8 @@
 @using NightCityVTT.Shared.Models
 @using NightCityVTT.Client.Services
 @inject StoryApiService StoryApi
+@inject MapApiService MapApi
+@inject CharacterApiService CharacterApi
 @inject UserSessionService Session
 @inject NavigationManager Nav
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
@@ -117,6 +119,22 @@
                                         <div class="sk-target"><strong>@stage.SkillName.ToUpper()</strong> // DIFFICULTY: <strong style="color:var(--nc-red)">@stage.TargetDifficulty</strong></div>
                                     </div>
                                 }
+
+                                @if (!string.IsNullOrEmpty(stage.MapId))
+                                {
+                                    var mapName = _maps.FirstOrDefault(m => m.Id == stage.MapId)?.Name ?? stage.MapId;
+                                    <div class="sp-map-launch">
+                                        <div class="sk-label">TACTICAL ENVIRONMENT</div>
+                                        <div style="display:flex;align-items:center;gap:1rem;margin-top:.4rem;">
+                                            <span style="color:var(--nc-cyan);font-weight:bold;">⬡ @mapName.ToUpper()</span>
+                                            @if (stage.EnemyCharacterIds.Count > 0)
+                                            {
+                                                <span style="color:var(--nc-dim);font-size:.75rem;">@stage.EnemyCharacterIds.Count HOSTILES ASSIGNED</span>
+                                            }
+                                            <button class="wiz-btn primary" style="margin-left:auto;" @onclick="() => LaunchStageMap(stage)">LAUNCH MAP ⬡</button>
+                                        </div>
+                                    </div>
+                                }
                             </div>
 
                             <div class="sp-controls">
@@ -174,7 +192,7 @@
                                         <input type="checkbox" @bind="stage.HasSkillCheck" style="accent-color:var(--nc-red);" />
                                         REQUIRES SKILL CHECK
                                     </label>
-                                    
+
                                     @if (stage.HasSkillCheck)
                                     {
                                         <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1rem;">
@@ -185,6 +203,42 @@
                                             <div class="wiz-field" style="margin-bottom:0;">
                                                 <label>TARGET DIFFICULTY (DV)</label>
                                                 <input type="number" class="ncc-input" @bind="stage.TargetDifficulty" min="5" max="40" />
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="map-assign-editor">
+                                    <div class="wiz-field" style="margin-bottom:.6rem;">
+                                        <label>LINKED BATTLE MAP</label>
+                                        <select class="ncc-input" @bind="stage.MapId">
+                                            <option value="">— No map linked —</option>
+                                            @foreach (var m in _maps)
+                                            {
+                                                <option value="@m.Id">@m.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(stage.MapId))
+                                    {
+                                        <div class="wiz-field" style="margin-bottom:0;">
+                                            <label>HOSTILE CHARACTERS (will be added as tokens on launch)</label>
+                                            <div class="enemy-pick-list">
+                                                @foreach (var ch in _npcChars)
+                                                {
+                                                    var chId = ch.Id ?? "";
+                                                    var chChecked = stage.EnemyCharacterIds.Contains(chId);
+                                                    <label class="enemy-pick-item">
+                                                        <input type="checkbox" checked="@chChecked"
+                                                               @onchange="e => ToggleEnemy(stage, chId, (bool)(e.Value ?? false))"
+                                                               style="accent-color:var(--nc-red);" />
+                                                        @ch.Handle (@ch.Role)
+                                                    </label>
+                                                }
+                                                @if (!_npcChars.Any())
+                                                {
+                                                    <span style="color:var(--nc-dim);font-size:.7rem;">No NPC characters found.</span>
+                                                }
                                             </div>
                                         </div>
                                     }
@@ -249,13 +303,20 @@
     .sp-header { padding: 2rem; background: var(--nc-dark); border-bottom: 2px solid var(--nc-red); text-align: center; }
     .sp-header h2 { font-family: var(--font-display); font-size: 2.5rem; color: var(--nc-red); margin: 0 0 0.5rem 0; letter-spacing: 0.1em; }
     .sp-stage { color: var(--nc-cyan); font-weight: bold; letter-spacing: 0.2em; font-size: 0.9rem; }
-    
-    .sp-stage-box { padding: 3rem; flex: 1; font-size: 1.1rem; }
+
+    .sp-stage-box { padding: 3rem; flex: 1; font-size: 1.1rem; overflow-y: auto; }
     .sp-skill-check { margin-top: 2rem; padding: 1.5rem; border: 2px solid var(--nc-red); background: rgba(255,0,60,0.05); display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
     .sk-label { font-size: 0.8rem; color: var(--nc-dim); letter-spacing: 0.2em; }
     .sk-target { font-size: 1.2rem; }
-    
+    .sp-map-launch { margin-top: 2rem; padding: 1.5rem; border: 2px solid var(--nc-cyan); background: rgba(0,229,255,0.04); }
+
     .sp-controls { padding: 1.5rem 3rem; border-top: 1px solid var(--nc-border); display: flex; justify-content: space-between; background: var(--nc-dark); }
+
+    /* MAP + ENEMY ASSIGNMENT */
+    .map-assign-editor { background: rgba(0,229,255,0.03); padding: 1rem; border: 1px dashed rgba(0,229,255,0.3); margin-top: 1rem; }
+    .enemy-pick-list { display: flex; flex-direction: column; gap: .3rem; max-height: 160px; overflow-y: auto; padding: .4rem; background: rgba(0,0,0,0.3); border: 1px solid var(--nc-border); margin-top: .3rem; }
+    .enemy-pick-item { display: flex; align-items: center; gap: .5rem; font-size: .75rem; cursor: pointer; padding: .2rem .3rem; }
+    .enemy-pick-item:hover { background: rgba(255,255,255,0.04); }
 </style>
 
 @code {
@@ -270,14 +331,26 @@
     private bool _isPlaying = false;
     private int _currentStageIndex = 0;
 
+    // Map + Enemy data
+    private List<MapDto> _maps = new();
+    private List<CharacterSheet> _npcChars = new();
+
     protected override async Task OnInitializedAsync()
     {
         await Session.InitializeAsync();
         if (Session.CurrentUser?.Role == UserRole.GameMaster)
         {
-            await LoadStories();
+            var tasks = new Task[] { LoadStories(), LoadMapsAndChars() };
+            await Task.WhenAll(tasks);
         }
         _loading = false;
+    }
+
+    private async Task LoadMapsAndChars()
+    {
+        _maps = await MapApi.GetAllAsync();
+        var allChars = await CharacterApi.GetAllAsync();
+        _npcChars = allChars.Where(c => c.IsNPC).ToList();
     }
 
     private async Task LoadStories()
@@ -300,13 +373,15 @@
             Title = story.Title,
             AuthorId = story.AuthorId,
             CreatedAt = story.CreatedAt,
-            Stages = story.Stages.Select(s => new StoryStageDto 
-            { 
-                Title = s.Title, 
-                Description = s.Description, 
-                HasSkillCheck = s.HasSkillCheck, 
-                SkillName = s.SkillName, 
-                TargetDifficulty = s.TargetDifficulty 
+            Stages = story.Stages.Select(s => new StoryStageDto
+            {
+                Title = s.Title,
+                Description = s.Description,
+                HasSkillCheck = s.HasSkillCheck,
+                SkillName = s.SkillName,
+                TargetDifficulty = s.TargetDifficulty,
+                MapId = s.MapId,
+                EnemyCharacterIds = new List<string>(s.EnemyCharacterIds)
             }).ToList()
         };
         _isPlaying = false;
@@ -394,5 +469,19 @@
         {
             _currentStageIndex++;
         }
+    }
+
+    private void ToggleEnemy(StoryStageDto stage, string charId, bool add)
+    {
+        if (add && !stage.EnemyCharacterIds.Contains(charId))
+            stage.EnemyCharacterIds.Add(charId);
+        else if (!add)
+            stage.EnemyCharacterIds.Remove(charId);
+    }
+
+    private void LaunchStageMap(StoryStageDto stage)
+    {
+        if (!string.IsNullOrEmpty(stage.MapId))
+            Nav.NavigateTo($"/maps/{stage.MapId}");
     }
 }

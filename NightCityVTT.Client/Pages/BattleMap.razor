@@ -1,6 +1,7 @@
 @page "/maps/{MapId}"
 @inject IJSRuntime JS
 @inject MapApiService MapApi
+@inject ScenarioApiService ScenarioApi
 @inject CharacterApiService CharApi
 @inject UserSessionService Session
 @inject NavigationManager Nav
@@ -47,6 +48,10 @@
                             @onclick='() => SetEditor("wall")' title="Paint wall tiles">WALL</button>
                     <button class="bm-tool-btn @(_editorMode == "door" ? "bm-tool-active" : "")"
                             @onclick='() => SetEditor("door")' title="Paint door tiles">DOOR</button>
+                    <button class="bm-tool-btn @(_editorMode == "halfcover" ? "bm-tool-active" : "")"
+                            @onclick='() => SetEditor("halfcover")' title="Paint half-cover (desks, barriers)">COVER</button>
+                    <button class="bm-tool-btn @(_editorMode == "hazard" ? "bm-tool-active" : "")"
+                            @onclick='() => SetEditor("hazard")' title="Paint hazard zone (fire, acid)">HAZARD</button>
                     <span class="bm-tool-sep">|</span>
                     <button class="bm-tool-btn" @onclick="FillFloor" title="Fill entire map with floor">FILL FLOOR</button>
                     <button class="bm-tool-btn" @onclick="ClearMap" title="Clear all tiles">CLEAR</button>
@@ -54,6 +59,14 @@
             }
 
             <div class="bm-toolbar-right">
+                <button class="bm-tool-btn @(_logOpen ? "bm-tool-active" : "")"
+                        @onclick='() => _logOpen = !_logOpen'>
+                    LOG (@_map.CombatLog.Count)
+                </button>
+                @if (_map.Tokens.Any(t => WoundStateFromDmg(t.TotalDamageTaken) == WoundState.Dead))
+                {
+                    <button class="bm-tool-btn bm-loot-btn" @onclick="OpenLoot">⚰ LOOT THE FALLEN</button>
+                }
                 @if (_isGm)
                 {
                     <button class="ncc-btn-submit bm-save-btn @(_saving ? "bm-saving" : "")"
@@ -76,8 +89,25 @@
         <div class="bm-main">
 
             <!-- Canvas -->
-            <div class="bm-canvas-wrap">
+            <div class="bm-canvas-wrap" style="position:relative;">
                 <canvas id="battle-map-canvas"></canvas>
+                
+                @if (_contextMenuTarget != null)
+                {
+                    <div class="bm-context-menu" style="left: @(_contextMenuX)px; top: @(_contextMenuY)px; position: absolute; z-index: 1000; background: var(--nc-bg-dark); border: 1px solid var(--nc-cyan); padding: 0.5rem; display:flex; flex-direction:column; gap:0.4rem; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.8);">
+                        <div style="font-weight:bold; color:var(--nc-cyan); font-size:0.75rem; text-align:center;">TARGET: @_contextMenuTarget.Handle</div>
+                        
+                        <div style="font-size:0.6rem; color:var(--nc-dim); text-align:center;">DISTANCE: @GetDistance(_selectedToken, _contextMenuTarget) m</div>
+
+                        <button class="ncc-btn-submit" @onclick="() => { ExecuteAttack(_contextMenuTarget); CloseContextMenu(); }">FIRE</button>
+                        <button class="ncc-btn-submit" style="background:var(--nc-red); color:#000;" @onclick="() => { ExecuteSuppressiveFire(_contextMenuTarget); CloseContextMenu(); }">SUPPRESS</button>
+                        
+                        <hr style="border-color:var(--nc-border); margin:0.2rem 0;" />
+                        
+                        <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-text); font-size:0.6rem; border:1px solid var(--nc-border);" @onclick="() => { SelectTokenFromSidebar(_contextMenuTarget.Id); CloseContextMenu(); }">Select Token</button>
+                        <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-red); font-size:0.6rem; border:none; margin-top:0.2rem;" @onclick="CloseContextMenu">Cancel</button>
+                    </div>
+                }
             </div>
 
             <!-- Sidebar -->
@@ -97,6 +127,133 @@
                     </div>
                 }
 
+                <!-- ── Combat Panel ──────────────────────────────────────────── -->
+                @if (_selectedToken != null)
+                {
+                    var _attChar = _charById.GetValueOrDefault(_selectedToken.CharacterId);
+                    @if (_attChar != null)
+                    {
+                        var _cWeapons = _attChar.Inventory.Where(i => i.Category == "Weapon").ToList();
+                        <div class="bm-sidebar-section bm-combat-panel">
+                            <div class="bm-section-title">⚔ COMBAT</div>
+                            @if (_cWeapons.Count == 0)
+                            {
+                                <div class="bm-empty-hint">No weapons in inventory.</div>
+                            }
+                            else
+                            {
+                                <select class="ncc-select bm-weap-select" @onchange="OnCombatWeaponChanged">
+                                    <option value="">— SELECT WEAPON —</option>
+                                    @foreach (var w in _cWeapons)
+                                    {
+                                        <option value="@w.InstanceId">@w.Name</option>
+                                    }
+                                </select>
+                            }
+
+                            @if (_selectedWeapon != null && _weaponStats != null)
+                            {
+                                var _targets = GetTargetsInRange();
+                                <div class="bm-weap-stats">
+                                    DMG: <strong>@_selectedWeapon.Damage</strong> &nbsp;WA: @_selectedWeapon.Acc &nbsp;<span style="color:var(--nc-red)">@_weaponStats.BaseRange m</span>
+                                </div>
+                                <div class="bm-attack-mods" style="display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.5rem; font-size:.65rem; color:var(--nc-text-dim)">
+                                    <label style="cursor:pointer" title="+3 to roll (Aiming)"><input type="checkbox" @bind="_modAim" /> Aim (+3)</label>
+                                    <label style="cursor:pointer" title="+3 to roll (Burst)"><input type="checkbox" @bind="_modBurst" /> Burst (+3)</label>
+                                    <label style="cursor:pointer" title="Full Auto"><input type="checkbox" @bind="_modAuto" /> Auto</label>
+                                    @if (_modAuto)
+                                    {
+                                        <input type="number" class="ncc-input" style="width:40px; padding:0; height:20px" min="1" max="100" @bind="_autoRounds" title="Rounds Fired" />
+                                    }
+                                    <label style="cursor:pointer" title="-3 to roll (One-handed)"><input type="checkbox" @bind="_modOneHanded" /> 1-Hand (-3)</label>
+                                    <select @bind="_modCover" class="ncc-select" style="font-size:.65rem; padding:.1rem; width:80px; border-color:var(--nc-border); background:transparent; color:var(--nc-text)">
+                                        <option value="0">No Cover</option>
+                                        <option value="5">Cover (-5)</option>
+                                        <option value="10">Heavy (-10)</option>
+                                    </select>
+                                    <select @bind="_modCalledShot" class="ncc-select" style="font-size:.65rem; padding:.1rem; width:100px; border-color:var(--nc-border); background:transparent; color:var(--nc-text)">
+                                        <option value="">No Called Shot</option>
+                                        <option value="Head">Head (-4)</option>
+                                        <option value="Torso">Torso (-4)</option>
+                                        <option value="RightArm">R.Arm (-4)</option>
+                                        <option value="LeftArm">L.Arm (-4)</option>
+                                        <option value="RightLeg">R.Leg (-4)</option>
+                                        <option value="LeftLeg">L.Leg (-4)</option>
+                                    </select>
+                                    @if (_charById.TryGetValue(_selectedToken.CharacterId, out var attChar))
+                                    {
+                                        <label style="cursor:pointer" title="Spend LUCK (+1 per point)">Luck (<span style="color:var(--nc-cyan)">@attChar.CurrentLuck</span>): <input type="number" class="ncc-input" style="width:40px; padding:0; height:20px" min="0" max="@attChar.CurrentLuck" @bind="_modLuck" /></label>
+                                    }
+                                </div>
+                                @if (_targets.Count == 0)
+                                {
+                                    <div class="bm-empty-hint" style="margin-top:.4rem;">No targets in range.</div>
+                                }
+                                else
+                                {
+                                    <div class="bm-section-title" style="margin-top:.6rem;">TARGETS IN RANGE</div>
+                                    @foreach (var tgt in _targets)
+                                    {
+                                        int _dist = GetDistance(_selectedToken, tgt);
+                                        var _ws   = WoundStateFromDmg(tgt.TotalDamageTaken);
+                                        <div class="bm-target-row">
+                                            <div class="bm-token-dot" style="background:@tgt.Color"></div>
+                                            <div class="bm-token-info">
+                                                <div class="bm-token-name">@tgt.Handle.ToUpper()</div>
+                                                <div class="bm-token-pos @GetWoundClass(_ws)">@_dist m | @_ws.ToString().ToUpper()</div>
+                                            </div>
+                                            <div style="display:flex; gap:0.2rem;">
+                                                <button class="bm-attack-btn" @onclick="() => ExecuteAttack(tgt)">FIRE</button>
+                                                <button class="bm-attack-btn" style="background:var(--nc-red); color:#000;" @onclick="() => ExecuteSuppressiveFire(tgt)" title="Target must pass COOL check to move">SUPPRESS</button>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            }
+
+                            @if (_combatLog.Count > 0)
+                            {
+                                <div class="bm-combat-log">
+                                    @foreach (var (msg, css) in _combatLog.TakeLast(14))
+                                    {
+                                        <div class="bm-log-line @css">@((MarkupString)msg)</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+
+                <!-- Teams (GM only) -->
+                @if (_isGm)
+                {
+                    <div class="bm-sidebar-section">
+                        <div class="bm-section-title">TEAMS (@_map.Teams.Count)</div>
+                        @foreach (var team in _map.Teams)
+                        {
+                            <div class="bm-team-row">
+                                <div class="bm-token-dot" style="background:@team.Color"></div>
+                                <span class="bm-team-name">@team.Name.ToUpper()</span>
+                                <span class="bm-team-badge @(team.IsPlayerSide ? "bm-team-player" : "bm-team-enemy")">@(team.IsPlayerSide ? "PLR" : "ENM")</span>
+                                <button class="bm-remove-btn" @onclick:stopPropagation="true" @onclick="() => RemoveTeam(team.Id)">✕</button>
+                            </div>
+                        }
+                        <div class="bm-add-team-form">
+                            <input class="ncc-input bm-team-name-input" placeholder="Team name..." @bind="_newTeamName" />
+                            <div class="bm-add-team-row">
+                                <input type="color" @bind="_newTeamColor" class="bm-team-color-pick" />
+                                <label class="bm-team-player-lbl">
+                                    <input type="checkbox" @bind="_newTeamIsPlayer" />
+                                    <span>Player side</span>
+                                </label>
+                                <button class="ncc-btn-submit bm-add-btn bm-team-add-btn"
+                                        @onclick="AddTeam"
+                                        disabled="@string.IsNullOrEmpty(_newTeamName)">+ ADD</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+
                 <!-- Tokens on map -->
                 <div class="bm-sidebar-section">
                     <div class="bm-section-title">TOKENS ON MAP (@_map.Tokens.Count)</div>
@@ -111,7 +268,8 @@
                             <div class="bm-token-dot" style="background:@token.Color"></div>
                             <div class="bm-token-info">
                                 <div class="bm-token-name">@token.Handle.ToUpper()</div>
-                                <div class="bm-token-pos">[@token.Col, @token.Row]</div>
+                                @{ var _tws = WoundStateFromDmg(token.TotalDamageTaken); }
+                                <div class="bm-token-pos @GetWoundClass(_tws)">[@token.Col,@token.Row] @(token.TotalDamageTaken > 0 ? _tws.ToString().ToUpper() : "")</div>
                             </div>
                             @if (_isGm)
                             {
@@ -127,6 +285,13 @@
                 {
                     <div class="bm-sidebar-section">
                         <div class="bm-section-title">ADD TOKEN</div>
+                        <select class="ncc-select bm-char-select" @bind="_addTokenTeamId" style="margin-bottom:.3rem">
+                            <option value="">— NO TEAM —</option>
+                            @foreach (var tm in _map.Teams)
+                            {
+                                <option value="@tm.Id">@tm.Name.ToUpper()</option>
+                            }
+                        </select>
                         <select class="ncc-select bm-char-select" @bind="_addCharId">
                             <option value="">— SELECT CHARACTER —</option>
                             @foreach (var c in _characters.Where(c => _map.Tokens.All(t => t.CharacterId != c.Id)))
@@ -157,6 +322,161 @@
 
             </div>
         </div>
+
+        <!-- ── COMBAT LOG PANEL ─────────────────────────────────────────── -->
+        @if (_logOpen)
+        {
+            <div class="bm-log-panel">
+                <div class="bm-log-panel-header">
+                    <div class="bm-log-panel-title-row">
+                        <span class="bm-log-panel-title">COMBAT LOG</span>
+                        <button class="bm-remove-btn" style="font-size:1rem" @onclick='() => _logOpen = false'>✕</button>
+                    </div>
+                    <div class="bm-log-filters-row">
+                        <div class="bm-log-filters">
+                            @foreach (var f in new[]{"ALL","HITS","MISSES","CRITS"})
+                            {
+                                <button class="bm-tool-btn @(_logFilter == f ? "bm-tool-active" : "")"
+                                        @onclick="() => { _logFilter = f; }">@f</button>
+                            }
+                        </div>
+                        @if (_isGm)
+                        {
+                            <button class="bm-tool-btn" @onclick="ClearCombatLog">CLEAR</button>
+                        }
+                    </div>
+                </div>
+                <div class="bm-log-panel-body">
+                    @{ var filteredLog = GetFilteredLog().ToList(); }
+                    @if (!filteredLog.Any())
+                    {
+                        <div class="bm-empty-hint" style="padding:1rem">No events yet.</div>
+                    }
+                    @foreach (var entry in filteredLog)
+                    {
+                        <div class="bm-log-entry @(entry.IsFumble ? "bm-le-fumble" : entry.IsCritical ? "bm-le-crit" : entry.IsHit ? "bm-le-hit" : "bm-le-miss")">
+                            <div class="bm-le-header">
+                                <span class="bm-le-att">@entry.AttackerHandle.ToUpper()</span>
+                                <span class="bm-le-arrow">→</span>
+                                <span class="bm-le-tgt">@entry.TargetHandle.ToUpper()</span>
+                                <span class="bm-le-wpn">[@entry.WeaponName]</span>
+                                <span class="bm-le-time">@entry.Timestamp.ToString("HH:mm")</span>
+                            </div>
+                            <div class="bm-le-body">
+                                @if (entry.IsFumble)
+                                {
+                                    <span class="bm-log-fumble">FUMBLE</span>
+                                }
+                                else
+                                {
+                                    <span>Roll @entry.Roll vs DN @entry.TargetDN</span>
+                                    @if (entry.IsCritical) { <span class="bm-log-crit"> [CRIT]</span> }
+                                    @if (entry.IsHit) { <span class="bm-log-hit"> HIT</span> }
+                                    else { <span class="bm-log-miss"> MISS</span> }
+                                    @if (entry.IsHit && entry.FinalDamage > 0)
+                                    {
+                                        <span> | @entry.Location | @entry.RawDamage→@entry.FinalDamage dmg | @entry.WoundState.ToUpper()</span>
+                                    }
+                                    @if (entry.StunSavePassed.HasValue)
+                                    {
+                                        <span class="@(entry.StunSavePassed.Value ? "bm-log-hit" : "bm-log-fumble")"> Stun @(entry.StunSavePassed.Value ? "✓" : "✗")</span>
+                                    }
+                                    @if (entry.DeathSavePassed.HasValue)
+                                    {
+                                        <span class="@(entry.DeathSavePassed.Value ? "bm-log-hit" : "bm-log-fumble")"> Death @(entry.DeathSavePassed.Value ? "✓" : "✗")</span>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- ── LOOT MODAL ─────────────────────────────────────────────── -->
+        @if (_lootOpen)
+        {
+            <div class="bm-modal-overlay" @onclick='() => _lootOpen = false'>
+                <div class="bm-modal" @onclick:stopPropagation="true">
+                    <div class="bm-modal-header">
+                        <span class="bm-modal-title">⚰ LOOT THE FALLEN</span>
+                        <button class="bm-remove-btn" style="font-size:1rem" @onclick='() => _lootOpen = false'>✕</button>
+                    </div>
+                    <div class="bm-modal-body">
+                        <div class="bm-loot-col">
+                            <div class="bm-loot-col-title">FALLEN</div>
+                            @foreach (var (tok, sheet) in GetDeadTokens())
+                            {
+                                <div class="bm-loot-char">
+                                    <div class="bm-loot-char-name" style="color:@tok.Color">
+                                        ● @sheet.Handle.ToUpper()
+                                    </div>
+                                    @if (sheet.Eurobucks > 0)
+                                    {
+                                        <div class="bm-loot-item-row">
+                                            <span class="bm-loot-item-name">💰 @sheet.Eurobucks eb</span>
+                                            <div class="bm-loot-eb-row">
+                                                <input type="number" class="ncc-input bm-loot-eb-input"
+                                                       min="1" max="@sheet.Eurobucks"
+                                                       value="@(_takingEb.GetValueOrDefault(sheet.Id ?? string.Empty, 0))"
+                                                       @onchange="e => SetTakingEb(sheet.Id, e.Value?.ToString())" />
+                                                <button class="bm-loot-btn-take" @onclick="() => TakeEb(sheet)">TAKE</button>
+                                            </div>
+                                        </div>
+                                    }
+                                    @foreach (var item in sheet.Inventory.Where(i => !sheet.InstalledCyberwareIds.Contains(i.InstanceId)))
+                                    {
+                                        <div class="bm-loot-item-row">
+                                            <span class="bm-loot-item-name">@item.Name</span>
+                                            <span class="bm-loot-item-cat">@item.Category</span>
+                                            <button class="bm-loot-btn-take" @onclick="() => TakeItem(sheet, item)">TAKE</button>
+                                        </div>
+                                    }
+                                    @if (!sheet.Inventory.Any(i => !sheet.InstalledCyberwareIds.Contains(i.InstanceId)) && sheet.Eurobucks <= 0)
+                                    {
+                                        <div class="bm-empty-hint">Nothing to loot.</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        <div class="bm-loot-col bm-loot-col-right">
+                            <div class="bm-loot-col-title">RECIPIENT</div>
+                            @if (_isGm)
+                            {
+                                <select class="ncc-select bm-char-select" @bind="_lootRecipientId" style="margin-bottom:.6rem">
+                                    <option value="">— CHOOSE CHARACTER —</option>
+                                    @foreach (var ch in _characters.Where(c => _map.Tokens.Any(t => t.CharacterId == c.Id && WoundStateFromDmg(t.TotalDamageTaken) != WoundState.Dead)))
+                                    {
+                                        <option value="@ch.Id">@ch.Handle.ToUpper()</option>
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                var recip = _charById.GetValueOrDefault(_lootRecipientId);
+                                <div class="bm-loot-char-name" style="color:var(--nc-accent2)">
+                                    ● @(recip?.Handle.ToUpper() ?? "NO CHARACTER")
+                                </div>
+                            }
+                            @{ var recipChar = _charById.GetValueOrDefault(_lootRecipientId); }
+                            @if (recipChar != null)
+                            {
+                                <div class="bm-loot-char-name" style="font-size:.68rem;color:var(--nc-text-dim);margin-bottom:.4rem">
+                                    @recipChar.Eurobucks eb in wallet
+                                </div>
+                                @foreach (var item in recipChar.Inventory)
+                                {
+                                    <div class="bm-loot-item-row" style="opacity:.7">
+                                        <span class="bm-loot-item-name">@item.Name</span>
+                                        <span class="bm-loot-item-cat">@item.Category</span>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     }
 </div>
 
@@ -165,6 +485,7 @@
 
     private MapDto?            _map;
     private List<CharacterSheet> _characters = new();
+    private Dictionary<string, CharacterSheet> _charById = new();
     private bool  _isGm;
     private bool  _loading = true;
     private bool  _saving;
@@ -172,6 +493,38 @@
     private string _addCharId  = "";
     private string _hubStatus  = "offline";
     private TokenState? _selectedToken;
+
+    // ── Combat ───────────────────────────────────────────────────────────
+    private GearItemDto?  _selectedWeapon;
+    private WeaponStats?  _weaponStats;
+    private string        _weaponSkillName = "";
+    private readonly FnffEngine _fnff = new();
+    private readonly List<(string Msg, string Css)> _combatLog = new();
+
+    // ── Combat Modifiers ──────────────────────────────────────────────────
+    private bool _modAim;
+    private bool _modBurst;
+    private bool _modAuto;
+    private int  _autoRounds = 10;
+    private bool _modOneHanded;
+    private int  _modCover;
+    private int  _modLuck;
+    private string _modCalledShot = "";
+
+    // ── Log panel ─────────────────────────────────────────────────────────
+    private bool   _logOpen   = false;
+    private string _logFilter = "ALL";
+
+    // ── Loot ──────────────────────────────────────────────────────────────
+    private bool   _lootOpen        = false;
+    private string _lootRecipientId = "";
+    private readonly Dictionary<string, int> _takingEb = new();
+
+    // ── Teams ─────────────────────────────────────────────────────────────
+    private string _addTokenTeamId  = "";
+    private string _newTeamName     = "";
+    private string _newTeamColor    = "#3a9fff";
+    private bool   _newTeamIsPlayer = false;
 
     private IJSObjectReference? _module;
     private DotNetObjectReference<BattleMap>? _dotNetRef;
@@ -193,24 +546,35 @@
         _map = await MapApi.GetByIdAsync(MapId);
         if (_map is null) { _loading = false; return; }
 
-        if (_isGm) _characters = await CharApi.GetAllAsync();
+        _characters = await CharApi.GetAllAsync();
+        _charById   = _characters.Where(c => c.Id != null).ToDictionary(c => c.Id!);
 
         await ConnectHub();
         _loading = false;
+        // Explicitly notify Blazor so OnAfterRenderAsync fires with the canvas in the DOM.
+        StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Canvas is only in the DOM after _loading=false renders.
-        // Don't use firstRender — by then _loading is still true and the canvas doesn't exist.
-        if (_map is null || _canvasInitialized) return;
-        _canvasInitialized = true;
+        // Guard: canvas element only exists in the DOM when _loading=false and _map!=null.
+        // _map can be set while _loading is still true (between GetByIdAsync and ConnectHub),
+        // so we must check both — otherwise init() is called before the canvas element is rendered.
+        if (_canvasInitialized || _loading || _map is null) return;
 
-        _module    = await JS.InvokeAsync<IJSObjectReference>("import", "/js/map-engine.js");
-        _dotNetRef = DotNetObjectReference.Create(this);
+        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "/js/map-engine.js");
+        _dotNetRef ??= DotNetObjectReference.Create(this);
 
-        await _module.InvokeVoidAsync("init", "battle-map-canvas",
+        var ok = await _module.InvokeAsync<bool>("init", "battle-map-canvas",
             _map.Width, _map.Height, _map.TileSize);
+        if (!ok)
+        {
+            // Canvas not yet in DOM (layout not committed). Retry on the next frame.
+            await Task.Delay(50);
+            StateHasChanged();
+            return;
+        }
+        _canvasInitialized = true;
         await _module.InvokeVoidAsync("setDotnetRef", _dotNetRef);
         await _module.InvokeVoidAsync("loadMap", _map);
     }
@@ -257,6 +621,25 @@
             await InvokeAsync(StateHasChanged);
         });
 
+        _hub.On<string, int>("TokenCombatUpdated", async (tokenId, totalDmg) =>
+        {
+            var t = _map?.Tokens.Find(x => x.Id == tokenId);
+            if (t != null) t.TotalDamageTaken = totalDmg;
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<CombatLogEntry>("CombatLogAppended", async (entry) =>
+        {
+            _map?.CombatLog.Add(entry);
+            await InvokeAsync(StateHasChanged);
+        });
+
+        _hub.On<List<TeamDto>>("MapTeamsUpdated", async (teams) =>
+        {
+            if (_map != null) _map.Teams = teams;
+            await InvokeAsync(StateHasChanged);
+        });
+
         _hub.Reconnected   += _ => { _hubStatus = "connected"; return InvokeAsync(StateHasChanged); };
         _hub.Reconnecting  += _ => { _hubStatus = "reconnecting"; return InvokeAsync(StateHasChanged); };
         _hub.Closed        += _ => { _hubStatus = "offline"; return InvokeAsync(StateHasChanged); };
@@ -280,10 +663,35 @@
             await _hub.SendAsync("MoveToken", MapId, tokenId, col, row);
     }
 
+    private TokenState? _contextMenuTarget;
+    private double _contextMenuX;
+    private double _contextMenuY;
+
+    [JSInvokable]
+    public void OnTokenTargeted(string targetId, double x, double y)
+    {
+        var target = _map?.Tokens.Find(t => t.Id == targetId);
+        if (target != null)
+        {
+            _contextMenuTarget = target;
+            _contextMenuX = x;
+            _contextMenuY = y;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseContextMenu()
+    {
+        _contextMenuTarget = null;
+        StateHasChanged();
+    }
+
     [JSInvokable]
     public async Task OnTokenSelected(string tokenId)
     {
+        _contextMenuTarget = null;
         _selectedToken = _map?.Tokens.Find(t => t.Id == tokenId);
+        await ClearCombatWeapon();
         if (_selectedToken != null && _module != null)
         {
             var cells = ComputeReachable(_selectedToken.Col, _selectedToken.Row, _selectedToken.MoveRange);
@@ -351,10 +759,12 @@
             Handle      = c.Handle,
             Col = 1, Row = 1,
             Color       = color,
+            TeamId      = _addTokenTeamId,
             MoveRange   = c.MA * 2
         };
         _map.Tokens.Add(token);
-        _addCharId = "";
+        _addCharId      = "";
+        _addTokenTeamId = "";
         if (_module != null) await _module.InvokeVoidAsync("updateToken", token);
         await MapApi.UpdateAsync(_map);
         if (_hub?.State == HubConnectionState.Connected)
@@ -374,6 +784,7 @@
     private async Task SelectTokenFromSidebar(string tokenId)
     {
         _selectedToken = _map?.Tokens.Find(t => t.Id == tokenId);
+        await ClearCombatWeapon();
         if (_module != null)
         {
             await _module.InvokeVoidAsync("selectToken", tokenId);
@@ -391,7 +802,7 @@
     private List<(int col, int row)> ComputeReachable(int startCol, int startRow, int range)
     {
         if (_map is null) return new();
-        var walls   = _map.Tiles.Where(t => t.Type == 2).Select(t => (t.Col, t.Row)).ToHashSet();
+        var walls   = _map.Tiles.Where(t => t.Type == 2 || t.Type == 4).Select(t => (t.Col, t.Row)).ToHashSet();
         var result  = new List<(int, int)>();
         var visited = new HashSet<(int, int)> { (startCol, startRow) };
         var queue   = new Queue<(int col, int row, int dist)>();
@@ -411,6 +822,531 @@
             }
         }
         return result;
+    }
+
+    // ── Combat helpers ────────────────────────────────────────────────────
+
+    private async Task ClearCombatWeapon()
+    {
+        _selectedWeapon  = null;
+        _weaponStats     = null;
+        _weaponSkillName = "";
+        if (_module != null) await _module.InvokeVoidAsync("clearAttackRange");
+    }
+
+    private async Task OnCombatWeaponChanged(ChangeEventArgs e)
+    {
+        var instanceId = e.Value?.ToString() ?? "";
+        if (string.IsNullOrEmpty(instanceId)) { await ClearCombatWeapon(); return; }
+
+        if (_selectedToken == null || !_charById.TryGetValue(_selectedToken.CharacterId, out var c)) return;
+        _selectedWeapon  = c.Inventory.FirstOrDefault(i => i.InstanceId == instanceId);
+        if (_selectedWeapon == null) return;
+
+        _weaponStats     = ParseWeaponStats(_selectedWeapon);
+        _weaponSkillName = GetWeaponSkillName(_weaponStats);
+
+        if (_map != null && _module != null)
+        {
+            var cells = GetCellsInRange(_selectedToken.Col, _selectedToken.Row, _weaponStats.BaseRange);
+            await _module.InvokeVoidAsync("setAttackRange",
+                cells.Select(cell => new { col = cell.col, row = cell.row }).ToList());
+        }
+    }
+
+    private static WeaponStats ParseWeaponStats(GearItemDto w)
+    {
+        int wa = 0;
+        int.TryParse(w.Acc.Replace("+", "").Trim(), out wa);
+
+        int baseRange = 50;
+        if (w.Range == "Melee") baseRange = 1;
+        else if (w.Range.EndsWith("m") && int.TryParse(w.Range.Replace("m", "").Trim(), out int r)) baseRange = r;
+
+        return new WeaponStats { WA = wa, DamageDice = w.Damage, BaseRange = Math.Max(1, baseRange) };
+    }
+
+    private static string GetWeaponSkillName(WeaponStats stats) => stats.BaseRange switch
+    {
+        <= 4   => "Melee",
+        <= 80  => "Handgun",
+        <= 200 => "Submachine Gun",
+        _      => "Rifle"
+    };
+
+    private List<(int col, int row)> GetCellsInRange(int startCol, int startRow, int range)
+    {
+        if (_map is null) return new();
+        var result = new List<(int, int)>();
+        for (int r = 0; r < _map.Height; r++)
+        for (int c = 0; c < _map.Width;  c++)
+        {
+            if (c == startCol && r == startRow) continue;
+            double dist = Math.Sqrt((c - startCol) * (c - startCol) + (r - startRow) * (r - startRow));
+            if (dist <= range) result.Add((c, r));
+        }
+        return result;
+    }
+
+    private static int GetDistance(TokenState a, TokenState b)
+    {
+        int dx = a.Col - b.Col, dy = a.Row - b.Row;
+        return (int)Math.Round(Math.Sqrt(dx * dx + dy * dy));
+    }
+
+    private List<TokenState> GetTargetsInRange()
+    {
+        if (_selectedToken == null || _weaponStats == null || _map == null) return new();
+        bool useTeams = _map.Teams.Count > 0 && !string.IsNullOrEmpty(_selectedToken.TeamId);
+        return _map.Tokens
+            .Where(t => t.Id != _selectedToken.Id
+                   && GetDistance(_selectedToken, t) <= _weaponStats.BaseRange
+                   && (!useTeams || IsOpposingTeam(_selectedToken.TeamId, t.TeamId)))
+            .ToList();
+    }
+
+    private bool IsOpposingTeam(string attackerTeamId, string targetTeamId)
+    {
+        if (string.IsNullOrEmpty(attackerTeamId) || string.IsNullOrEmpty(targetTeamId)) return true;
+        var atk = _map?.Teams.Find(t => t.Id == attackerTeamId);
+        var tgt = _map?.Teams.Find(t => t.Id == targetTeamId);
+        if (atk is null || tgt is null) return true;
+        return atk.IsPlayerSide != tgt.IsPlayerSide;
+    }
+
+    private CharacterCombatState BuildCombatState(CharacterSheet c, int totalDamageTaken)
+    {
+        var skills = new Dictionary<string, int>();
+        if (!string.IsNullOrEmpty(c.SkillsJson))
+            try { skills = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(c.SkillsJson) ?? new(); }
+            catch { }
+
+        int evPenalty = GetTotalEV(c);
+
+        var state = new CharacterCombatState
+        {
+            REF  = Math.Max(1, c.REF - evPenalty),
+            BODY = c.BT,
+            COOL = c.COOL,
+            Skills = skills,
+            TotalDamageTaken = totalDamageTaken
+        };
+
+        state.ArmorSP[HitLocation.Head]     = GetEquippedSP(c, "HEAD");
+        state.ArmorSP[HitLocation.Torso]    = GetEquippedSP(c, "TORSO");
+        state.ArmorSP[HitLocation.RightArm] = GetEquippedSP(c, "R.ARM");
+        state.ArmorSP[HitLocation.LeftArm]  = GetEquippedSP(c, "L.ARM");
+        state.ArmorSP[HitLocation.RightLeg] = GetEquippedSP(c, "R.LEG");
+        state.ArmorSP[HitLocation.LeftLeg]  = GetEquippedSP(c, "L.LEG");
+
+        return state;
+    }
+
+    private static int GetEquippedSP(CharacterSheet c, string slot)
+    {
+        var layers = new List<int>();
+
+        if (c.EquippedGearIds.TryGetValue(slot, out var innerId))
+        {
+            var item = c.Inventory.FirstOrDefault(i => i.InstanceId == innerId);
+            if (item != null && int.TryParse(item.SP, out int sp)) layers.Add(sp);
+        }
+
+        if (c.EquippedGearIds.TryGetValue(slot + "_OUTER", out var outerId))
+        {
+            var item = c.Inventory.FirstOrDefault(i => i.InstanceId == outerId);
+            if (item != null && int.TryParse(item.SP, out int sp)) layers.Add(sp);
+        }
+
+        foreach (var cyberId in c.InstalledCyberwareIds)
+        {
+            var cyber = c.Inventory.FirstOrDefault(i => i.InstanceId == cyberId);
+            if (cyber != null && cyber.Name.Contains("Skinweave", StringComparison.OrdinalIgnoreCase))
+            {
+                if (int.TryParse(cyber.SP, out int sp)) layers.Add(sp);
+                else layers.Add(12);
+            }
+        }
+
+        if (layers.Count == 0) return 0;
+        
+        layers.Sort((a, b) => b.CompareTo(a)); // Descending order
+        int total = layers[0];
+        for (int i = 1; i < layers.Count; i++)
+        {
+            total += layers[i] / 2;
+        }
+
+        return total;
+    }
+
+    private static int GetTotalEV(CharacterSheet c)
+    {
+        int totalEV = 0;
+        foreach (var id in c.EquippedGearIds.Values.Distinct())
+        {
+            var item = c.Inventory.FirstOrDefault(i => i.InstanceId == id);
+            if (item != null && int.TryParse(item.EV, out int ev))
+            {
+                totalEV += ev;
+            }
+        }
+        return totalEV;
+    }
+
+    private static WoundState WoundStateFromDmg(int dmg) => dmg switch
+    {
+        0    => WoundState.Uninjured,
+        <= 4  => WoundState.Light,
+        <= 8  => WoundState.Serious,
+        <= 12 => WoundState.Critical,
+        <= 16 => WoundState.Mortal0,
+        <= 20 => WoundState.Mortal1,
+        <= 24 => WoundState.Mortal2,
+        <= 28 => WoundState.Mortal3,
+        <= 32 => WoundState.Mortal4,
+        <= 36 => WoundState.Mortal5,
+        <= 40 => WoundState.Mortal6,
+        _    => WoundState.Dead
+    };
+
+    private static string GetWoundClass(WoundState ws) => ws switch
+    {
+        WoundState.Uninjured => "bm-ws-ok",
+        WoundState.Light     => "bm-ws-light",
+        WoundState.Serious   => "bm-ws-serious",
+        WoundState.Critical  => "bm-ws-critical",
+        WoundState.Dead      => "bm-ws-dead",
+        _                    => "bm-ws-mortal"
+    };
+
+    private async Task ExecuteSuppressiveFire(TokenState target)
+    {
+        if (_selectedToken == null || _selectedWeapon == null || _weaponStats == null) return;
+        if (!_charById.TryGetValue(_selectedToken.CharacterId, out var attackerChar)) return;
+        if (!_charById.TryGetValue(target.CharacterId, out var targetChar)) return;
+
+        _combatLog.Add(("───", ""));
+        _combatLog.Add(($"<span style='color:var(--nc-red)'>{_selectedToken.Handle.ToUpper()}</span> lays down SUPPRESSIVE FIRE on <span style='color:{target.Color}'>{target.Handle.ToUpper()}</span>!", ""));
+
+        int targetNumber = 15; // Base COOL check DN
+        if (_modAuto)
+        {
+            targetNumber = Math.Max(10, _autoRounds / 2);
+            _combatLog.Add(($"<span style='color:var(--nc-cyan)'>[AUTO]</span> {_autoRounds} rounds fired. Target Number: {targetNumber}", ""));
+        }
+        else if (_modBurst)
+        {
+            targetNumber = 10;
+        }
+
+        int roll = new Random().Next(1, 11);
+        int total = roll + targetChar.COOL;
+        bool pass = total >= targetNumber;
+
+        if (pass)
+        {
+             _combatLog.Add(($"<span style='color:var(--nc-green)'>[PASSED]</span> {target.Handle.ToUpper()} rolled {roll} + COOL {targetChar.COOL} = {total} (vs {targetNumber}).", ""));
+        }
+        else
+        {
+             _combatLog.Add(($"<span class='bm-log-fumble'>[SUPPRESSED]</span> {target.Handle.ToUpper()} rolled {roll} + COOL {targetChar.COOL} = {total} (vs {targetNumber}). They must take cover!", "bm-log-fumble"));
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ExecuteAttack(TokenState target)
+    {
+        if (_selectedToken == null || _selectedWeapon == null || _weaponStats == null) return;
+        if (!_charById.TryGetValue(_selectedToken.CharacterId, out var attackerChar)) return;
+        if (!_charById.TryGetValue(target.CharacterId, out var targetChar)) return;
+
+        var attackerState = BuildCombatState(attackerChar, _selectedToken.TotalDamageTaken);
+        var targetState   = BuildCombatState(targetChar,   target.TotalDamageTaken);
+        int distance      = GetDistance(_selectedToken, target);
+
+        _combatLog.Add(("───", ""));
+        _combatLog.Add(($"<span style='color:var(--nc-red)'>{_selectedToken.Handle.ToUpper()}</span> → <span style='color:{target.Color}'>{target.Handle.ToUpper()}</span> | {_selectedWeapon.Name} | {distance}m", ""));
+
+        int modifiers = 0;
+        if (_modAim) modifiers += 3;
+        if (_modBurst) modifiers += 3;
+        if (_modAuto)
+        {
+            int autoMod = _autoRounds / 10;
+            if (distance <= _weaponStats.BaseRange / 4) modifiers += autoMod;
+            else if (distance > _weaponStats.BaseRange / 2) modifiers -= autoMod;
+        }
+        if (_modOneHanded) modifiers -= 3;
+        if (_modCover > 0) modifiers -= _modCover;
+        if (!string.IsNullOrEmpty(_modCalledShot)) modifiers -= 4;
+
+        if (_modLuck > 0 && attackerChar.CurrentLuck >= _modLuck)
+        {
+            modifiers += _modLuck;
+            attackerChar.CurrentLuck -= _modLuck;
+            await CharApi.UpdateAsync(attackerChar);
+            _modLuck = 0; // Reset so they don't accidentally spend it again
+        }
+
+        var hit = _fnff.RollToHit(attackerState, _weaponStats, _weaponSkillName, distance, modifiers);
+
+        string rangeLabel = distance <= 1 ? "PB/10" : distance <= _weaponStats.BaseRange / 4 ? "Close/15" :
+                            distance <= _weaponStats.BaseRange / 2 ? "Med/20" :
+                            distance <= _weaponStats.BaseRange ? "Long/25" : "Extreme/30";
+        string wpTag = attackerState.WoundPenalty < 0 ? $" Wound({attackerState.WoundPenalty})" : "";
+        string modTag = modifiers != 0 ? $" Mod({(modifiers > 0 ? "+" : "")}{modifiers})" : "";
+
+        var logEntry = new CombatLogEntry
+        {
+            AttackerHandle = _selectedToken.Handle,
+            TargetHandle   = target.Handle,
+            WeaponName     = _selectedWeapon.Name,
+            Roll           = hit.TotalRoll,
+            TargetDN       = hit.TargetNumber,
+            IsHit          = hit.IsHit,
+            IsCritical     = hit.IsCritical,
+            IsFumble       = hit.IsFumble
+        };
+
+        if (hit.IsFumble)
+        {
+            _combatLog.Add(("<span class='bm-log-fumble'>[FUMBLE]</span> Weapon jams / drops.", "bm-log-fumble"));
+        }
+        else
+        {
+            string critTag = hit.IsCritical ? " <span class='bm-log-crit'>[CRIT]</span>" : "";
+            string hitTag  = hit.IsHit
+                ? "<span class='bm-log-hit'>[HIT]</span>"
+                : "<span class='bm-log-miss'>[MISS]</span>";
+            _combatLog.Add(($"Roll {hit.TotalRoll}{critTag}{wpTag}{modTag} vs DN {hit.TargetNumber} ({rangeLabel}) → {hitTag}", ""));
+        }
+
+        if (hit.IsHit)
+        {
+            int numHits = 1;
+            if (_modAuto)
+            {
+                numHits = Math.Clamp(hit.TotalRoll - hit.TargetNumber, 1, _autoRounds);
+                _combatLog.Add(($"<span style='color:var(--nc-cyan)'>[FULL AUTO]</span> Fired {_autoRounds} rounds, {numHits} hit the target!", ""));
+            }
+            else if (_modBurst)
+            {
+                numHits = (new Random().Next(1, 7) + 1) / 2;
+                _combatLog.Add(($"<span style='color:var(--nc-cyan)'>[BURST FIRE]</span> {numHits} rounds hit the target!", ""));
+            }
+
+            for (int i = 0; i < numHits; i++)
+            {
+                if (target.TotalDamageTaken >= 40 && i > 0) break; // Don't keep shooting if already fully dead
+
+                var hitLogEntry = new CombatLogEntry
+                {
+                    AttackerHandle = _selectedToken.Handle,
+                    TargetHandle   = target.Handle,
+                    WeaponName     = _selectedWeapon.Name + (numHits > 1 ? $" (Hit {i+1})" : ""),
+                    IsHit          = true,
+                    IsCritical     = hit.IsCritical,
+                    IsFumble       = false,
+                    Timestamp      = DateTime.UtcNow
+                };
+
+                var location = string.IsNullOrEmpty(_modCalledShot) 
+                    ? _fnff.RollHitLocation() 
+                    : Enum.Parse<HitLocation>(_modCalledShot);
+                var dmg      = _fnff.CalculateDamage(targetState, _weaponStats.DamageDice, location);
+                target.TotalDamageTaken = targetState.TotalDamageTaken;
+
+                int sp = targetState.ArmorSP.GetValueOrDefault(location, 0);
+                _combatLog.Add(($"Loc: <strong>{location}</strong> | DMG {dmg.RawDamage} − SP{sp} − BTM{targetState.BTM} = <strong>{dmg.FinalDamageApplied}</strong>", ""));
+
+                if (_module != null)
+                {
+                    await _module.InvokeVoidAsync("triggerAttackEffect", _selectedToken.Id, target.Id, $"-{dmg.FinalDamageApplied}", true);
+                }
+
+                var ws = WoundStateFromDmg(target.TotalDamageTaken);
+                _combatLog.Add(($"<span class='{GetWoundClass(ws)}'>{target.Handle.ToUpper()}: {ws.ToString().ToUpper()}</span> (total {target.TotalDamageTaken})", GetWoundClass(ws)));
+
+                bool? stunSaved = null, deathSaved = null;
+                if (dmg.RequiresStunSave)
+                {
+                    bool stunOk = _fnff.MakeStunSave(targetState);
+                    stunSaved = stunOk;
+                    _combatLog.Add(stunOk
+                        ? ("<span class='bm-log-hit'>Stun save PASSED</span>", "")
+                        : ("<span class='bm-log-fumble'>Stun save FAILED — stunned 1 turn</span>", "bm-log-fumble"));
+                }
+                if (dmg.RequiresDeathSave)
+                {
+                    bool deathOk = _fnff.MakeDeathSave(targetState);
+                    deathSaved = deathOk;
+                    _combatLog.Add(deathOk
+                        ? ("<span class='bm-log-hit'>Death save PASSED</span>", "")
+                        : ("<span class='bm-log-fumble'>Death save FAILED — DEAD</span>", "bm-log-fumble"));
+                }
+
+                hitLogEntry.Location        = location.ToString();
+                hitLogEntry.RawDamage       = dmg.RawDamage;
+                hitLogEntry.FinalDamage     = dmg.FinalDamageApplied;
+                hitLogEntry.WoundState      = ws.ToString();
+                hitLogEntry.StunSavePassed  = stunSaved;
+                hitLogEntry.DeathSavePassed = deathSaved;
+
+                if (dmg.PenetratingDamage > 0)
+                {
+                    string slotName = location switch
+                    {
+                        HitLocation.Head => "HEAD",
+                        HitLocation.Torso => "TORSO",
+                        HitLocation.RightArm => "R.ARM",
+                        HitLocation.LeftArm => "L.ARM",
+                        HitLocation.RightLeg => "R.LEG",
+                        HitLocation.LeftLeg => "L.LEG",
+                        _ => ""
+                    };
+                    if (targetChar.EquippedGearIds.TryGetValue(slotName, out var id))
+                    {
+                        var item = targetChar.Inventory.FirstOrDefault(i => i.InstanceId == id);
+                        if (item != null && int.TryParse(item.SP, out int currentSp) && currentSp > 0)
+                        {
+                            item.SP = (currentSp - 1).ToString();
+                            _combatLog.Add(($"<span style='color:#ff8c00'>Armor degraded at {location}: SP now {item.SP}</span>", ""));
+                            await CharApi.UpdateAsync(targetChar);
+                        }
+                    }
+                }
+
+                // Sync wound state to server + other clients
+                if (_map != null)
+                {
+                    _map.CombatLog.Add(hitLogEntry);
+                    await MapApi.UpdateAsync(_map);
+                }
+                if (_hub?.State == HubConnectionState.Connected)
+                {
+                    await _hub.SendAsync("UpdateTokenCombat", MapId, target.Id, target.TotalDamageTaken);
+                    await _hub.SendAsync("AppendCombatLog", MapId, hitLogEntry);
+                }
+            }
+        }
+        else
+        {
+            if (_map != null) _map.CombatLog.Add(logEntry);
+            if (_hub?.State == HubConnectionState.Connected)
+                await _hub.SendAsync("AppendCombatLog", MapId, logEntry);
+
+            if (_module != null)
+            {
+                await _module.InvokeVoidAsync("triggerAttackEffect", _selectedToken.Id, target.Id, "MISS", false);
+            }
+        }
+
+        if (_combatLog.Count > 40) _combatLog.RemoveRange(0, _combatLog.Count - 40);
+        StateHasChanged();
+    }
+
+    // ── Team management ───────────────────────────────────────────────────
+
+    private async Task AddTeam()
+    {
+        if (string.IsNullOrEmpty(_newTeamName) || _map is null) return;
+        _map.Teams.Add(new TeamDto
+        {
+            Name = _newTeamName, Color = _newTeamColor, IsPlayerSide = _newTeamIsPlayer
+        });
+        _newTeamName = "";
+        await MapApi.UpdateAsync(_map);
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.SendAsync("UpdateMapTeams", MapId, _map.Teams);
+    }
+
+    private async Task RemoveTeam(string teamId)
+    {
+        if (_map is null) return;
+        _map.Teams.RemoveAll(t => t.Id == teamId);
+        foreach (var tok in _map.Tokens.Where(t => t.TeamId == teamId))
+            tok.TeamId = "";
+        await MapApi.UpdateAsync(_map);
+        if (_hub?.State == HubConnectionState.Connected)
+            await _hub.SendAsync("UpdateMapTeams", MapId, _map.Teams);
+    }
+
+    // ── Loot ──────────────────────────────────────────────────────────────
+
+    private IEnumerable<(TokenState Token, CharacterSheet Sheet)> GetDeadTokens()
+        => _map?.Tokens
+               .Where(t => WoundStateFromDmg(t.TotalDamageTaken) == WoundState.Dead)
+               .Select(t => (Token: t, Sheet: _charById.GetValueOrDefault(t.CharacterId)!))
+               .Where(x => x.Sheet != null)
+           ?? Enumerable.Empty<(TokenState, CharacterSheet)>();
+
+    private void OpenLoot()
+    {
+        _lootOpen = true;
+        _takingEb.Clear();
+        _lootRecipientId = _characters
+            .FirstOrDefault(c => c.OwnerId == Session.CurrentUser?.Id)?.Id ?? "";
+    }
+
+    private async Task TakeItem(CharacterSheet donor, GearItemDto item)
+    {
+        if (string.IsNullOrEmpty(_lootRecipientId) || donor.Id is null) return;
+        bool ok = await ScenarioApi.TransferItemAsync(donor.Id, item.InstanceId, _lootRecipientId);
+        if (!ok) return;
+        donor.Inventory.RemoveAll(i => i.InstanceId == item.InstanceId);
+        var recipient = _charById.GetValueOrDefault(_lootRecipientId);
+        if (recipient != null)
+            recipient.Inventory.Add(new GearItemDto
+            {
+                Name = item.Name, Category = item.Category, Damage = item.Damage,
+                Acc = item.Acc, Range = item.Range, SP = item.SP,
+                CostEurobucks = item.CostEurobucks,
+                HumanityCostDice = item.HumanityCostDice, Description = item.Description,
+                InstanceId = Guid.NewGuid().ToString("N")[..8]
+            });
+        StateHasChanged();
+    }
+
+    private void SetTakingEb(string? charId, string? val)
+    {
+        if (charId is null) return;
+        if (int.TryParse(val, out int v)) _takingEb[charId] = v;
+    }
+
+    private async Task TakeEb(CharacterSheet donor)
+    {
+        int amount = _takingEb.GetValueOrDefault(donor.Id ?? "", 0);
+        if (amount <= 0 || string.IsNullOrEmpty(_lootRecipientId) || donor.Id is null) return;
+        await ScenarioApi.TransferItemAsync(donor.Id, "", _lootRecipientId, amount);
+        int actual = Math.Min(amount, donor.Eurobucks);
+        donor.Eurobucks -= actual;
+        var recipient = _charById.GetValueOrDefault(_lootRecipientId);
+        if (recipient != null) recipient.Eurobucks += actual;
+        _takingEb[donor.Id] = 0;
+        StateHasChanged();
+    }
+
+    // ── Log panel ─────────────────────────────────────────────────────────
+
+    private IEnumerable<CombatLogEntry> GetFilteredLog()
+    {
+        if (_map is null) return Enumerable.Empty<CombatLogEntry>();
+        var src = _map.CombatLog.AsEnumerable().Reverse();
+        return _logFilter switch
+        {
+            "HITS"   => src.Where(e => e.IsHit && !e.IsFumble),
+            "MISSES" => src.Where(e => !e.IsHit && !e.IsFumble),
+            "CRITS"  => src.Where(e => e.IsCritical),
+            _        => src
+        };
+    }
+
+    private async Task ClearCombatLog()
+    {
+        if (_map is null) return;
+        _map.CombatLog.Clear();
+        await MapApi.UpdateAsync(_map);
     }
 
     // ── Dispose ───────────────────────────────────────────────────────────
@@ -499,4 +1435,96 @@
     .bm-tile-floor  { background: #0d1117; border: 1px solid #1a2040; }
     .bm-tile-wall   { background: #1a0008; border: 1px solid rgba(255,0,60,.5); }
     .bm-tile-door   { background: #001a06; border: 1px solid rgba(0,255,65,.7); }
+
+    /* ── Combat Panel ── */
+    .bm-combat-panel  { background: rgba(255,30,30,.03); border-left: 2px solid var(--nc-red); }
+    .bm-weap-select   { width: 100%; font-size: .7rem; margin-bottom: .4rem; }
+    .bm-weap-stats    { font-size: .68rem; color: var(--nc-text-dim); margin-bottom: .3rem; }
+    .bm-target-row    { display: flex; align-items: center; gap: .4rem; padding: .3rem .1rem; }
+    .bm-attack-btn    { background: var(--nc-red); border: none; color: #000; font-family: 'Share Tech Mono', monospace;
+                        font-size: .65rem; font-weight: bold; letter-spacing: .08em; padding: .25rem .5rem;
+                        cursor: pointer; flex-shrink: 0; }
+    .bm-attack-btn:hover { background: #ff6666; }
+    .bm-combat-log    { margin-top: .5rem; border-top: 1px solid var(--nc-border); padding-top: .4rem;
+                        max-height: 200px; overflow-y: auto; }
+    .bm-log-line      { font-size: .63rem; line-height: 1.5; padding: .1rem 0;
+                        border-bottom: 1px dotted rgba(255,255,255,.04); color: var(--nc-text-dim); }
+    .bm-log-hit       { color: #3aff6e; }
+    .bm-log-miss      { color: var(--nc-text-dim); font-style: italic; }
+    .bm-log-fumble    { color: var(--nc-red); font-weight: bold; }
+    .bm-log-crit      { color: #ffb73a; font-weight: bold; }
+
+    /* Wound state colours */
+    .bm-ws-ok      { color: #3aff6e; }
+    .bm-ws-light   { color: #ffb73a; }
+    .bm-ws-serious { color: #ff8c00; }
+    .bm-ws-critical{ color: var(--nc-red); }
+    .bm-ws-mortal  { color: var(--nc-red); font-weight: bold; animation: blink-border .6s infinite; }
+    .bm-ws-dead    { color: #666; text-decoration: line-through; }
+
+    /* ── LOOT button ── */
+    .bm-loot-btn   { background: rgba(255,165,0,.15); border-color: orange; color: orange; }
+    .bm-loot-btn:hover { background: rgba(255,165,0,.3); }
+
+    /* ── TEAMS section ── */
+    .bm-team-row   { display:flex; align-items:center; gap:.4rem; padding:.25rem .1rem; }
+    .bm-team-name  { flex:1; font-size:.75rem; font-family:'Share Tech Mono',monospace; }
+    .bm-team-badge { font-size:.6rem; padding:.1rem .3rem; border-radius:2px; letter-spacing:.08em; }
+    .bm-team-player{ background:rgba(58,159,255,.2); color:#3a9fff; }
+    .bm-team-enemy { background:rgba(255,58,58,.2);  color:var(--nc-red); }
+    .bm-add-team-form { margin-top:.4rem; }
+    .bm-team-name-input { width:100%; font-size:.72rem; margin-bottom:.3rem; }
+    .bm-add-team-row { display:flex; align-items:center; gap:.3rem; }
+    .bm-team-color-pick { width:28px; height:24px; padding:2px; background:transparent; border:1px solid var(--nc-border); cursor:pointer; flex-shrink:0; }
+    .bm-team-player-lbl { font-size:.65rem; color:var(--nc-text-dim); display:flex; align-items:center; gap:.2rem; cursor:pointer; flex-shrink:0; }
+    .bm-team-add-btn { flex:1; padding:.3rem; font-size:.65rem; }
+
+    /* ── COMBAT LOG PANEL ── */
+    .bm-log-panel  { position:fixed; top:0; right:0; bottom:0; width:420px; max-width:100vw;
+                     background:#0d0d0f; border-left:2px solid var(--nc-border);
+                     display:flex; flex-direction:column; z-index:200; box-shadow:-4px 0 24px rgba(0,0,0,0.85); }
+    .bm-log-panel-header { display:flex; flex-direction:column; gap:.3rem; padding:.6rem .8rem;
+                            border-bottom:1px solid var(--nc-border); }
+    .bm-log-panel-title-row { display:flex; align-items:center; justify-content:space-between; }
+    .bm-log-panel-title { font-family:'Orbitron',monospace; font-size:.8rem; color:var(--nc-red); }
+    .bm-log-filters-row { display:flex; align-items:center; gap:.2rem; flex-wrap:wrap; }
+    .bm-log-filters { display:flex; gap:.2rem; flex-wrap:wrap; flex:1; }
+    .bm-log-panel-body { flex:1; overflow-y:auto; padding:.4rem; }
+    .bm-log-entry  { border:1px solid var(--nc-border); border-radius:2px; padding:.4rem .5rem; margin-bottom:.3rem; font-size:.68rem; }
+    .bm-le-hit     { border-left:2px solid #3aff6e; }
+    .bm-le-miss    { opacity:.6; }
+    .bm-le-crit    { border-left:2px solid #ffb73a; }
+    .bm-le-fumble  { border-left:2px solid var(--nc-red); }
+    .bm-le-header  { display:flex; align-items:center; gap:.3rem; margin-bottom:.2rem; flex-wrap:wrap; }
+    .bm-le-att     { color:var(--nc-red); font-weight:bold; }
+    .bm-le-arrow   { color:var(--nc-text-dim); }
+    .bm-le-tgt     { color:var(--nc-accent2); font-weight:bold; }
+    .bm-le-wpn     { color:var(--nc-text-dim); font-style:italic; }
+    .bm-le-time    { margin-left:auto; color:var(--nc-text-dim); font-size:.6rem; }
+    .bm-le-body    { color:var(--nc-text-dim); line-height:1.5; }
+
+    /* ── LOOT MODAL ── */
+    .bm-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200;
+                        display:flex; align-items:center; justify-content:center; }
+    .bm-modal      { background:var(--nc-card-bg); border:1px solid var(--nc-border);
+                     width:90vw; max-width:860px; max-height:85vh; display:flex; flex-direction:column; }
+    .bm-modal-header { display:flex; align-items:center; padding:.7rem 1rem; border-bottom:1px solid var(--nc-border); }
+    .bm-modal-title  { flex:1; font-family:'Orbitron',monospace; font-size:.85rem; color:orange; }
+    .bm-modal-body   { display:flex; flex:1; overflow:hidden; }
+    .bm-loot-col   { flex:1; overflow-y:auto; padding:.8rem; border-right:1px solid var(--nc-border); }
+    .bm-loot-col-right { border-right:none; }
+    .bm-loot-col-title { font-size:.65rem; letter-spacing:.15em; color:var(--nc-text-dim);
+                         margin-bottom:.6rem; font-family:'Share Tech Mono',monospace; }
+    .bm-loot-char  { margin-bottom:.8rem; padding-bottom:.6rem; border-bottom:1px solid var(--nc-border); }
+    .bm-loot-char-name { font-family:'Share Tech Mono',monospace; font-size:.8rem; margin-bottom:.3rem; }
+    .bm-loot-item-row { display:flex; align-items:center; gap:.4rem; padding:.2rem 0;
+                        border-bottom:1px dotted rgba(255,255,255,.05); }
+    .bm-loot-item-name { flex:1; font-size:.72rem; }
+    .bm-loot-item-cat  { font-size:.62rem; color:var(--nc-text-dim); }
+    .bm-loot-btn-take  { background:rgba(0,210,255,.15); border:1px solid var(--nc-accent2);
+                          color:var(--nc-accent2); font-family:'Share Tech Mono',monospace;
+                          font-size:.62rem; padding:.2rem .5rem; cursor:pointer; flex-shrink:0; }
+    .bm-loot-btn-take:hover { background:rgba(0,210,255,.3); }
+    .bm-loot-eb-row { display:flex; align-items:center; gap:.3rem; }
+    .bm-loot-eb-input { width:60px; font-size:.7rem; padding:.15rem .3rem; }
 </style>

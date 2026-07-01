@@ -62,9 +62,10 @@ public class CharacterCombatState
     };
 
     /// <summary>
-    /// Penalty to Stun/Shock saves based on damage.
+    /// Penalty applied to ALL action rolls (to-hit, skills, saves) based on wound state.
+    /// CP2020 core rule: wound penalty is not limited to stun saves.
     /// </summary>
-    public int StunSaveModifier => TotalDamageTaken switch
+    public int WoundPenalty => TotalDamageTaken switch
     {
         <= 4 => 0,
         <= 8 => -1,
@@ -157,7 +158,7 @@ public class FnffEngine
         int rollTotal = RollExploding1D10(out bool isFumble, out bool isCrit);
         
         // On fumble, usually a separate fumble table is rolled, but for To-Hit calculation it automatically misses or takes penalties.
-        int finalTotal = isFumble ? rollTotal : (rollTotal + attacker.REF + skillLevel + weapon.WA + modifiers);
+        int finalTotal = isFumble ? rollTotal : (rollTotal + attacker.REF + skillLevel + weapon.WA + modifiers + attacker.WoundPenalty);
         
         return new HitResult
         {
@@ -249,7 +250,7 @@ public class FnffEngine
     public bool MakeStunSave(CharacterCombatState target)
     {
         int roll = Roll1D10();
-        int saveTarget = target.BODY + target.StunSaveModifier;
+        int saveTarget = target.BODY + target.WoundPenalty;
         return roll <= saveTarget;
     }
 

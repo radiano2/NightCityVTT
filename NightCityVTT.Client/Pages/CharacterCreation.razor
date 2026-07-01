@@ -44,7 +44,20 @@
                     <span class="lang-ru">НОВЫЙ ОБЪЕКТ ⊕</span>
                     <span class="lang-pl">NOWY WPIS ⊕</span>
                 </button>
+                @if (Session.CurrentUser?.Role == UserRole.GameMaster)
+                {
+                    <button class="ncc-btn-submit" style="white-space:nowrap;background:rgba(255,58,58,.25);border-color:var(--nc-red)"
+                            @onclick="() => _showNpcWizard = !_showNpcWizard">
+                        + QUICK NPC
+                    </button>
+                }
             </div>
+            @if (_showNpcWizard)
+            {
+                <div style="background:var(--nc-card-bg);border:1px solid var(--nc-border);padding:1rem;margin-top:.5rem;max-width:500px">
+                    <QuickNpcWizard OnNpcGenerated="OnQuickNpcGenerated" />
+                </div>
+            }
         </div>
 
         @if (_loading)
@@ -394,6 +407,7 @@
     };
     private bool _loading = true;
     private bool _isCreating = false;
+    private bool _showNpcWizard = false;
     
     // Wizard State
     private int _stage = 0;
@@ -441,6 +455,12 @@
         }
         catch { _characters = new(); }
         _loading = false;
+    }
+
+    private void OnQuickNpcGenerated(CharacterSheet npc)
+    {
+        if (npc != null) _characters.Insert(0, npc);
+        _showNpcWizard = false;
     }
 
     private void StartCreation()
@@ -522,7 +542,7 @@
                 Handle = _handle.Trim(), Name = _name.Trim(),
                 EthnicOrigin = _origin, Role = _role, SpecialAbility = _specialAbility,
                 INT = _stats["INT"], REF = _stats["REF"], TECH = _stats["TECH"],
-                COOL = _stats["COOL"], LK = _stats["LK"], ATT = _stats["ATT"],
+                COOL = _stats["COOL"], LK = _stats["LK"], CurrentLuck = _stats["LK"], ATT = _stats["ATT"],
                 MA = _stats["MA"], EMP = _stats["EMP"], BT = _stats["BT"],
                 IsElite = _isElite,
                 Clothes = _clothes, Hairstyle = _hairstyle, Affectation = _affectation,

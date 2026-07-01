@@ -55,7 +55,7 @@
                                 <strong class="@GetWoundClass(_targetState.CurrentWoundState)">@_targetState.CurrentWoundState</strong>
                             </div>
                             <div class="status-row"><span>TOTAL DMG:</span> <strong>@_targetState.TotalDamageTaken</strong></div>
-                            <div class="status-row"><span>STUN PENALTY:</span> <strong>@_targetState.StunSaveModifier</strong></div>
+                            <div class="status-row"><span>WOUND PENALTY:</span> <strong>@_targetState.WoundPenalty</strong></div>
                             <button class="ncc-btn-submit" style="margin-top:0.5rem; width:100%; font-size:0.7rem;" @onclick="ResetTarget">RESET TARGET HEALTH</button>
                         </div>
                     }
@@ -86,6 +86,10 @@
                         <div class="wiz-field">
                             <label>MODIFIERS (AIM, SIGHTS, ETC)</label>
                             <input type="number" class="ncc-input" @bind="_attackModifiers" />
+                        </div>
+                        <div class="wiz-field">
+                            <label>ATTACKER WOUND PENALTY</label>
+                            <input type="number" class="ncc-input" @bind="_attackerWoundPenalty" max="0" />
                         </div>
                         <div class="wiz-field">
                             <label>COVER SP (TARGET)</label>
@@ -235,6 +239,7 @@
     private int _range = 10;
     private int _attackerSkillBase = 12; // REF + Skill average
     private int _attackModifiers = 0;
+    private int _attackerWoundPenalty = 0;
     private int _coverSp = 0;
     private bool _armorLayering = false;
 
@@ -337,8 +342,8 @@
         int targetNumber = _range <= 1 ? 10 : _range <= _selectedWeaponStats.BaseRange / 4 ? 15 : _range <= _selectedWeaponStats.BaseRange / 2 ? 20 : _range <= _selectedWeaponStats.BaseRange ? 25 : 30;
         
         int roll = _engine.RollExploding1D10(out bool fumble, out bool crit);
-        int total = fumble ? roll : roll + _attackerSkillBase + _selectedWeaponStats.WA + _attackModifiers;
-        
+        int total = fumble ? roll : roll + _attackerSkillBase + _selectedWeaponStats.WA + _attackModifiers + _attackerWoundPenalty;
+
         _lastHitSuccess = !fumble && (total >= targetNumber);
 
         if (fumble)
@@ -350,7 +355,8 @@
         {
             string critTag = crit ? "<span class='log-crit'>[CRITICAL EXPLOSION]</span>" : "";
             string resultTag = _lastHitSuccess ? "<span class='log-result'>[HIT]</span>" : "<span class='log-dim'>[MISS]</span>";
-            Log($"Roll: {roll} {critTag} + Skill({_attackerSkillBase}) + WA({_selectedWeaponStats.WA}) + Mod({_attackModifiers}) = <strong>{total}</strong> vs Target: <strong>{targetNumber}</strong>", "");
+            string woundTag = _attackerWoundPenalty < 0 ? $" + Wound({_attackerWoundPenalty})" : "";
+            Log($"Roll: {roll} {critTag} + Skill({_attackerSkillBase}) + WA({_selectedWeaponStats.WA}) + Mod({_attackModifiers}){woundTag} = <strong>{total}</strong> vs Target: <strong>{targetNumber}</strong>", "");
             Log($"Result: {resultTag}", _lastHitSuccess ? "log-result" : "log-dim");
         }
     }
@@ -391,7 +397,7 @@
     {
         if (_targetState == null) return;
         Log("---", "");
-        Log($"Rolling Stun Save (BODY: {_targetState.BODY}, Penalty: {_targetState.StunSaveModifier})...", "");
+        Log($"Rolling Stun Save (BODY: {_targetState.BODY}, Wound Penalty: {_targetState.WoundPenalty})...", "");
         bool pass = _engine.MakeStunSave(_targetState);
         
         if (pass) Log("<span class='log-result'>[SAVE PASSED]</span> Target remains active.", "log-result");

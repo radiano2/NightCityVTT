@@ -34,12 +34,14 @@ public class CharacterSheet
     public int    TECH { get; set; }
     public int    COOL { get; set; }
     public int    LK   { get; set; }
+    public int    CurrentLuck { get; set; }
     public int    ATT  { get; set; }
     public int    MA   { get; set; }
     public int    EMP  { get; set; }
     public int    BT   { get; set; }
     public bool   IsElite    { get; set; }
     public bool   IsTestAsset { get; set; }
+    public bool   IsNPC      { get; set; }
     public string SkillsJson { get; set; } = string.Empty; // JSON: {skill:points}
     public int    Humanity   { get; set; }
     public int    Mobility   { get; set; }
@@ -47,6 +49,7 @@ public class CharacterSheet
     public string CreatedBy  { get; set; } = string.Empty; // "" | "heroldowie"
 
     public int Eurobucks { get; set; }
+    public int IP { get; set; }
     public List<GearItemDto> Inventory { get; set; } = new();
     public Dictionary<string, string> EquippedGearIds { get; set; } = new();
     public Dictionary<string, int> GridItemPositions { get; set; } = new();

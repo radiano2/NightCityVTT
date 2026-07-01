@@ -389,10 +389,10 @@ body::before {
     /* Visible scanlines with a faint phosphor green tint between lines */
     background: repeating-linear-gradient(
         180deg,
-        rgba(0, 255, 80, 0.025) 0px,
-        rgba(0, 255, 80, 0.025) 1px,
-        rgba(0, 0, 0, 0.28)    1px,
-        rgba(0, 0, 0, 0.28)    3px,
+        rgba(0, 255, 80, 0.015) 0px,
+        rgba(0, 255, 80, 0.015) 1px,
+        rgba(0, 0, 0, 0.12)    1px,
+        rgba(0, 0, 0, 0.12)    3px,
         transparent            3px,
         transparent            4px
     );
@@ -409,9 +409,9 @@ body::before {
     background: linear-gradient(
         to bottom,
         transparent 0%,
-        rgba(180, 255, 200, 0.04) 30%,
-        rgba(220, 255, 220, 0.11) 50%,
-        rgba(180, 255, 200, 0.04) 70%,
+        rgba(180, 255, 200, 0.02) 30%,
+        rgba(220, 255, 220, 0.06) 50%,
+        rgba(180, 255, 200, 0.02) 70%,
         transparent 100%
     );
     animation: scan-roll 7s linear infinite;
@@ -424,15 +424,15 @@ body::before {
     inset: 0;
     background: radial-gradient(
         ellipse at 50% 50%,
-        transparent 48%,
-        rgba(0, 0, 0, 0.42) 80%,
-        rgba(0, 0, 0, 0.55) 100%
+        transparent 55%,
+        rgba(0, 0, 0, 0.25) 85%,
+        rgba(0, 0, 0, 0.40) 100%
     );
 }
 
 /* Phosphor warmth — brighter and greener, not darker */
 body.crt-body {
-    filter: hue-rotate(12deg) saturate(1.35) brightness(1.06) contrast(1.1) sepia(0.06);
+    filter: hue-rotate(6deg) saturate(1.15) brightness(1.02) contrast(1.05) sepia(0.04);
 }
 
 @keyframes scan-roll {

@@ -40,6 +40,7 @@ builder.Services.AddScoped<SettingsApiService>();
 builder.Services.AddScoped<GearApiService>();
 builder.Services.AddScoped<StoryApiService>();
 builder.Services.AddScoped<MapApiService>();
+builder.Services.AddScoped<ScenarioApiService>();
 builder.Services.AddScoped<DiceEngine>();
 builder.Services.AddMudServices();
 
