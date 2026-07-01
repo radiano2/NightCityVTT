@@ -97,14 +97,14 @@
                     <div class="bm-context-menu" style="left: @(_contextMenuX)px; top: @(_contextMenuY)px; position: absolute; z-index: 1000; background: var(--nc-bg-dark); border: 1px solid var(--nc-cyan); padding: 0.5rem; display:flex; flex-direction:column; gap:0.4rem; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.8);">
                         <div style="font-weight:bold; color:var(--nc-cyan); font-size:0.75rem; text-align:center;">TARGET: @_contextMenuTarget.Handle</div>
                         
-                        <div style="font-size:0.6rem; color:var(--nc-dim); text-align:center;">DISTANCE: @GetDistance(_selectedToken, _contextMenuTarget) m</div>
+                        <div style="font-size:0.6rem; color:var(--nc-dim); text-align:center;">DISTANCE: @(_selectedToken != null ? GetDistance(_selectedToken, _contextMenuTarget) : 0) m</div>
 
-                        <button class="ncc-btn-submit" @onclick="() => { ExecuteAttack(_contextMenuTarget); CloseContextMenu(); }">FIRE</button>
-                        <button class="ncc-btn-submit" style="background:var(--nc-red); color:#000;" @onclick="() => { ExecuteSuppressiveFire(_contextMenuTarget); CloseContextMenu(); }">SUPPRESS</button>
+                        <button class="ncc-btn-submit" @onclick="async () => { await ExecuteAttack(_contextMenuTarget); CloseContextMenu(); }">FIRE</button>
+                        <button class="ncc-btn-submit" style="background:var(--nc-red); color:#000;" @onclick="async () => { await ExecuteSuppressiveFire(_contextMenuTarget); CloseContextMenu(); }">SUPPRESS</button>
                         
                         <hr style="border-color:var(--nc-border); margin:0.2rem 0;" />
                         
-                        <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-text); font-size:0.6rem; border:1px solid var(--nc-border);" @onclick="() => { SelectTokenFromSidebar(_contextMenuTarget.Id); CloseContextMenu(); }">Select Token</button>
+                        <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-text); font-size:0.6rem; border:1px solid var(--nc-border);" @onclick="async () => { await SelectTokenFromSidebar(_contextMenuTarget.Id); CloseContextMenu(); }">Select Token</button>
                         <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-red); font-size:0.6rem; border:none; margin-top:0.2rem;" @onclick="CloseContextMenu">Cancel</button>
                     </div>
                 }
@@ -760,7 +760,7 @@
             Col = 1, Row = 1,
             Color       = color,
             TeamId      = _addTokenTeamId,
-            MoveRange   = c.MA * 2
+            MoveRange   = Math.Max(1, c.MA - GetTotalEV(c)) * 2
         };
         _map.Tokens.Add(token);
         _addCharId      = "";
@@ -972,12 +972,13 @@
         
         layers.Sort((a, b) => b.CompareTo(a)); // Descending order
         int total = layers[0];
+        int bonus = 0;
         for (int i = 1; i < layers.Count; i++)
         {
-            total += layers[i] / 2;
+            bonus += layers[i] / 2;
         }
 
-        return total;
+        return total + Math.Min(bonus, 14);
     }
 
     private static int GetTotalEV(CharacterSheet c)

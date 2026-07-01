@@ -202,16 +202,10 @@ public class FnffEngine
     /// <summary>
     /// Resolves damage, applying Cover, Armor Layering, SP, Headshot multipliers, and BTM.
     /// </summary>
-    public DamageResult CalculateDamage(CharacterCombatState target, string damageDice, HitLocation location, int coverSP = 0, bool armorLayeringActive = false)
+    public DamageResult CalculateDamage(CharacterCombatState target, string damageDice, HitLocation location, int coverSP = 0)
     {
         int rawDamage = ParseAndRollDamage(damageDice);
         int targetSP = target.ArmorSP.GetValueOrDefault(location, 0);
-        
-        // Simplified Armor Layering: Proportional Bonus (adds +5 SP as a flat proxy for layered soft/hard armor in this engine context)
-        if (armorLayeringActive && targetSP > 0)
-        {
-            targetSP += 5; 
-        }
         
         int totalSP = targetSP + coverSP;
         int penetratingDamage = rawDamage - totalSP;
@@ -219,15 +213,21 @@ public class FnffEngine
         
         if (penetratingDamage > 0)
         {
-            // Headshots double the damage that penetrates armor
-            if (location == HitLocation.Head)
+            // Armor Degradation: permanently reduce SP of struck location by 1
+            if (targetSP > 0)
             {
-                penetratingDamage *= 2;
+                target.ArmorSP[location] = Math.Max(0, targetSP - 1);
             }
 
             // Apply BTM (reduces damage, minimum of 1 damage goes through)
             int btmApplied = penetratingDamage + target.BTM;
             finalDamage = Math.Max(1, btmApplied);
+            
+            // Headshots double the damage that penetrates armor AFTER BTM is applied
+            if (location == HitLocation.Head)
+            {
+                finalDamage *= 2;
+            }
             
             target.TotalDamageTaken += finalDamage;
         }
@@ -251,7 +251,7 @@ public class FnffEngine
     {
         int roll = Roll1D10();
         int saveTarget = target.BODY + target.WoundPenalty;
-        return roll <= saveTarget;
+        return roll != 10 && roll <= saveTarget;
     }
 
     /// <summary>
@@ -275,7 +275,7 @@ public class FnffEngine
         };
 
         int saveTarget = target.BODY + deathModifier;
-        return roll <= saveTarget;
+        return roll != 10 && roll <= saveTarget;
     }
 
     /// <summary>

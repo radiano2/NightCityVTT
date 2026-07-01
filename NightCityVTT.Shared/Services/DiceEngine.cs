@@ -99,7 +99,7 @@ public class DiceEngine
         int roll = D10();
         result.Dice.Add(roll);
         result.Total = roll;
-        bool success = roll <= bodyType;
+        bool success = roll != 10 && roll <= bodyType;
         result.IsCriticalSuccess = success;
         result.IsFumble          = !success;
         result.Log.Add(
