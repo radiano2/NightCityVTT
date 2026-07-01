@@ -33,13 +33,13 @@ export function init(canvasId, w, h, ts) {
     mapWidth = w; mapHeight = h; tileSize = ts;
     canvas.width  = w * ts;
     canvas.height = h * ts;
-    ctx = canvas.getContext('2d');
+    ctx = canvas.getContext('2d', { alpha: false }); // Better performance if opaque
 
-    canvas.addEventListener('mousedown',    onMouseDown);
-    canvas.addEventListener('mousemove',    onMouseMove);
-    canvas.addEventListener('mouseup',      onMouseUp);
-    canvas.addEventListener('mouseleave',   onMouseLeave);
-    canvas.addEventListener('contextmenu',  e => { e.preventDefault(); onRightClick(e); });
+    canvas.onmousedown = onMouseDown;
+    canvas.onmousemove = onMouseMove;
+    canvas.onmouseup   = onMouseUp;
+    canvas.onmouseleave= onMouseLeave;
+    canvas.oncontextmenu = (e) => { e.preventDefault(); onRightClick(e); };
     return true;
 }
 
@@ -101,6 +101,7 @@ export function selectToken(tokenId) {
 
 function render() {
     if (!ctx) return;
+    ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Background

@@ -562,7 +562,7 @@
         // so we must check both — otherwise init() is called before the canvas element is rendered.
         if (_canvasInitialized || _loading || _map is null) return;
 
-        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "/js/map-engine.js");
+        _module ??= await JS.InvokeAsync<IJSObjectReference>("import", "/js/map-engine.js?v=2");
         _dotNetRef ??= DotNetObjectReference.Create(this);
 
         var ok = await _module.InvokeAsync<bool>("init", "battle-map-canvas",
