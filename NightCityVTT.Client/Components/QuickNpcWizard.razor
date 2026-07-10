@@ -1,0 +1,471 @@
+@inject CharacterApiService CharApi
+@inject UserSessionService Session
+
+<!-- Step indicator -->
+<div class="qnw-steps">
+    @for (int i = 1; i <= 5; i++)
+    {
+        int si = i;
+        <div class="qnw-step @(_step == si ? "qnw-step-active" : si < _step ? "qnw-step-done" : "")">@si</div>
+    }
+</div>
+
+<!-- ── Step 1: Stats ─────────────────────────────────────────────────────── -->
+@if (_step == 1)
+{
+    <div class="qnw-section">
+        <div class="qnw-title">STEP 1 — STATS</div>
+        <p class="qnw-hint">Each stat is a 2d6 roll (3–12). Assign rolled values to stats.</p>
+        <div class="qnw-stat-roll-pool">
+            @for (int i = 0; i < _rolledValues.Count; i++)
+            {
+                int idx = i;
+                <span class="qnw-roll-pill @(_usedRollIdx.Contains(idx) ? "qnw-roll-used" : "")">@_rolledValues[idx]</span>
+            }
+            <button class="qnw-reroll-btn" @onclick="RollAllStats">↺ REROLL ALL</button>
+        </div>
+        <div class="qnw-stat-grid">
+            @foreach (var sn in StatNames)
+            {
+                <div class="qnw-stat-row">
+                    <span class="qnw-stat-label">@sn</span>
+                    <select class="ncc-select qnw-stat-sel" value="@_statAssign.GetValueOrDefault(sn, -1)"
+                            @onchange="e => AssignStat(sn, e.Value?.ToString())">
+                        <option value="-1">—</option>
+                        @for (int i = 0; i < _rolledValues.Count; i++)
+                        {
+                            int idx = i;
+                            bool taken = _usedRollIdx.Contains(idx) && _statAssign.GetValueOrDefault(sn, -1) != idx;
+                            <option value="@idx" disabled="@taken">@_rolledValues[idx]</option>
+                        }
+                    </select>
+                    <span class="qnw-stat-val">@(_statAssign.TryGetValue(sn, out int sv) && sv >= 0 ? _rolledValues[sv].ToString() : "??")</span>
+                </div>
+            }
+        </div>
+        <button class="ncc-btn-submit qnw-next" @onclick="NextStep"
+                disabled="@(StatNames.Any(s => !_statAssign.ContainsKey(s) || _statAssign[s] < 0))">
+            NEXT →
+        </button>
+    </div>
+}
+
+<!-- ── Step 2: Role & Skills ─────────────────────────────────────────────── -->
+@if (_step == 2)
+{
+    <div class="qnw-section">
+        <div class="qnw-title">STEP 2 — ROLE &amp; SKILLS</div>
+        <p class="qnw-hint">Pick a role. 40 career skill points are auto-distributed.</p>
+        <select class="ncc-select" @onchange="OnRoleChanged" style="width:200px;margin-bottom:.8rem">
+            <option value="">— SELECT ROLE —</option>
+            @foreach (var r in Roles)
+            {
+                <option value="@r">@r.ToUpper()</option>
+            }
+        </select>
+        @if (!string.IsNullOrEmpty(_selectedRole))
+        {
+            <div class="qnw-skills-list">
+                @foreach (var kv in _skills)
+                {
+                    <div class="qnw-skill-row">
+                        <span class="qnw-skill-name">@kv.Key</span>
+                        <input type="number" class="ncc-input qnw-skill-input" min="0" max="10"
+                               value="@kv.Value"
+                               @onchange="e => { if (int.TryParse(e.Value?.ToString(), out int v)) _skills[kv.Key] = Math.Clamp(v,0,10); }" />
+                    </div>
+                }
+                <div class="qnw-skill-total">Total: @_skills.Values.Sum() / 40 pts</div>
+            </div>
+        }
+        <div style="display:flex;gap:.5rem;margin-top:.8rem">
+            <button class="qnw-back-btn" @onclick="PrevStep">← BACK</button>
+            <button class="ncc-btn-submit qnw-next" @onclick="NextStep"
+                    disabled="@string.IsNullOrEmpty(_selectedRole)">NEXT →</button>
+        </div>
+    </div>
+}
+
+<!-- ── Step 3: Cyberware ─────────────────────────────────────────────────── -->
+@if (_step == 3)
+{
+    <div class="qnw-section">
+        <div class="qnw-title">STEP 3 — CYBERWARE</div>
+        <p class="qnw-hint">@(_selectedRole == "Solo" ? "6" : "3") random cyberware rolls. Click ↺ to reroll any implant.</p>
+        <div class="qnw-cyber-list">
+            @for (int i = 0; i < _cyberRolls.Count; i++)
+            {
+                int idx = i;
+                var (name, hcost) = CyberTable[_cyberRolls[idx] - 1];
+                <div class="qnw-cyber-row">
+                    <span class="qnw-cyber-idx">@(idx+1).</span>
+                    <span class="qnw-cyber-name">@name</span>
+                    <span class="qnw-cyber-cost" style="color:var(--nc-red)">-@hcost HL</span>
+                    <button class="qnw-reroll-btn" @onclick="() => RerollCyber(idx)">↺</button>
+                </div>
+            }
+        </div>
+        <div class="qnw-hint" style="margin-top:.4rem">
+            Humanity cost: <strong style="color:var(--nc-red)">@TotalHumanityCost HL</strong>
+            &nbsp;| New EMP: <strong>@Math.Max(0, (GetStatValue("EMP") * 10 - TotalHumanityCost) / 10)</strong>
+        </div>
+        <div style="display:flex;gap:.5rem;margin-top:.8rem">
+            <button class="qnw-back-btn" @onclick="PrevStep">← BACK</button>
+            <button class="ncc-btn-submit qnw-next" @onclick="NextStep">NEXT →</button>
+        </div>
+    </div>
+}
+
+<!-- ── Step 4: Gear ──────────────────────────────────────────────────────── -->
+@if (_step == 4)
+{
+    <div class="qnw-section">
+        <div class="qnw-title">STEP 4 — ARMOR &amp; WEAPONS</div>
+        <p class="qnw-hint">Select NPC class, then roll loadout.</p>
+        <div class="qnw-class-row">
+            @foreach (var (label, mod) in GearClasses)
+            {
+                string lbl = label, m = mod.ToString();
+                <button class="qnw-class-btn @(_gearClass == mod ? "bm-tool-active" : "")"
+                        @onclick="() => { _gearClass = mod; RollGear(); }">
+                    @label
+                </button>
+            }
+        </div>
+        <div class="qnw-gear-list" style="margin-top:.6rem">
+            @foreach (var item in _gearItems)
+            {
+                <div class="qnw-gear-row">
+                    <span class="qnw-gear-name">@item.Name</span>
+                    <span class="qnw-gear-cat">@item.Category</span>
+                    @if (!string.IsNullOrEmpty(item.Damage)) { <span class="qnw-gear-stat">@item.Damage</span> }
+                    @if (!string.IsNullOrEmpty(item.SP)) { <span class="qnw-gear-stat">SP @item.SP</span> }
+                </div>
+            }
+            <div class="qnw-hint" style="margin-top:.3rem">Starting EB: <strong>@_startingEb</strong></div>
+        </div>
+        <div style="display:flex;gap:.5rem;margin-top:.8rem">
+            <button class="qnw-back-btn" @onclick="PrevStep">← BACK</button>
+            <button class="ncc-btn-submit qnw-next" @onclick="NextStep" disabled="@(!_gearItems.Any())">NEXT →</button>
+        </div>
+    </div>
+}
+
+<!-- ── Step 5: Generate ──────────────────────────────────────────────────── -->
+@if (_step == 5)
+{
+    <div class="qnw-section">
+        <div class="qnw-title">STEP 5 — GENERATE</div>
+        @if (_generated == null)
+        {
+            <div class="qnw-summary">
+                <div><strong>Role:</strong> @_selectedRole</div>
+                <div><strong>Stats:</strong>
+                    @string.Join(" | ", StatNames.Select(s => $"{s} {GetStatValue(s)}"))
+                </div>
+                <div><strong>Cyberware:</strong> @_cyberRolls.Count implant(s)</div>
+                <div><strong>Gear:</strong> @_gearItems.Count item(s) | @_startingEb eb</div>
+            </div>
+            <div class="qnw-handle-row">
+                <input class="ncc-input" placeholder="NPC handle..." @bind="_npcHandle" style="max-width:200px" />
+                <button class="qnw-reroll-btn" @onclick="GenerateHandle">↺ RANDOM</button>
+            </div>
+            <div style="display:flex;gap:.5rem;margin-top:.8rem">
+                <button class="qnw-back-btn" @onclick="PrevStep">← BACK</button>
+                <button class="ncc-btn-submit qnw-next" @onclick="Generate"
+                        disabled="@(string.IsNullOrWhiteSpace(_npcHandle) || _saving)">
+                    @(_saving ? "GENERATING..." : "⚡ GENERATE NPC")
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="qnw-success">
+                <div class="qnw-success-name" style="color:var(--nc-red)">@_generated.Handle.ToUpper()</div>
+                <div class="qnw-hint">NPC saved to the roster with IsNPC=true.</div>
+                <div style="display:flex;gap:.5rem;margin-top:.8rem">
+                    <button class="ncc-btn-submit" @onclick="() => OnNpcGenerated.InvokeAsync(_generated)">DONE</button>
+                    <button class="qnw-back-btn" @onclick="Reset">+ ANOTHER NPC</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<CharacterSheet> OnNpcGenerated { get; set; }
+
+    private static readonly string[] StatNames = ["INT","REF","TECH","COOL","ATT","LK","MA","BT","EMP"];
+    private static readonly string[] Roles = [
+        "Rockerboy","Solo","Netrunner","Tech","Medtech","Media","Cop","Corporate","Fixer","Nomad"
+    ];
+    private static readonly (string Label, int Mod)[] GearClasses = [
+        ("LIGHT", 0), ("MEDIUM", 2), ("HEAVY", 4), ("ELITE", 6)
+    ];
+    private static readonly (string Name, int HumanityCost)[] CyberTable = [
+        ("Cyberoptic (basic)",    10),
+        ("Cyberaudio",            10),
+        ("Interface Plugs",        7),
+        ("Neural Processor",        4),
+        ("Smartgun Link",           7),
+        ("Cyberarm (right, basic)",7),
+        ("Subdermal Armor SP4",    7),
+        ("Toxin Binders",           4),
+        ("Rippers (retractable claws)", 7),
+        ("Kerenzikov Booster (+1 REF)", 7)
+    ];
+
+    private int _step = 1;
+    private readonly Random _rng = new();
+    private List<int> _rolledValues = new();
+    private readonly HashSet<int> _usedRollIdx = new();
+    private readonly Dictionary<string, int> _statAssign = new();
+    private string _selectedRole = "";
+    private Dictionary<string, int> _skills = new();
+    private List<int> _cyberRolls = new();
+    private int _gearClass = 0;
+    private List<GearItemDto> _gearItems = new();
+    private int _startingEb;
+    private string _npcHandle = "";
+    private bool _saving;
+    private CharacterSheet? _generated;
+
+    protected override void OnInitialized() => RollAllStats();
+
+    private void RollAllStats()
+    {
+        _rolledValues = Enumerable.Range(0, 9).Select(_ => _rng.Next(1, 7) + _rng.Next(1, 7)).ToList();
+        _usedRollIdx.Clear();
+        _statAssign.Clear();
+    }
+
+    private void AssignStat(string stat, string? idxStr)
+    {
+        if (!int.TryParse(idxStr, out int idx) || idx < 0) { _statAssign.Remove(stat); return; }
+        // free previously held slot
+        if (_statAssign.TryGetValue(stat, out int old)) _usedRollIdx.Remove(old);
+        _statAssign[stat] = idx;
+        _usedRollIdx.Add(idx);
+    }
+
+    private int GetStatValue(string stat)
+        => _statAssign.TryGetValue(stat, out int idx) && idx >= 0 ? _rolledValues[idx] : 5;
+
+    private void OnRoleChanged(ChangeEventArgs e)
+    {
+        _selectedRole = e.Value?.ToString() ?? "";
+        _skills = BuildDefaultSkills(_selectedRole);
+    }
+
+    private static Dictionary<string, int> BuildDefaultSkills(string role) => role switch
+    {
+        "Solo"      => new() { ["Handgun"] = 6, ["Rifle"] = 6, ["Combat Sense"] = 5, ["Athletics"] = 5, ["Dodge"] = 5, ["Melee"] = 5, ["Awareness"] = 4, ["Driving"] = 4 },
+        "Rockerboy" => new() { ["Perform"] = 7, ["Persuasion"] = 6, ["Streetwise"] = 5, ["Brawling"] = 4, ["Handgun"] = 4, ["Athletics"] = 4, ["Awareness"] = 4, ["Wardrobe"] = 3, ["Social"] = 3 },
+        "Netrunner" => new() { ["Interface"] = 7, ["Programming"] = 6, ["Electronics"] = 5, ["Awareness"] = 4, ["Handgun"] = 4, ["Streetwise"] = 4, ["Stealth"] = 4, ["Cyberdeck Design"] = 3, ["System Knowledge"] = 3 },
+        "Tech"      => new() { ["Electronics"] = 6, ["Jury Rig"] = 5, ["Weaponsmith"] = 5, ["Awareness"] = 4, ["Handgun"] = 4, ["Stealth"] = 4, ["Athletics"] = 4, ["Basic Tech"] = 4, ["Cybertech"] = 4 },
+        "Medtech"   => new() { ["Medical Tech"] = 7, ["Awareness"] = 5, ["Diagnose"] = 5, ["Cryotank Op"] = 4, ["First Aid"] = 5, ["Pharmaceuticals"] = 4, ["Handgun"] = 4, ["Athletics"] = 3, ["Persuasion"] = 3 },
+        "Media"     => new() { ["Credibility"] = 7, ["Persuasion"] = 6, ["Awareness"] = 5, ["Streetwise"] = 4, ["Stealth"] = 4, ["Social"] = 4, ["Handgun"] = 3, ["Seduction"] = 4, ["Writing"] = 3 },
+        "Cop"       => new() { ["Authority"] = 6, ["Handgun"] = 6, ["Awareness"] = 5, ["Athletics"] = 4, ["Interrogation"] = 4, ["Streetwise"] = 4, ["Intimidate"] = 4, ["Driving"] = 4, ["Brawling"] = 3 },
+        "Corporate" => new() { ["Resources"] = 7, ["Persuasion"] = 5, ["Social"] = 5, ["Awareness"] = 4, ["Business"] = 4, ["Handgun"] = 4, ["Wardrobe"] = 4, ["Seduction"] = 4, ["Bureaucracy"] = 3 },
+        "Fixer"     => new() { ["Streetdeal"] = 7, ["Persuasion"] = 5, ["Awareness"] = 5, ["Streetwise"] = 5, ["Bribery"] = 4, ["Handgun"] = 4, ["Forgery"] = 4, ["Gambling"] = 3, ["Trading"] = 3 },
+        "Nomad"     => new() { ["Family"] = 6, ["Driving"] = 6, ["Awareness"] = 5, ["Athletics"] = 5, ["Rifle"] = 5, ["Melee"] = 4, ["Stealth"] = 4, ["Tracking"] = 3, ["Survival"] = 2 },
+        _           => new()
+    };
+
+    private int TotalHumanityCost => _cyberRolls.Sum(r => CyberTable[r - 1].HumanityCost);
+
+    private void RollCyber()
+    {
+        int count = _selectedRole == "Solo" ? 6 : 3;
+        _cyberRolls = Enumerable.Range(0, count).Select(_ => _rng.Next(1, 11)).ToList();
+    }
+
+    private void RerollCyber(int idx) => _cyberRolls[idx] = _rng.Next(1, 11);
+
+    private void RollGear()
+    {
+        int roll = _rng.Next(1, 11) + _gearClass;
+        _gearItems = new();
+
+        if (roll >= 10)
+        {
+            _gearItems.Add(MakeArmor("Military Armor",   "20"));
+            _gearItems.Add(MakeWeapon("Assault Rifle",   "5D6", "400m", "+1"));
+            _gearItems.Add(MakeWeapon("Submachine Gun",  "2D6", "150m", "0"));
+            _gearItems.Add(MakeWeapon("Combat Knife",    "1D6+2", "Melee", "+1"));
+            _startingEb = _rng.Next(1, 11) * 10 * 20;
+        }
+        else if (roll >= 8)
+        {
+            _gearItems.Add(MakeArmor("Flak Vest",        "14"));
+            _gearItems.Add(MakeWeapon("Assault Rifle",   "5D6", "400m", "+1"));
+            _gearItems.Add(MakeWeapon("Medium Pistol",   "2D6+1", "50m", "0"));
+            _startingEb = _rng.Next(1, 11) * 10 * 10;
+        }
+        else if (roll >= 6)
+        {
+            _gearItems.Add(MakeArmor("Armorjack",        "10"));
+            _gearItems.Add(MakeWeapon("Submachine Gun",  "2D6", "150m", "0"));
+            _gearItems.Add(MakeWeapon("Medium Pistol",   "2D6+1", "50m", "0"));
+            _startingEb = _rng.Next(1, 11) * 10 * 5;
+        }
+        else if (roll >= 4)
+        {
+            _gearItems.Add(MakeArmor("Leather Jacket",   "4"));
+            _gearItems.Add(MakeWeapon("Medium Pistol",   "2D6+1", "50m", "0"));
+            _gearItems.Add(MakeWeapon("Combat Knife",    "1D6+2", "Melee", "+1"));
+            _startingEb = _rng.Next(1, 11) * 10;
+        }
+        else
+        {
+            _gearItems.Add(MakeArmor("Street Clothes",   "0"));
+            _gearItems.Add(MakeWeapon("Light Pistol",    "1D6+1", "50m", "0"));
+            _startingEb = _rng.Next(1, 11) * 10;
+        }
+    }
+
+    private static GearItemDto MakeWeapon(string name, string dmg, string range, string acc) => new()
+    {
+        Name = name, Category = "Weapon", Damage = dmg, Range = range, Acc = acc,
+        InstanceId = Guid.NewGuid().ToString("N")[..8]
+    };
+
+    private static GearItemDto MakeArmor(string name, string sp) => new()
+    {
+        Name = name, Category = "Armor", SP = sp,
+        InstanceId = Guid.NewGuid().ToString("N")[..8]
+    };
+
+    private static readonly string[] HandlePrefixes = ["CHROME","GHOST","RAZOR","SPIDER","IRON","NEON","VIPER","SHADE","BLADE","ECHO"];
+    private static readonly string[] HandleSuffixes = ["JACK","ZERO","SIX","NINE","X","EDGE","BYTE","FANG","WIRE","SHADE"];
+    private void GenerateHandle()
+        => _npcHandle = HandlePrefixes[new Random().Next(HandlePrefixes.Length)]
+                      + HandleSuffixes[new Random().Next(HandleSuffixes.Length)];
+
+    private void NextStep()
+    {
+        _step++;
+        if (_step == 3) RollCyber();
+        if (_step == 4) RollGear();
+        if (_step == 5) GenerateHandle();
+    }
+
+    private void PrevStep() { if (_step > 1) _step--; }
+
+    private async Task Generate()
+    {
+        _saving = true;
+        int humanity = GetStatValue("EMP") * 10 - TotalHumanityCost;
+        int newEmp   = Math.Max(0, humanity / 10);
+
+        var skillsJson = System.Text.Json.JsonSerializer.Serialize(_skills);
+        var inventory  = new List<GearItemDto>(_gearItems);
+        // Add cyberware as items
+        foreach (var roll in _cyberRolls)
+        {
+            var (name, _) = CyberTable[roll - 1];
+            inventory.Add(new GearItemDto
+            {
+                Name = name, Category = "Cyberware",
+                InstanceId = Guid.NewGuid().ToString("N")[..8]
+            });
+        }
+
+        var sheet = new CharacterSheet
+        {
+            Handle    = _npcHandle,
+            Name      = _npcHandle,
+            OwnerId   = Session.CurrentUser?.Id ?? "",
+            Role      = _selectedRole,
+            IsNPC     = true,
+            IsElite   = _gearClass >= 6,
+            INT  = GetStatValue("INT"),
+            REF  = GetStatValue("REF"),
+            TECH = GetStatValue("TECH"),
+            COOL = GetStatValue("COOL"),
+            ATT  = GetStatValue("ATT"),
+            LK   = GetStatValue("LK"),
+            CurrentLuck = GetStatValue("LK"),
+            MA   = GetStatValue("MA"),
+            BT   = GetStatValue("BT"),
+            EMP  = newEmp,
+            Humanity   = Math.Max(0, humanity),
+            SkillsJson = skillsJson,
+            Eurobucks  = _startingEb,
+            Inventory  = inventory
+        };
+
+        _generated = await CharApi.CreateAsync(sheet);
+        _saving = false;
+    }
+
+    private void Reset()
+    {
+        _step = 1; _generated = null; _selectedRole = ""; _npcHandle = "";
+        _skills.Clear(); _cyberRolls.Clear(); _gearItems.Clear();
+        RollAllStats();
+    }
+}
+
+<style>
+    .qnw-steps { display:flex; gap:.4rem; margin-bottom:1rem; }
+    .qnw-step  { width:28px; height:28px; border-radius:50%; border:1px solid var(--nc-border);
+                 display:flex; align-items:center; justify-content:center; font-size:.7rem;
+                 color:var(--nc-text-dim); }
+    .qnw-step-active { border-color:var(--nc-red); color:var(--nc-red); background:rgba(255,58,58,.1); }
+    .qnw-step-done   { border-color:#3aff6e; color:#3aff6e; background:rgba(58,255,110,.1); }
+
+    .qnw-section { display:flex; flex-direction:column; gap:.5rem; }
+    .qnw-title   { font-family:'Orbitron',monospace; font-size:.8rem; color:var(--nc-accent2); margin-bottom:.2rem; }
+    .qnw-hint    { font-size:.68rem; color:var(--nc-text-dim); }
+
+    .qnw-stat-roll-pool { display:flex; flex-wrap:wrap; gap:.3rem; align-items:center; }
+    .qnw-roll-pill { padding:.2rem .5rem; border:1px solid var(--nc-accent2); color:var(--nc-accent2);
+                     font-size:.75rem; font-family:'Share Tech Mono',monospace; border-radius:2px; }
+    .qnw-roll-used { opacity:.35; }
+    .qnw-reroll-btn { background:transparent; border:1px solid var(--nc-border); color:var(--nc-text-dim);
+                       padding:.2rem .5rem; font-size:.7rem; cursor:pointer; font-family:'Share Tech Mono',monospace; }
+    .qnw-reroll-btn:hover { color:var(--nc-text); border-color:var(--nc-text); }
+
+    .qnw-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:.3rem; }
+    .qnw-stat-row  { display:flex; align-items:center; gap:.4rem; }
+    .qnw-stat-label { font-size:.7rem; width:40px; color:var(--nc-text-dim); font-family:'Share Tech Mono',monospace; }
+    .qnw-stat-sel  { flex:1; font-size:.7rem; }
+    .qnw-stat-val  { width:24px; text-align:center; font-size:.75rem; color:var(--nc-accent2); font-family:'Share Tech Mono',monospace; }
+
+    .qnw-next     { font-size:.72rem; padding:.4rem .9rem; }
+    .qnw-back-btn { background:transparent; border:1px solid var(--nc-border); color:var(--nc-text-dim);
+                    padding:.4rem .9rem; font-size:.72rem; cursor:pointer; font-family:'Share Tech Mono',monospace; }
+    .qnw-back-btn:hover { color:var(--nc-text); }
+
+    .qnw-skills-list { max-height:220px; overflow-y:auto; border:1px solid var(--nc-border); padding:.4rem; }
+    .qnw-skill-row   { display:flex; align-items:center; gap:.4rem; padding:.15rem 0; }
+    .qnw-skill-name  { flex:1; font-size:.7rem; }
+    .qnw-skill-input { width:50px; font-size:.7rem; padding:.15rem .3rem; }
+    .qnw-skill-total { font-size:.68rem; color:var(--nc-text-dim); margin-top:.3rem; }
+
+    .qnw-cyber-list { display:flex; flex-direction:column; gap:.25rem; }
+    .qnw-cyber-row  { display:flex; align-items:center; gap:.4rem; padding:.2rem 0;
+                      border-bottom:1px dotted rgba(255,255,255,.06); }
+    .qnw-cyber-idx  { font-size:.65rem; color:var(--nc-text-dim); width:18px; }
+    .qnw-cyber-name { flex:1; font-size:.75rem; }
+    .qnw-cyber-cost { font-size:.65rem; }
+
+    .qnw-class-row { display:flex; gap:.3rem; }
+    .qnw-class-btn { background:transparent; border:1px solid var(--nc-border); color:var(--nc-text-dim);
+                     padding:.3rem .7rem; font-size:.68rem; cursor:pointer;
+                     font-family:'Share Tech Mono',monospace; }
+    .qnw-class-btn:hover { color:var(--nc-text); border-color:var(--nc-accent2); }
+    .qnw-gear-list { border:1px solid var(--nc-border); padding:.4rem; }
+    .qnw-gear-row  { display:flex; align-items:center; gap:.4rem; padding:.2rem 0;
+                     border-bottom:1px dotted rgba(255,255,255,.06); font-size:.72rem; }
+    .qnw-gear-name { flex:1; }
+    .qnw-gear-cat  { font-size:.62rem; color:var(--nc-text-dim); }
+    .qnw-gear-stat { font-size:.65rem; color:var(--nc-accent2); }
+
+    .qnw-handle-row { display:flex; align-items:center; gap:.5rem; }
+    .qnw-summary    { background:rgba(255,255,255,.03); border:1px solid var(--nc-border); padding:.6rem;
+                      font-size:.72rem; line-height:1.8; margin-bottom:.5rem; }
+    .qnw-success    { text-align:center; padding:.5rem; }
+    .qnw-success-name { font-family:'Orbitron',monospace; font-size:1.1rem; margin-bottom:.4rem; }
+</style>
