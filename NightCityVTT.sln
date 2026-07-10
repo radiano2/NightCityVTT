@@ -9,8 +9,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NightCityVTT.Client", "Nigh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NightCityVTT.Shared", "NightCityVTT.Shared\NightCityVTT.Shared.csproj", "{0B698757-DD3A-4E02-B15A-59AF5CD677C1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NightCityVTT.Tests.E2E", "NightCityVTT.Tests.E2E\NightCityVTT.Tests.E2E.csproj", "{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,18 +55,6 @@ Global
 		{0B698757-DD3A-4E02-B15A-59AF5CD677C1}.Release|x64.Build.0 = Release|Any CPU
 		{0B698757-DD3A-4E02-B15A-59AF5CD677C1}.Release|x86.ActiveCfg = Release|Any CPU
 		{0B698757-DD3A-4E02-B15A-59AF5CD677C1}.Release|x86.Build.0 = Release|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Debug|x64.Build.0 = Debug|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Debug|x86.Build.0 = Debug|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Release|x64.ActiveCfg = Release|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Release|x64.Build.0 = Release|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Release|x86.ActiveCfg = Release|Any CPU
-		{6BBCEF4A-FF25-4847-9DF3-10181BFCC0EE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

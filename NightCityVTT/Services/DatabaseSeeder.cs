@@ -64,7 +64,7 @@ public class DatabaseSeeder
             {
                 Theme = "",
                 AnimationIntervalMs = 5000,
-                CrtFilterEnabled = true
+                CrtFilterEnabled = false
             });
         }
     }

@@ -11,7 +11,6 @@
     <span class="lang-eec">Euro-Market</span>
     <span class="lang-ru">Черный Рынок</span>
     <span class="lang-pl">Czarny Rynek</span>
-    <span class="lang-uk">Чорний Ринок</span>
 </PageTitle>
 
 <div class="market-page">
@@ -24,7 +23,6 @@
         <p class="subtitle lang-eec">Standardized EC compliant logistics and defense acquisitions.</p>
         <p class="subtitle lang-ru">Оружие, броня, инструменты и препараты. Без лишних вопросов.</p>
         <p class="subtitle lang-pl">Broń, pancerze i sprzęt do zadań specjalnych. Ceny rynkowe.</p>
-        <h1 class="lang-uk">ЧОРНИЙ РИНОК КИЄВА // БЕЗПЕЧНЕ З'ЄДНАННЯ</h1>
     </div>
 
     @if (_loading)
@@ -36,7 +34,6 @@
                 <span class="lang-eec">CONNECTING TO EURO-LOGISTICS...</span>
                 <span class="lang-ru">УСТАНОВКА СВЯЗИ С ПОСТАВЩИКОМ...</span>
                 <span class="lang-pl">NAWIĄZYWANIE POŁĄCZENIA Z DOSTAWCĄ...</span>
-                <span class="lang-uk">ВСТАНОВЛЕННЯ ЗВ'ЯЗКУ З ПРОДАВЦЕМ...</span>
             </div>
         </div>
     }
@@ -95,7 +92,6 @@
                         <span class="lang-eec">CLASSIFICATIONS</span>
                         <span class="lang-ru">КАТЕГОРИИ</span>
                         <span class="lang-pl">KATEGORIE</span>
-                        <span class="lang-uk">КАТЕГОРІЇ</span>
                     </h3>
                     <div class="filter-btns">
                         <button class="filter-btn @(_selectedCategory == "" ? "active" : "")" @onclick='() => SetCategory("")'>
@@ -103,7 +99,6 @@
                             <span class="lang-eec">ALL</span>
                             <span class="lang-ru">ВСЕ</span>
                             <span class="lang-pl">WSZYSTKIE</span>
-                            <span class="lang-uk">[UK] ALL</span>
                         </button>
                         @foreach (var cat in _categories)
                         {

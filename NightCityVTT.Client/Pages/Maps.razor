@@ -8,15 +8,15 @@
 
 <div class="maps-page">
     <div class="maps-header">
-        <h1><span class="lang-en">// TACTICAL GRID //</span><span class="lang-uk">// ТАКТИЧНА СІТКА //</span></h1>
-        <p class="subtitle"><span class="lang-en">Battle maps for combat encounters. GM creates and manages maps.</span><span class="lang-uk">Бойові карти для сутичок. Майстер гри створює та керує картами.</span></p>
+        <h1>// TACTICAL GRID //</h1>
+        <p class="subtitle">Battle maps for combat encounters. GM creates and manages maps.</p>
     </div>
 
     @if (_loading)
     {
         <div class="ncc-loading">
             <div class="ncc-empty-icon">⬡</div>
-            <div class="ncc-empty-sub"><span class="lang-en">LOADING GRID DATA...</span><span class="lang-uk">ЗАВАНТАЖЕННЯ ДАНИХ СІТКИ...</span></div>
+            <div class="ncc-empty-sub">LOADING GRID DATA...</div>
         </div>
     }
     else
@@ -24,30 +24,30 @@
         @if (_isGm)
         {
             <div class="map-create-panel">
-                <h3><span class="lang-en">CREATE NEW MAP</span><span class="lang-uk">СТВОРИТИ НОВУ КАРТУ</span></h3>
+                <h3>CREATE NEW MAP</h3>
                 <div class="map-create-form">
                     <div class="wiz-field">
-                        <label><span class="lang-en">MAP NAME</span><span class="lang-uk">НАЗВА КАРТИ</span></label>
+                        <label>MAP NAME</label>
                         <input class="ncc-input" @bind="_newName" placeholder="e.g. Scavenger Warehouse" />
                     </div>
                     <div class="wiz-field">
-                        <label><span class="lang-en">WIDTH (tiles)</span><span class="lang-uk">ШИРИНА (тайли)</span></label>
+                        <label>WIDTH (tiles)</label>
                         <input type="number" class="ncc-input" @bind="_newWidth" min="10" max="50" />
                     </div>
                     <div class="wiz-field">
-                        <label><span class="lang-en">HEIGHT (tiles)</span><span class="lang-uk">ВИСОТА (тайли)</span></label>
+                        <label>HEIGHT (tiles)</label>
                         <input type="number" class="ncc-input" @bind="_newHeight" min="10" max="50" />
                     </div>
                     <div class="wiz-field">
-                        <label><span class="lang-en">TILE SIZE (px)</span><span class="lang-uk">РОЗМІР ТАЙЛУ (px)</span></label>
+                        <label>TILE SIZE (px)</label>
                         <select class="ncc-select" @bind="_newTileSize">
-                            <option value="32">32px — <span class="lang-en">large map</span><span class="lang-uk">велика карта</span></option>
-                            <option value="40">40px — <span class="lang-en">standard</span><span class="lang-uk">стандарт</span></option>
-                            <option value="48">48px — <span class="lang-en">detailed</span><span class="lang-uk">деталізована</span></option>
+                            <option value="32">32px — large map</option>
+                            <option value="40">40px — standard</option>
+                            <option value="48">48px — detailed</option>
                         </select>
                     </div>
                     <button class="ncc-btn-submit" @onclick="CreateMap" disabled="@_creating">
-                        @((MarkupString)(_creating ? "<span class=\"lang-en\">CREATING...</span><span class=\"lang-uk\">СТВОРЕННЯ...</span>" : "<span class=\"lang-en\">CREATE MAP ⊕</span><span class=\"lang-uk\">СТВОРИТИ КАРТУ ⊕</span>"))
+                        @(_creating ? "CREATING..." : "CREATE MAP ⊕")
                     </button>
                 </div>
             </div>
@@ -57,7 +57,7 @@
         {
             <div class="ncc-empty">
                 <div class="ncc-empty-icon">⬡</div>
-                <div class="ncc-empty-sub"><span class="lang-en">NO MAPS FOUND — GM MUST CREATE A BATTLE MAP FIRST</span><span class="lang-uk">КАРТ НЕ ЗНАЙДЕНО — МГ МАЄ СТВОРИТИ БОЙОВУ КАРТУ</span></div>
+                <div class="ncc-empty-sub">NO MAPS FOUND — GM MUST CREATE A BATTLE MAP FIRST</div>
             </div>
         }
         else
@@ -68,17 +68,17 @@
                     <div class="map-card @(map.IsActive ? "map-active" : "")">
                         <div class="map-card-info">
                             <div class="map-card-name">@map.Name.ToUpper()</div>
-                            <div class="map-card-meta">@map.Width × @map.Height <span class="lang-en">TILES</span><span class="lang-uk">ТАЙЛІВ</span> · @(map.Width * map.TileSize)×@(map.Height * map.TileSize)px · @map.Tokens.Count <span class="lang-en">TOKENS</span><span class="lang-uk">ТОКЕНІВ</span></div>
-                            @if (map.IsActive) { <div class="map-active-badge">● <span class="lang-en">ACTIVE</span><span class="lang-uk">АКТИВНА</span></div> }
+                            <div class="map-card-meta">@map.Width × @map.Height TILES · @(map.Width * map.TileSize)×@(map.Height * map.TileSize)px · @map.Tokens.Count TOKENS</div>
+                            @if (map.IsActive) { <div class="map-active-badge">● ACTIVE</div> }
                         </div>
                         <div class="map-card-actions">
-                            <button class="ncc-btn-submit" @onclick="() => OpenMap(map.Id!)"><span class="lang-en">OPEN</span><span class="lang-uk">ВІДКРИТИ</span></button>
+                            <button class="ncc-btn-submit" @onclick="() => OpenMap(map.Id!)">OPEN</button>
                             @if (_isGm)
                             {
                                 <button class="ncc-btn-submit" style="background: var(--nc-accent2);" @onclick="() => ToggleActive(map)">
-                                    @((MarkupString)(map.IsActive ? "<span class=\"lang-en\">DEACTIVATE</span><span class=\"lang-uk\">ДЕАКТИВУВАТИ</span>" : "<span class=\"lang-en\">SET ACTIVE</span><span class=\"lang-uk\">ЗРОБИТИ АКТИВНОЮ</span>"))
+                                    @(map.IsActive ? "DEACTIVATE" : "SET ACTIVE")
                                 </button>
-                                <button class="ncc-btn-danger" @onclick="() => DeleteMap(map.Id!)"><span class="lang-en">DELETE</span><span class="lang-uk">ВИДАЛИТИ</span></button>
+                                <button class="ncc-btn-danger" @onclick="() => DeleteMap(map.Id!)">DELETE</button>
                             }
                         </div>
                     </div>

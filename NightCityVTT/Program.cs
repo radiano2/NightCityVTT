@@ -18,7 +18,6 @@ builder.Services.AddScoped<DatabaseSeeder>();
 
 // Controllers (for seed API)
 builder.Services.AddControllers();
-builder.Services.AddHttpClient();
 
 // SignalR
 builder.Services.AddSignalR();
@@ -41,7 +40,6 @@ builder.Services.AddScoped<SettingsApiService>();
 builder.Services.AddScoped<GearApiService>();
 builder.Services.AddScoped<StoryApiService>();
 builder.Services.AddScoped<MapApiService>();
-builder.Services.AddScoped<ScenarioApiService>();
 builder.Services.AddScoped<DiceEngine>();
 builder.Services.AddMudServices();
 
@@ -63,16 +61,6 @@ app.UseAntiforgery();
 
 app.MapControllers();
 app.MapHub<GameHub>("/hubs/game");
-
-app.MapGet("/api/weather", async (IHttpClientFactory factory) => {
-    var client = factory.CreateClient();
-    client.DefaultRequestHeaders.Add("User-Agent", "curl/7.68.0");
-    var response = await client.GetAsync("https://wttr.in/San+Francisco?format=j1");
-    if (response.IsSuccessStatusCode) {
-        return Results.Content(await response.Content.ReadAsStringAsync(), "application/json");
-    }
-    return Results.StatusCode(500);
-});
 
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()

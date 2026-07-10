@@ -10,22 +10,22 @@
 @if (_loading)
 {
     <div class="lp-boot">
-        <div class="lp-blink"><span class="lang-en">// NETWORK HANDSHAKE...</span><span class="lang-uk">// МЕРЕЖЕВЕ З'ЄДНАННЯ...</span></div>
+        <div class="lp-blink">// NETWORK HANDSHAKE...</div>
     </div>
 }
 else if (_mode == LoginMode.ForceRegister || _mode == LoginMode.Register)
 {
     <div class="lp-card">
         <div class="lp-header">
-            <div class="lp-slash"><span class="lang-en">// NIGHT CITY VTT //</span><span class="lang-uk">// NIGHT CITY VTT //</span></div>
-            <h1 class="lp-title">@(_mode == LoginMode.ForceRegister ? "<span class=\"lang-en\">SYSTEM INITIALIZATION</span><span class=\"lang-uk\">ІНІЦІАЛІЗАЦІЯ СИСТЕМИ</span>" : "<span class=\"lang-en\">NEW OPERATOR</span><span class=\"lang-uk\">НОВИЙ ОПЕРАТОР</span>")</h1>
-            <p class="lp-sub">@(_mode == LoginMode.ForceRegister ? "<span class=\"lang-en\">No operators detected. Create the first account.</span><span class=\"lang-uk\">Операторів не виявлено. Створіть перший акаунт.</span>" : "<span class=\"lang-en\">Register a new identity.</span><span class=\"lang-uk\">Зареєструйте нову особу.</span>")</p>
+            <div class="lp-slash">// NIGHT CITY VTT //</div>
+            <h1 class="lp-title">@(_mode == LoginMode.ForceRegister ? "SYSTEM INITIALIZATION" : "NEW OPERATOR")</h1>
+            <p class="lp-sub">@(_mode == LoginMode.ForceRegister ? "No operators detected. Create the first account." : "Register a new identity.")</p>
         </div>
 
         @if (_dbNeedsSeeding)
         {
             <div class="lp-error" style="background:rgba(255,191,36,0.08); border-color:var(--nc-gold); color:var(--nc-gold); margin-bottom:1rem;">
-                <span class="lang-en">[!] CORE DATABASE IS EMPTY. SYSTEM MUST BE SEEDED BEFORE CREATING OPERATORS.</span><span class="lang-uk">[!] БАЗА ДАНИХ ПОРОЖНЯ. СИСТЕМУ ПОТРІБНО ЗАПОВНИТИ ПЕРЕД СТВОРЕННЯМ ОПЕРАТОРІВ.</span>
+                [!] CORE DATABASE IS EMPTY. SYSTEM MUST BE SEEDED BEFORE CREATING OPERATORS.
             </div>
             
             @if (!string.IsNullOrEmpty(_error))
@@ -34,7 +34,7 @@ else if (_mode == LoginMode.ForceRegister || _mode == LoginMode.Register)
             }
             
             <button class="lp-submit" style="background:var(--nc-gold); color:var(--nc-black);" @onclick="DoSeed" disabled="@_seeding">
-                @(_seeding ? "<span class=\"lang-en\">INITIALIZING CORE DATA...</span><span class=\"lang-uk\">ІНІЦІАЛІЗАЦІЯ БАЗИ ДАНИХ...</span>" : "<span class=\"lang-en\">SEED DATABASE NOW</span><span class=\"lang-uk\">ЗАПОВНИТИ БАЗУ ДАНИХ</span>")
+                @(_seeding ? "INITIALIZING CORE DATA..." : "SEED DATABASE NOW")
             </button>
         }
         else
@@ -42,26 +42,26 @@ else if (_mode == LoginMode.ForceRegister || _mode == LoginMode.Register)
             <div class="lp-role-row">
                 <button class="lp-role-btn @(_regRole == UserRole.Player ? "active" : "")"
                         @onclick="() => _regRole = UserRole.Player">
-                    <span class="lp-role-icon">▶</span> <span class="lang-en">PLAYER</span><span class="lang-uk">ГРАВЕЦЬ</span>
+                    <span class="lp-role-icon">▶</span> PLAYER
                 </button>
                 <button class="lp-role-btn @(_regRole == UserRole.GameMaster ? "active gm" : "")"
                         @onclick="() => _regRole = UserRole.GameMaster">
-                    <span class="lp-role-icon">◈</span> <span class="lang-en">GAME MASTER</span><span class="lang-uk">МАЙСТЕР ГРИ</span>
+                    <span class="lp-role-icon">◈</span> GAME MASTER
                 </button>
             </div>
 
             <div class="lp-field">
-                <label><span class="lang-en">HANDLE / NICKNAME</span><span class="lang-uk">НІКНЕЙМ</span></label>
+                <label>HANDLE / NICKNAME</label>
                 <input class="lp-input" type="text" placeholder="ENTER CALLSIGN..."
                        @bind="_regNick" @bind:event="oninput" maxlength="24" />
             </div>
             <div class="lp-field">
-                <label><span class="lang-en">ACCESS CODE</span><span class="lang-uk">КОД ДОСТУПУ</span></label>
+                <label>ACCESS CODE</label>
                 <input class="lp-input" type="password" placeholder="••••••••"
                        @bind="_regPass" @bind:event="oninput" />
             </div>
             <div class="lp-field">
-                <label><span class="lang-en">CONFIRM ACCESS CODE</span><span class="lang-uk">ПІДТВЕРДИТИ КОД ДОСТУПУ</span></label>
+                <label>CONFIRM ACCESS CODE</label>
                 <input class="lp-input" type="password" placeholder="••••••••"
                        @bind="_regPass2" @bind:event="oninput"
                        @onkeydown="OnRegisterKeyDown" />
@@ -73,14 +73,14 @@ else if (_mode == LoginMode.ForceRegister || _mode == LoginMode.Register)
             }
 
             <button class="lp-submit" @onclick="DoRegister" disabled="@_busy">
-                @(_busy ? "<span class=\"lang-en\">PROCESSING...</span><span class=\"lang-uk\">ОБРОБКА...</span>" : "<span class=\"lang-en\">REGISTER IDENTITY</span><span class=\"lang-uk\">ЗАРЕЄСТРУВАТИ ОСОБУ</span>")
+                @(_busy ? "PROCESSING..." : "REGISTER IDENTITY")
             </button>
         }
 
         @if (_mode == LoginMode.Register)
         {
             <button class="lp-back" @onclick="() => { _mode = LoginMode.PickUser; _error = null; }">
-                ← <span class="lang-en">BACK TO LOGIN</span><span class="lang-uk">ПОВЕРНУТИСЯ ДО ЛОГІНУ</span>
+                ← BACK TO LOGIN
             </button>
         }
     </div>
@@ -89,9 +89,9 @@ else if (_mode == LoginMode.PickUser)
 {
     <div class="lp-card">
         <div class="lp-header">
-            <div class="lp-slash"><span class="lang-en">// NIGHT CITY VTT //</span><span class="lang-uk">// NIGHT CITY VTT //</span></div>
-            <h1 class="lp-title"><span class="lang-en">USER AUTHENTICATION</span><span class="lang-uk">АВТЕНТИФІКАЦІЯ КОРИСТУВАЧА</span></h1>
-            <p class="lp-sub"><span class="lang-en">Select your operator identity.</span><span class="lang-uk">Виберіть свою особу оператора.</span></p>
+            <div class="lp-slash">// NIGHT CITY VTT //</div>
+            <h1 class="lp-title">USER AUTHENTICATION</h1>
+            <p class="lp-sub">Select your operator identity.</p>
         </div>
 
         <div class="lp-user-list">
@@ -101,7 +101,7 @@ else if (_mode == LoginMode.PickUser)
                         @onclick="() => SelectUser(u)">
                     <span class="lp-user-nick">@u.Nickname.ToUpper()</span>
                     <span class="lp-role-badge @(u.Role == UserRole.GameMaster ? "gm" : "")">
-                        @(u.Role == UserRole.GameMaster ? "<span class=\"lang-en\">GM</span><span class=\"lang-uk\">МГ</span>" : "<span class=\"lang-en\">PLR</span><span class=\"lang-uk\">ГРАВЕЦЬ</span>")
+                        @(u.Role == UserRole.GameMaster ? "GM" : "PLR")
                     </span>
                 </button>
             }
@@ -110,7 +110,7 @@ else if (_mode == LoginMode.PickUser)
         @if (_selectedUser != null)
         {
             <div class="lp-field" style="margin-top: 1.5rem;">
-                <label><span class="lang-en">ACCESS CODE FOR</span><span class="lang-uk">КОД ДОСТУПУ ДЛЯ</span> @_selectedUser.Nickname.ToUpper()</label>
+                <label>ACCESS CODE FOR @_selectedUser.Nickname.ToUpper()</label>
                 <input class="lp-input" type="password" placeholder="••••••••"
                        @bind="_loginPass" @bind:event="oninput"
                        @onkeydown="OnLoginKeyDown" />
@@ -122,12 +122,12 @@ else if (_mode == LoginMode.PickUser)
             }
 
             <button class="lp-submit" @onclick="DoLogin" disabled="@_busy">
-                @(_busy ? "<span class=\"lang-en\">AUTHENTICATING...</span><span class=\"lang-uk\">АВТЕНТИФІКАЦІЯ...</span>" : $"<span class=\"lang-en\">ACCESS AS {_selectedUser.Nickname.ToUpper()}</span><span class=\"lang-uk\">УВІЙТИ ЯК {_selectedUser.Nickname.ToUpper()}</span>")
+                @(_busy ? "AUTHENTICATING..." : $"ACCESS AS {_selectedUser.Nickname.ToUpper()}")
             </button>
         }
 
         <button class="lp-new-user" @onclick="() => { _mode = LoginMode.Register; _error = null; ResetRegForm(); }">
-            + <span class="lang-en">NEW OPERATOR</span><span class="lang-uk">НОВИЙ ОПЕРАТОР</span>
+            + NEW OPERATOR
         </button>
     </div>
 }

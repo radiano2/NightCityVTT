@@ -31,15 +31,4 @@ public class GameHub : Hub
 
     public async Task RemoveToken(string mapId, string tokenId)
         => await Clients.OthersInGroup($"map_{mapId}").SendAsync("TokenRemoved", tokenId);
-
-    // ── Combat events ─────────────────────────────────────────────────────
-
-    public async Task UpdateTokenCombat(string mapId, string tokenId, int totalDamageTaken)
-        => await Clients.OthersInGroup($"map_{mapId}").SendAsync("TokenCombatUpdated", tokenId, totalDamageTaken);
-
-    public async Task AppendCombatLog(string mapId, CombatLogEntry entry)
-        => await Clients.OthersInGroup($"map_{mapId}").SendAsync("CombatLogAppended", entry);
-
-    public async Task UpdateMapTeams(string mapId, List<TeamDto> teams)
-        => await Clients.OthersInGroup($"map_{mapId}").SendAsync("MapTeamsUpdated", teams);
 }

@@ -62,10 +62,9 @@ public class CharacterCombatState
     };
 
     /// <summary>
-    /// Penalty applied to ALL action rolls (to-hit, skills, saves) based on wound state.
-    /// CP2020 core rule: wound penalty is not limited to stun saves.
+    /// Penalty to Stun/Shock saves based on damage.
     /// </summary>
-    public int WoundPenalty => TotalDamageTaken switch
+    public int StunSaveModifier => TotalDamageTaken switch
     {
         <= 4 => 0,
         <= 8 => -1,
@@ -158,7 +157,7 @@ public class FnffEngine
         int rollTotal = RollExploding1D10(out bool isFumble, out bool isCrit);
         
         // On fumble, usually a separate fumble table is rolled, but for To-Hit calculation it automatically misses or takes penalties.
-        int finalTotal = isFumble ? rollTotal : (rollTotal + attacker.REF + skillLevel + weapon.WA + modifiers + attacker.WoundPenalty);
+        int finalTotal = isFumble ? rollTotal : (rollTotal + attacker.REF + skillLevel + weapon.WA + modifiers);
         
         return new HitResult
         {
@@ -202,10 +201,16 @@ public class FnffEngine
     /// <summary>
     /// Resolves damage, applying Cover, Armor Layering, SP, Headshot multipliers, and BTM.
     /// </summary>
-    public DamageResult CalculateDamage(CharacterCombatState target, string damageDice, HitLocation location, int coverSP = 0)
+    public DamageResult CalculateDamage(CharacterCombatState target, string damageDice, HitLocation location, int coverSP = 0, bool armorLayeringActive = false)
     {
         int rawDamage = ParseAndRollDamage(damageDice);
         int targetSP = target.ArmorSP.GetValueOrDefault(location, 0);
+        
+        // Simplified Armor Layering: Proportional Bonus (adds +5 SP as a flat proxy for layered soft/hard armor in this engine context)
+        if (armorLayeringActive && targetSP > 0)
+        {
+            targetSP += 5; 
+        }
         
         int totalSP = targetSP + coverSP;
         int penetratingDamage = rawDamage - totalSP;
@@ -213,21 +218,15 @@ public class FnffEngine
         
         if (penetratingDamage > 0)
         {
-            // Armor Degradation: permanently reduce SP of struck location by 1
-            if (targetSP > 0)
+            // Headshots double the damage that penetrates armor
+            if (location == HitLocation.Head)
             {
-                target.ArmorSP[location] = Math.Max(0, targetSP - 1);
+                penetratingDamage *= 2;
             }
 
             // Apply BTM (reduces damage, minimum of 1 damage goes through)
             int btmApplied = penetratingDamage + target.BTM;
             finalDamage = Math.Max(1, btmApplied);
-            
-            // Headshots double the damage that penetrates armor AFTER BTM is applied
-            if (location == HitLocation.Head)
-            {
-                finalDamage *= 2;
-            }
             
             target.TotalDamageTaken += finalDamage;
         }
@@ -250,8 +249,8 @@ public class FnffEngine
     public bool MakeStunSave(CharacterCombatState target)
     {
         int roll = Roll1D10();
-        int saveTarget = target.BODY + target.WoundPenalty;
-        return roll != 10 && roll <= saveTarget;
+        int saveTarget = target.BODY + target.StunSaveModifier;
+        return roll <= saveTarget;
     }
 
     /// <summary>
@@ -275,7 +274,7 @@ public class FnffEngine
         };
 
         int saveTarget = target.BODY + deathModifier;
-        return roll != 10 && roll <= saveTarget;
+        return roll <= saveTarget;
     }
 
     /// <summary>

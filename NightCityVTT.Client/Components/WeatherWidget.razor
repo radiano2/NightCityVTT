@@ -4,12 +4,12 @@
 <div class="nc-weather" title="Night City atmospheric data (San Francisco)">
     @if (_loading)
     {
-        <span class="nc-weather-city"><span class="lang-en">NC WEATHER</span><span class="lang-uk">ПОГОДА НС</span></span>
-        <span class="nc-weather-cond"> <span class="lang-en">SCANNING...</span><span class="lang-uk">СКАНУВАННЯ...</span></span>
+        <span class="nc-weather-city">NC WEATHER</span>
+        <span class="nc-weather-cond"> SCANNING...</span>
     }
     else
     {
-        <span class="nc-weather-city"><span class="lang-en">NIGHT CITY</span><span class="lang-uk">НАЙТ СІТІ</span></span>
+        <span class="nc-weather-city">NIGHT CITY</span>
         <span> // </span>
         <span class="nc-weather-temp">@_temp°C</span>
         <span> // </span>
@@ -28,7 +28,6 @@
         if (firstRender)
         {
             await FetchWeather();
-            StateHasChanged();
             _refreshTimer = new System.Timers.Timer(30 * 60 * 1000);
             _refreshTimer.Elapsed += async (_, _) => await InvokeAsync(async () =>
             {
@@ -45,7 +44,7 @@
         try
         {
             var res = await Http.GetFromJsonAsync<WttrResponse>(
-                "/api/weather",
+                "https://wttr.in/San+Francisco?format=j1",
                 new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             var c = res?.current_condition?.FirstOrDefault();
