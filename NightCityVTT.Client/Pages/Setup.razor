@@ -11,12 +11,14 @@
         <span class="lang-eec">DIRECTORATE // NETWORK SETUP</span>
         <span class="lang-ru">КОНСОЛЬ ГМ // НАСТРОЙКА БАЗЫ ДАННЫХ</span>
         <span class="lang-pl">KONSOLA MG // KONFIGURACJA BAZY DANYCH</span>
+        <span class="lang-uk">КОНСОЛЬ ГМ // НАЛАШТУВАННЯ БАЗИ ДАНИХ</span>
     </h1>
     <p class="setup-subtitle">
         <span class="lang-en hide-in-eec">Initialize the Night City VTT database with CP2020 core rulebook data.</span>
         <span class="lang-eec">Initialize the Euro NET database with standard EC regulatory data.</span>
         <span class="lang-ru">Инициализируйте базу данных Найт Сити ВТТ данными из основной книги правил CP2020.</span>
         <span class="lang-pl">Zainicjalizuj bazę danych Night City VTT danymi z podręcznika podstawowego CP2020.</span>
+        <span class="lang-uk">Ініціалізація бази даних Night City VTT даними з базової книги правил CP2020.</span>
     </p>
 
     <div class="button-row">
@@ -27,6 +29,7 @@
                 <span class="lang-eec">UPLOADING...</span>
                 <span class="lang-ru">ЗАГРУЗКА...</span>
                 <span class="lang-pl">WGRYWANIE...</span>
+                <span class="lang-uk">ЗАПОВНЕННЯ...</span>
             }
             else
             {
@@ -34,6 +37,7 @@
                 <span class="lang-eec">INIT DATABASE</span>
                 <span class="lang-ru">ЗАГРУЗИТЬ БАЗУ</span>
                 <span class="lang-pl">WGRAJ BAZĘ</span>
+                <span class="lang-uk">ЗАПОВНИТИ БАЗУ ДАНИХ</span>
             }
         </button>
 
@@ -42,6 +46,7 @@
             <span class="lang-eec">VERIFY STANDARDS</span>
             <span class="lang-ru">ПРОВЕРИТЬ БАЗУ</span>
             <span class="lang-pl">SPRAWDŹ BAZĘ</span>
+            <span class="lang-uk">ПЕРЕВІРИТИ БАЗУ ДАНИХ</span>
         </button>
     </div>
 
@@ -53,6 +58,7 @@
                 <span class="lang-eec">@(_report.Success ? "// PROTOCOLS APPLIED" : "// REGULATORY BREACH")</span>
                 <span class="lang-ru">@(_report.Success ? "// СОЕДИНЕНИЕ УСТАНОВЛЕНО" : "// ОШИБКА СОЕДИНЕНИЯ")</span>
                 <span class="lang-pl">@(_report.Success ? "// POŁĄCZENIE NAWIĄZANE" : "// BŁĄD POŁĄCZENIA")</span>
+                <span class="lang-uk">[UK] @(_report.Success ? "// UPLINK ESTABLISHED" : "// CONNECTION FAILURE")</span>
             </h2>
             <p class="report-message">@_report.Message</p>
 
@@ -61,18 +67,21 @@
                     <span class="count-label lang-en">SKILLS</span>
                     <span class="count-label lang-ru">НАВЫКИ</span>
                     <span class="count-label lang-pl">UMIEJĘTNOŚCI</span>
+                    <span class="count-label lang-uk">НАВИЧКИ</span>
                     <span class="count-value">@_report.SkillCount</span>
                 </div>
                 <div class="count-card">
                     <span class="count-label lang-en">ROLES</span>
                     <span class="count-label lang-ru">РОЛИ</span>
                     <span class="count-label lang-pl">ROLE</span>
+                    <span class="count-label lang-uk">РОЛІ</span>
                     <span class="count-value">@_report.RoleCount</span>
                 </div>
                 <div class="count-card">
                     <span class="count-label lang-en">GEAR ITEMS</span>
                     <span class="count-label lang-ru">СНАРЯЖЕНИЕ</span>
                     <span class="count-label lang-pl">WYPOSAŻENIE</span>
+                    <span class="count-label lang-uk">СПОРАДЖЕННЯ</span>
                     <span class="count-value">@_report.GearCount</span>
                 </div>
             </div>
@@ -84,6 +93,8 @@
                         <span class="lang-en">WARNINGS</span>
                         <span class="lang-ru">ПРЕДУПРЕЖДЕНИЯ</span>
                         <span class="lang-pl">OSTRZEŻENIA</span>
+                        <span class="lang-uk">ПОПЕРЕДЖЕННЯ</span>
+                        <span class="lang-eec">WARNINGS</span>
                     </h3>
                     <ul>
                         @foreach (var warning in _report.ValidationWarnings)
@@ -101,6 +112,8 @@
                         <span class="lang-en">ERRORS</span>
                         <span class="lang-ru">ОШИБКИ</span>
                         <span class="lang-pl">BŁĘDY</span>
+                        <span class="lang-uk">ПОМИЛКИ</span>
+                        <span class="lang-eec">ERRORS</span>
                     </h3>
                     <ul>
                         @foreach (var error in _report.Errors)
@@ -118,6 +131,8 @@
                         <span class="lang-en">COLLECTION COUNTS</span>
                         <span class="lang-ru">КОЛИЧЕСТВО ЗАПИСЕЙ</span>
                         <span class="lang-pl">LICZBA REKORDÓW</span>
+                        <span class="lang-uk">КІЛЬКІСТЬ КОЛЕКЦІЙ</span>
+                        <span class="lang-eec">COLLECTION COUNTS</span>
                     </h3>
                     <table class="counts-table">
                         <thead>
@@ -126,11 +141,15 @@
                                     <span class="lang-en">Collection</span>
                                     <span class="lang-ru">Коллекция</span>
                                     <span class="lang-pl">Kolekcja</span>
+                                    <span class="lang-uk">Колекція</span>
+                                    <span class="lang-eec">Collection</span>
                                 </th>
                                 <th>
                                     <span class="lang-en">Documents</span>
                                     <span class="lang-ru">Документы</span>
                                     <span class="lang-pl">Dokumenty</span>
+                                    <span class="lang-uk">Документи</span>
+                                    <span class="lang-eec">Documents</span>
                                 </th>
                             </tr>
                         </thead>

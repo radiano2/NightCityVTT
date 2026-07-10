@@ -15,6 +15,7 @@
     <span class="lang-eec">Operative Dossiers</span>
     <span class="lang-ru">Картотека кадров</span>
     <span class="lang-pl">Rejestr personelu</span>
+    <span class="lang-uk">[UK] Personnel Registry</span>
 </PageTitle>
 
 <div class="char-suite">
@@ -27,15 +28,36 @@
                 <h1 class="lang-eec" style="margin:0;">OPERATIVE DOSSIERS</h1>
                 <h1 class="lang-ru" style="margin:0;">КАРТОТЕКА КАДРОВ</h1>
                 <h1 class="lang-pl" style="margin:0;">REJESTR PERSONELU</h1>
+                <h1 class="lang-uk" style="margin:0;">[UK] PERSONNEL REGISTRY</h1>
             </div>
             
             <div style="display:flex; gap:1rem; align-items:center; width: 100%;">
                 @if (Session.CurrentUser?.Role == UserRole.GameMaster)
                 {
-                    <select class="ncc-select" style="max-width:240px; padding: 0.5rem;" @bind="RosterFilter">
+                    <select class="ncc-select lang-en hide-in-eec" style="max-width:240px; padding: 0.5rem;" @bind="RosterFilter">
                         <option value="All">SHOW ALL ASSETS</option>
                         <option value="Players">PLAYER OPERATIVES</option>
                         <option value="Tests">TEST ASSETS</option>
+                    </select>
+                    <select class="ncc-select lang-uk" style="max-width:240px; padding: 0.5rem;" @bind="RosterFilter">
+                        <option value="All">ПОКАЗАТИ ВСІ АКТИВИ</option>
+                        <option value="Players">ОПЕРАТИВНИКИ ГРАВЦІВ</option>
+                        <option value="Tests">ТЕСТОВІ АКТИВИ</option>
+                    </select>
+                    <select class="ncc-select lang-ru" style="max-width:240px; padding: 0.5rem;" @bind="RosterFilter">
+                        <option value="All">ПОКАЗАТЬ ВСЕ АКТИВЫ</option>
+                        <option value="Players">ОПЕРАТИВНИКИ ИГРОКОВ</option>
+                        <option value="Tests">ТЕСТОВЫЕ АКТИВЫ</option>
+                    </select>
+                    <select class="ncc-select lang-pl" style="max-width:240px; padding: 0.5rem;" @bind="RosterFilter">
+                        <option value="All">POKAŻ WSZYSTKIE AKTYWA</option>
+                        <option value="Players">OPERATORZY GRACZY</option>
+                        <option value="Tests">AKTYWA TESTOWE</option>
+                    </select>
+                    <select class="ncc-select lang-eec" style="max-width:240px; padding: 0.5rem;" @bind="RosterFilter">
+                        <option value="All">SHOW ALL DOSSIERS</option>
+                        <option value="Players">ACTIVE AGENTS</option>
+                        <option value="Tests">SIMULATION PROFILES</option>
                     </select>
                 }
                 <button class="ncc-btn-submit" @onclick="StartCreation" style="white-space:nowrap;">
@@ -43,12 +65,13 @@
                     <span class="lang-eec">NEW OPERATIVE ⊕</span>
                     <span class="lang-ru">НОВЫЙ ОБЪЕКТ ⊕</span>
                     <span class="lang-pl">NOWY WPIS ⊕</span>
+                    <span class="lang-uk">[UK] NEW ASSET ⊕</span>
                 </button>
                 @if (Session.CurrentUser?.Role == UserRole.GameMaster)
                 {
                     <button class="ncc-btn-submit" style="white-space:nowrap;background:rgba(255,58,58,.25);border-color:var(--nc-red)"
                             @onclick="() => _showNpcWizard = !_showNpcWizard">
-                        + QUICK NPC
+                        <span class="lang-en">+ QUICK NPC</span><span class="lang-uk">+ ШВИДКИЙ НІП</span>
                     </button>
                 }
             </div>
@@ -64,7 +87,7 @@
         {
             <div class="ncc-loading">
                 <div class="ncc-empty-icon">⬡</div>
-                <div class="ncc-empty-sub">SYNCING RECORDS...</div>
+                <div class="ncc-empty-sub"><span class="lang-en">SYNCING RECORDS...</span><span class="lang-uk">СИНХРОНІЗАЦІЯ ЗАПИСІВ...</span></div>
             </div>
         }
         else if (FilteredCharacters.Count == 0)
@@ -75,6 +98,7 @@
                 <div class="lang-eec">NO OPERATIVES DETECTED</div>
                 <div class="lang-ru">ДАННЫЕ НЕ НАЙДЕНЫ</div>
                 <div class="lang-pl">BRAK REKORDÓW</div>
+                <div class="lang-uk">[UK] NO ASSETS ON RECORD</div>
             </div>
         }
         else
@@ -113,7 +137,7 @@
         <!-- ═══ WIZARD VIEW ═══ -->
         <div class="wizard-container">
             <div class="wizard-header">
-                <button class="wiz-back-btn" @onclick="CancelCreation">✕ EXIT</button>
+                <button class="wiz-back-btn" @onclick="CancelCreation"><span class="lang-en">✕ EXIT</span><span class="lang-uk">✕ ВИХІД</span></button>
                 <div class="wiz-stepper">
                     @for (int i = 0; i < _stageLabels.Length; i++)
                     {
@@ -131,19 +155,19 @@
                 @if (_stage == 0)
                 {
                     <div class="wiz-section">
-                        <h3>1. CORE IDENTIFICATION</h3>
+                        <h3><span class="lang-en">1. CORE IDENTIFICATION</span><span class="lang-uk">1. ОСНОВНА ІДЕНТИФІКАЦІЯ</span></h3>
                         <div class="wiz-field">
-                            <label>HANDLE (STREET NAME) *</label>
+                            <label><span class="lang-en">HANDLE (STREET NAME) *</span><span class="lang-uk">ПСЕВДОНІМ (ВУЛИЧНЕ ІМ'Я) *</span></label>
                             <input type="text" class="ncc-input" @bind="_handle" placeholder="Enter codename..." />
                         </div>
                         <div class="wiz-field">
-                            <label>LEGAL DESIGNATION (NAME)</label>
+                            <label><span class="lang-en">LEGAL DESIGNATION (NAME)</span><span class="lang-uk">ЮРИДИЧНЕ ІМ'Я (ПІБ)</span></label>
                             <input type="text" class="ncc-input" @bind="_name" placeholder="Optional..." />
                         </div>
                         <div class="wiz-field">
-                            <label>ETHNIC ORIGIN</label>
+                            <label><span class="lang-en">ETHNIC ORIGIN</span><span class="lang-uk">ЕТНІЧНЕ ПОХОДЖЕННЯ</span></label>
                             <select class="ncc-select" @bind="_origin">
-                                <option value="">— SELECT ORIGIN —</option>
+                                <option value=""><span class="lang-en">— SELECT ORIGIN —</span><span class="lang-uk">— ВИБЕРІТЬ ПОХОДЖЕННЯ —</span></option>
                                 @foreach (var o in _originOpts) { <option value="@o.V">@o.En</option> }
                             </select>
                         </div>
@@ -154,7 +178,7 @@
                 @if (_stage == 1)
                 {
                     <div class="wiz-section">
-                        <h3>2. FUNCTIONAL ROLE</h3>
+                        <h3><span class="lang-en">2. FUNCTIONAL ROLE</span><span class="lang-uk">2. ФУНКЦІОНАЛЬНА РОЛЬ</span></h3>
                         <div class="role-selector">
                             @foreach (var r in _roles)
                             {
@@ -171,11 +195,11 @@
                 @if (_stage == 2)
                 {
                     <div class="wiz-section">
-                        <h3>3. CHARACTERISTICS</h3>
+                        <h3><span class="lang-en">3. CHARACTERISTICS</span><span class="lang-uk">3. ХАРАКТЕРИСТИКИ</span></h3>
                         <div class="pool-header">
-                            <span>REMAINING: <strong class="@(PointsRemaining < 0 ? "over" : "ok")">@PointsRemaining</strong> / @PointPool</span>
+                            <span><span class="lang-en">REMAINING: </span><span class="lang-uk">ЗАЛИШИЛОСЯ: </span><strong class="@(PointsRemaining < 0 ? "over" : "ok")">@PointsRemaining</strong> / @PointPool</span>
                             <label class="elite-toggle">
-                                <input type="checkbox" @bind="_isElite" /> ELITE BUILD (80 PTS)
+                                <input type="checkbox" @bind="_isElite" /> <span class="lang-en">ELITE BUILD (80 PTS)</span><span class="lang-uk">ЕЛІТНА ЗБІРКА (80 ОЧКІВ)</span>
                             </label>
                         </div>
                         <div class="stats-grid">
@@ -201,47 +225,47 @@
                 @if (_stage == 3)
                 {
                     <div class="wiz-section">
-                        <h3>4. LIFEPATH PROTOCOL</h3>
+                        <h3><span class="lang-en">4. LIFEPATH PROTOCOL</span><span class="lang-uk">4. ПРОТОКОЛ ЖИТТЄВОГО ШЛЯХУ</span></h3>
                         <div class="lifepath-grid">
                             <div class="wiz-field">
-                                <label>CLOTHING STYLE</label>
+                                <label><span class="lang-en">CLOTHING STYLE</span><span class="lang-uk">СТИЛЬ ОДЯГУ</span></label>
                                 <select class="ncc-select" @bind="_clothes">
-                                    <option value="">— SELECT —</option>
+                                    <option value=""><span class="lang-en">— SELECT —</span><span class="lang-uk">— ВИБРАТИ —</span></option>
                                     @foreach (var o in _clothesOpts) { <option value="@o.V">@o.En</option> }
                                 </select>
                             </div>
                             <div class="wiz-field">
-                                <label>HAIRSTYLE</label>
+                                <label><span class="lang-en">HAIRSTYLE</span><span class="lang-uk">ЗАЧІСКА</span></label>
                                 <select class="ncc-select" @bind="_hairstyle">
-                                    <option value="">— SELECT —</option>
+                                    <option value=""><span class="lang-en">— SELECT —</span><span class="lang-uk">— ВИБРАТИ —</span></option>
                                     @foreach (var o in _hairOpts) { <option value="@o.V">@o.En</option> }
                                 </select>
                             </div>
                             <div class="wiz-field">
-                                <label>AFFECTATION</label>
+                                <label><span class="lang-en">AFFECTATION</span><span class="lang-uk">ОЗДОБЛЕННЯ (АФЕКТАЦІЯ)</span></label>
                                 <select class="ncc-select" @bind="_affectation">
-                                    <option value="">— SELECT —</option>
+                                    <option value=""><span class="lang-en">— SELECT —</span><span class="lang-uk">— ВИБРАТИ —</span></option>
                                     @foreach (var o in _affectOpts) { <option value="@o.V">@o.En</option> }
                                 </select>
                             </div>
                             <div class="wiz-field">
-                                <label>FAMILY RANKING</label>
+                                <label><span class="lang-en">FAMILY RANKING</span><span class="lang-uk">СТАТУС СІМ'Ї</span></label>
                                 <select class="ncc-select" @bind="_familyRanking">
-                                    <option value="">— SELECT —</option>
+                                    <option value=""><span class="lang-en">— SELECT —</span><span class="lang-uk">— ВИБРАТИ —</span></option>
                                     @foreach (var o in _familyRankOpts) { <option value="@o.V">@o.En</option> }
                                 </select>
                             </div>
                             <div class="wiz-field">
-                                <label>FAMILY TRAGEDY</label>
+                                <label><span class="lang-en">FAMILY TRAGEDY</span><span class="lang-uk">СІМЕЙНА ТРАГЕДІЯ</span></label>
                                 <select class="ncc-select" @bind="_familyTragedy">
-                                    <option value="">— SELECT —</option>
+                                    <option value=""><span class="lang-en">— SELECT —</span><span class="lang-uk">— ВИБРАТИ —</span></option>
                                     @foreach (var o in _familyTragOpts) { <option value="@o.V">@o.En</option> }
                                 </select>
                             </div>
                             <div class="wiz-field">
-                                <label>PERSONALITY</label>
+                                <label><span class="lang-en">PERSONALITY</span><span class="lang-uk">ОСОБИСТІСТЬ</span></label>
                                 <select class="ncc-select" @bind="_personality">
-                                    <option value="">— SELECT —</option>
+                                    <option value=""><span class="lang-en">— SELECT —</span><span class="lang-uk">— ВИБРАТИ —</span></option>
                                     @foreach (var o in _personalityOpts) { <option value="@o.V">@o.En</option> }
                                 </select>
                             </div>
@@ -253,8 +277,8 @@
                 @if (_stage == 4)
                 {
                     <div class="wiz-section">
-                        <h3>5. SKILL MATRIX</h3>
-                        <div class="pool-bar">CAREER POINTS: <strong>@CareerPointsRemaining</strong> / 40</div>
+                        <h3><span class="lang-en">5. SKILL MATRIX</span><span class="lang-uk">5. МАТРИЦЯ НАВИЧОК</span></h3>
+                        <div class="pool-bar"><span class="lang-en">CAREER POINTS: </span><span class="lang-uk">ОЧКИ КАР'ЄРИ: </span><strong>@CareerPointsRemaining</strong> / 40</div>
                         <div class="skills-scroll">
                             @foreach (var skill in CurrentRole?.CareerSkills ?? Array.Empty<string>())
                             {
@@ -263,7 +287,7 @@
                                     <div class="stat-info">
                                         <span class="skill-name @(skill == CurrentRole?.Special ? "special" : "")">
                                             @skill
-                                            @if (skill == CurrentRole?.Special) { <span style="font-size:0.6rem; margin-left:0.5rem; background:var(--nc-gold); color:var(--nc-black); padding:2px 4px; border-radius:2px;">RECOMMENDED</span> }
+                                            @if (skill == CurrentRole?.Special) { <span style="font-size:0.6rem; margin-left:0.5rem; background:var(--nc-gold); color:var(--nc-black); padding:2px 4px; border-radius:2px;"><span class="lang-en">RECOMMENDED</span><span class="lang-uk">РЕКОМЕНДОВАНО</span></span> }
                                         </span>
                                         <span class="stat-desc">@(_skillDescs.GetValueOrDefault(skill, "General skill."))</span>
                                     </div>
@@ -275,7 +299,7 @@
                                 </div>
                             }
                         </div>
-                        <div class="pool-bar" style="margin-top: 1rem;">PICKUP POINTS: <strong>@PickupPointsRemaining</strong> / @PickupPool</div>
+                        <div class="pool-bar" style="margin-top: 1rem;"><span class="lang-en">PICKUP POINTS: </span><span class="lang-uk">ДОДАТКОВІ ОЧКИ: </span><strong>@PickupPointsRemaining</strong> / @PickupPool</div>
                         <div class="skills-scroll">
                             @foreach (var skill in _pickupSkillNames)
                             {
@@ -300,15 +324,22 @@
             <div class="wizard-footer">
                 @if (!string.IsNullOrEmpty(_error)) { <div class="ncc-msg ncc-msg-err">✕ @_error</div> }
                 <div class="wiz-nav">
-                    <button class="wiz-btn" @onclick="PrevStage" disabled="@(_stage == 0)">BACK</button>
+                    <button class="wiz-btn" @onclick="PrevStage" disabled="@(_stage == 0)"><span class="lang-en">BACK</span><span class="lang-uk">НАЗАД</span></button>
                     @if (_stage < 4)
                     {
-                        <button class="wiz-btn primary" @onclick="NextStage" disabled="@(!CanAdvance)">NEXT</button>
+                        <button class="wiz-btn primary" @onclick="NextStage" disabled="@(!CanAdvance)"><span class="lang-en">NEXT</span><span class="lang-uk">ДАЛІ</span></button>
                     }
                     else
                     {
                         <button class="wiz-btn primary" @onclick="SaveCharacter" disabled="@_saving">
-                            @(_saving ? "SYNCING..." : "COMMIT TO NET ◈")
+                            @if (_saving)
+                            {
+                                <span class="lang-en">SYNCING...</span><span class="lang-uk">СИНХРОНІЗАЦІЯ...</span>
+                            }
+                            else
+                            {
+                                <span class="lang-en">COMMIT TO NET ◈</span><span class="lang-uk">ЗБЕРЕГТИ В МЕРЕЖІ ◈</span>
+                            }
                         </button>
                     }
                 </div>

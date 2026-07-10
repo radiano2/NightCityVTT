@@ -51,6 +51,7 @@
     private readonly string[] defaultCorps = { "ARASAKA", "MILITECH", "KANG TAO", "TRAUMA TEAM", "ZETATECH", "NCPD" };
     private readonly string[] lunaCorps = { "SOVOIL", "PETROCHEM", "MINISTRY OF INFO", "KGB SECURE", "EUROBANK" };
     private readonly string[] heroldowieCorps = { "BUREAU OF RECORDS", "POLISH INTEL", "INDUSTRIAL BOARD", "ORZEŁ-TECH", "VISTULA CORP" };
+    private readonly string[] kyivCorps = { "NAFTOHAZ", "UKRZALIZNYTSIA", "ANTONOV", "SBU SECURE", "ZBROYA" };
 
     private readonly string[] depts = { "CENTRAL", "RESEARCH", "FINANCIAL", "MILITARY", "INTELLIGENCE", "BLACK_OPS" };
 
@@ -123,6 +124,7 @@
         {
             "luna" => lunaCorps,
             "heroldowie" => heroldowieCorps,
+            "kyiv" => kyivCorps,
             _ => defaultCorps
         };
 
@@ -158,6 +160,21 @@
             interfaceText = "INTERFEJSU";
             footerText = "WŁASNOŚĆ";
             warningText = "NIEAUTORYZOWANY DOSTĘP GROZI ŚMIERCIĄ.";
+        }
+        else if (currentTheme == "kyiv")
+        {
+            intrusionText = "[ ВИЯВЛЕНО ВТРУЧАННЯ В СИСТЕМУ ]";
+            initText = "ІНІЦІАЛІЗАЦІЯ ЗВ'ЯЗКУ";
+            bypassText = "ОБХІД";
+            firewallText = "БРАНДМАУЕРА";
+            injectText = "ВВЕДЕННЯ ДАНИХ";
+            decryptText = "ДЕШИФРУВАННЯ";
+            accessText = "ДОСТУП ДО";
+            databaseText = "БАЗИ ДАНИХ";
+            loadText = "ЗАВАНТАЖЕННЯ";
+            interfaceText = "ІНТЕРФЕЙСУ";
+            footerText = "ВЛАСНІСТЬ";
+            warningText = "НЕСАНКЦІОНОВАНИЙ ДОСТУП КАРАЄТЬСЯ СМЕРТЮ.";
         }
         else
         {

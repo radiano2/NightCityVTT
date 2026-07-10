@@ -9,15 +9,15 @@
 
 <div class="maps-page">
     <div class="maps-header">
-        <h1>// OPERATIONS //</h1>
-        <p class="subtitle">Combat scenarios link a story, map and team rosters into one launchable encounter.</p>
+        <h1><span class="lang-en">// OPERATIONS //</span><span class="lang-uk">// ОПЕРАЦІЇ //</span></h1>
+        <p class="subtitle"><span class="lang-en">Combat scenarios link a story, map and team rosters into one launchable encounter.</span><span class="lang-uk">Бойові сценарії об'єднують історію, карту та списки команд в одну придатну для запуску сутичку.</span></p>
     </div>
 
     @if (_loading)
     {
         <div class="ncc-loading">
             <div class="ncc-empty-icon">⬡</div>
-            <div class="ncc-empty-sub">LOADING OPERATIONS DATA...</div>
+            <div class="ncc-empty-sub"><span class="lang-en">LOADING OPERATIONS DATA...</span><span class="lang-uk">ЗАВАНТАЖЕННЯ ДАНИХ ОПЕРАЦІЙ...</span></div>
         </div>
     }
     else
@@ -28,7 +28,7 @@
                 <input class="ncc-input" placeholder="Operation name..." @bind="_newName" style="max-width:280px" />
                 <button class="ncc-btn-submit" @onclick="CreateScenario"
                         disabled="@string.IsNullOrWhiteSpace(_newName)">
-                    + NEW OPERATION
+                    <span class="lang-en">+ NEW OPERATION</span><span class="lang-uk">+ НОВА ОПЕРАЦІЯ</span>
                 </button>
             </div>
         }
@@ -37,10 +37,10 @@
         {
             <div class="ncc-empty">
                 <div class="ncc-empty-icon">◌</div>
-                <div class="ncc-empty-sub">NO OPERATIONS FOUND</div>
+                <div class="ncc-empty-sub"><span class="lang-en">NO OPERATIONS FOUND</span><span class="lang-uk">ОПЕРАЦІЙ НЕ ЗНАЙДЕНО</span></div>
                 @if (_isGm)
                 {
-                    <p class="ncc-empty-tip">Create an operation above to begin.</p>
+                    <p class="ncc-empty-tip"><span class="lang-en">Create an operation above to begin.</span><span class="lang-uk">Створіть операцію вище, щоб розпочати.</span></p>
                 }
             </div>
         }
@@ -59,19 +59,19 @@
                             <div class="map-card-sub">@s.Description</div>
                         }
                         <div class="map-card-meta">
-                            <span>@s.Teams.Count team(s)</span>
+                            <span>@s.Teams.Count <span class="lang-en">team(s)</span><span class="lang-uk">команд(и)</span></span>
                             <span>@s.CreatedAt.ToString("yyyy-MM-dd")</span>
                         </div>
                         <div class="map-card-actions">
                             <button class="ncc-btn-submit" style="font-size:.7rem;padding:.3rem .8rem"
                                     @onclick='() => Nav.NavigateTo($"/scenarios/{s.Id}")'>
-                                DETAILS
+                                <span class="lang-en">DETAILS</span><span class="lang-uk">ДЕТАЛІ</span>
                             </button>
                             @if (_isGm && !string.IsNullOrEmpty(s.MapId))
                             {
                                 <button class="ncc-btn-submit" style="font-size:.7rem;padding:.3rem .8rem;background:var(--nc-red)"
                                         @onclick="() => LaunchScenario(s.Id!)">
-                                    ▶ LAUNCH
+                                    <span class="lang-en">▶ LAUNCH</span><span class="lang-uk">▶ ЗАПУСК</span>
                                 </button>
                             }
                             @if (_isGm)

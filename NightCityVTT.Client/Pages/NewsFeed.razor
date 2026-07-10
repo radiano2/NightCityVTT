@@ -9,17 +9,30 @@
         <h1 class="lang-eec">EUROPRESS // STRATEGIC DIRECTIVES</h1>
         <h1 class="lang-ru">ТАСС // НОВОСТНАЯ СВОДКА</h1>
         <h1 class="lang-pl">KURIER WARSZAWSKI // WIADOMOŚCI</h1>
+        <h1 class="lang-uk">КИЇВСЬКИЙ ВІСНИК // ОСТАННІ НОВИНИ</h1>
         <div class="news-date">
             <span class="lang-en hide-in-eec">DATE: 2020.05.08 // TIME: 14:02:44 PST</span>
             <span class="lang-eec">DATE: 08.05.2020 // HEURE: 23:02 CET</span>
             <span class="lang-ru">ДАТА: 08.05.2020 // ВРЕМЯ: 01:02 MSK</span>
             <span class="lang-pl">DATA: 08.05.2020 // CZAS: 23:02 CET</span>
+            <span class="lang-uk">ДАТА: 08.05.2020 // ЧАС: 00:02 EEST</span>
         </div>
     </div>
 
     <div class="news-grid">
         <!-- Main News Column -->
         <div class="news-main">
+            <!-- UK News: Retro Newspaper Theme -->
+            <div class="news-article lang-uk">
+                <div class="article-meta"><span class="article-tag urgent">БЛИСКАВКА</span> // КИЇВ</div>
+                <h2>ПЕРЕСТРІЛКА НА ПОДІЛІ: КОРПОРАЦІЇ ВТРАЧАЮТЬ КОНТРОЛЬ</h2>
+                <p>Сили муніципальної поліції перекрили Контрактову площу після масштабної збройної сутички між кібер-угрупованнями. Місцеві лікарні відмовляються приймати поранених без платинової страховки. Повідомляється про використання нелегальної важкої зброї, що надійшла з контрабандних шляхів. Громадянам нагадують, що несанкціоноване перебування на вулицях після комендантської години суворо карається.</p>
+            </div>
+            <div class="news-article lang-uk">
+                <div class="article-meta"><span class="article-tag">ЕКОНОМІКА</span> // ЧОРНИЙ РИНОК</div>
+                <h2>ЦІНИ НА КІБЕР-ІМПЛАНТИ ЗРОСЛИ НА 40%</h2>
+                <p>Через перебої в постачанні з європейських мегаполісів, місцеві фіксери підняли ціни на нейронні процесори та оптичні сенсори. Експерти прогнозують подальший дефіцит високотехнологічних компонентів. Водночас зростає ринок кустарних модифікацій, хоча рівень кіберпсихозу серед користувачів таких пристроїв залишається критично високим.</p>
+            </div>
             <!-- EN News: Satirical Corporate Dystopia -->
             <div class="news-article lang-en hide-in-eec">
                 <div class="article-meta"><span class="article-tag urgent">RED ALERT</span> // NIGHT CITY</div>
@@ -101,6 +114,7 @@
                     <span class="lang-eec">EUROBOURSE INDEX</span>
                     <span class="lang-ru">ИНДЕКС РЫНКА</span>
                     <span class="lang-pl">INDEKS GIEŁDOWY</span>
+                    <span class="lang-uk">ІНДЕКС СВІТОВОГО РИНКУ</span>
                 </h3>
                 <ul class="stock-list">
                     <li class="stock-item down">
@@ -128,6 +142,7 @@
                         <span class="stock-name lang-eec">EUROBANK (EEC)</span>
                         <span class="stock-name lang-ru">EUROBANK</span>
                         <span class="stock-name lang-pl">EUROBANK</span>
+                        <span class="stock-name lang-uk ">ЄВРОБАНК</span>
                         <span class="stock-price">412.10</span>
                         <span class="stock-change">+1.2%</span>
                     </li>
@@ -312,6 +327,9 @@
     
     :root[data-theme="luna"] .news-header h1,
     :root[data-theme="luna"] .news-article h2 { font-family: var(--font-cyrillic); }
+
+    :root[data-theme="kyiv"] .news-header h1,
+    :root[data-theme="kyiv"] .news-article h2 { font-family: var(--font-type); font-weight: bold; border-bottom: 2px solid var(--nc-border); padding-bottom: 5px; }
 
     @@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
 </style>

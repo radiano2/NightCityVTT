@@ -13,6 +13,7 @@
     <span class="lang-eec">Directive Architect</span>
     <span class="lang-ru">Архитектор кампаний</span>
     <span class="lang-pl">Kreator Kampanii</span>
+    <span class="lang-uk">[UK] Campaign Architect</span>
 </PageTitle>
 
 <div class="story-page">
@@ -25,6 +26,7 @@
         <p class="subtitle lang-eec">Draft and deploy classified operational directives.</p>
         <p class="subtitle lang-ru">Планирование операций и распределение целевых нормативов.</p>
         <p class="subtitle lang-pl">Tworzenie i zarządzanie misjami dla zespołów uderzeniowych.</p>
+        <h1 class="lang-uk">[UK] CAMPAIGN ARCHITECT // STORY EDITOR</h1>
     </div>
 
     @if (Session.CurrentUser?.Role != UserRole.GameMaster)
@@ -34,6 +36,7 @@
             <span class="lang-eec">RESTRICTED DOSSIER. DIRECTORATE ACCESS REQUIRED.</span>
             <span class="lang-ru">В ДОСТУПЕ ОТКАЗАНО. ТРЕБУЕТСЯ УРОВЕНЬ "МАСТЕР".</span>
             <span class="lang-pl">ODMOWA DOSTĘPU. WYMAGANE UPRAWNIENIA MG.</span>
+            <span class="lang-uk">[UK] ACCESS DENIED. GM CLEARANCE REQUIRED.</span>
         </div>
     }
     else if (_loading)
@@ -53,6 +56,7 @@
                     <span class="lang-eec">ACTIVE DIRECTIVES</span>
                     <span class="lang-ru">АКТИВНЫЕ КАМПАНИИ</span>
                     <span class="lang-pl">AKTYWNE KAMPANIE</span>
+                    <span class="lang-uk">[UK] ACTIVE CAMPAIGNS</span>
                 </div>
                 
                 <button class="ncc-btn-submit" style="width:100%; margin-bottom: 1rem;" @onclick="CreateNewStory">
@@ -60,6 +64,7 @@
                     <span class="lang-eec">NEW DIRECTIVE ⊕</span>
                     <span class="lang-ru">НОВАЯ КАМПАНИЯ ⊕</span>
                     <span class="lang-pl">NOWY SCENARIUSZ ⊕</span>
+                    <span class="lang-uk">[UK] NEW CAMPAIGN ⊕</span>
                 </button>
 
                 @if (_stories.Count == 0)

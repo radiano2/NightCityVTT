@@ -16,15 +16,15 @@
     {
         <div class="ncc-loading">
             <div class="ncc-empty-icon">⬡</div>
-            <div class="ncc-empty-sub">INITIALIZING TACTICAL GRID...</div>
+            <div class="ncc-empty-sub"><span class="lang-en">INITIALIZING TACTICAL GRID...</span><span class="lang-uk">ІНІЦІАЛІЗАЦІЯ ТАКТИЧНОЇ СІТКИ...</span></div>
         </div>
     }
     else if (_map is null)
     {
         <div class="ncc-empty">
             <div class="ncc-empty-icon">◌</div>
-            <div class="ncc-empty-sub">MAP NOT FOUND</div>
-            <button class="ncc-btn-submit" @onclick='() => Nav.NavigateTo("/maps")'>BACK TO MAPS</button>
+            <div class="ncc-empty-sub"><span class="lang-en">MAP NOT FOUND</span><span class="lang-uk">КАРТУ НЕ ЗНАЙДЕНО</span></div>
+            <button class="ncc-btn-submit" @onclick='() => Nav.NavigateTo("/maps")'><span class="lang-en">BACK TO MAPS</span><span class="lang-uk">ПОВЕРНУТИСЯ ДО КАРТ</span></button>
         </div>
     }
     else
@@ -32,7 +32,7 @@
         <!-- ── TOOLBAR ─────────────────────────────────────────────────── -->
         <div class="bm-toolbar">
             <div class="bm-toolbar-left">
-                <button class="bm-back-btn" @onclick='() => Nav.NavigateTo("/maps")'>◁ MAPS</button>
+                <button class="bm-back-btn" @onclick='() => Nav.NavigateTo("/maps")'>◁ <span class="lang-en">MAPS</span><span class="lang-uk">КАРТИ</span></button>
                 <span class="bm-map-title">// @_map.Name.ToUpper() //</span>
                 <span class="bm-map-size">@_map.Width×@_map.Height</span>
             </div>
@@ -41,46 +41,46 @@
             {
                 <div class="bm-toolbar-center">
                     <button class="bm-tool-btn @(_editorMode == "" ? "bm-tool-active" : "")"
-                            @onclick='() => SetEditor("")' title="Select / Move tokens">SELECT</button>
+                            @onclick='() => SetEditor("")' title="Select / Move tokens"><span class="lang-en">SELECT</span><span class="lang-uk">ВИБРАТИ</span></button>
                     <button class="bm-tool-btn @(_editorMode == "floor" ? "bm-tool-active" : "")"
-                            @onclick='() => SetEditor("floor")' title="Paint floor tiles">FLOOR</button>
+                            @onclick='() => SetEditor("floor")' title="Paint floor tiles"><span class="lang-en">FLOOR</span><span class="lang-uk">ПІДЛОГА</span></button>
                     <button class="bm-tool-btn @(_editorMode == "wall" ? "bm-tool-active" : "")"
-                            @onclick='() => SetEditor("wall")' title="Paint wall tiles">WALL</button>
+                            @onclick='() => SetEditor("wall")' title="Paint wall tiles"><span class="lang-en">WALL</span><span class="lang-uk">СТІНА</span></button>
                     <button class="bm-tool-btn @(_editorMode == "door" ? "bm-tool-active" : "")"
-                            @onclick='() => SetEditor("door")' title="Paint door tiles">DOOR</button>
+                            @onclick='() => SetEditor("door")' title="Paint door tiles"><span class="lang-en">DOOR</span><span class="lang-uk">ДВЕРІ</span></button>
                     <button class="bm-tool-btn @(_editorMode == "halfcover" ? "bm-tool-active" : "")"
-                            @onclick='() => SetEditor("halfcover")' title="Paint half-cover (desks, barriers)">COVER</button>
+                            @onclick='() => SetEditor("halfcover")' title="Paint half-cover (desks, barriers)"><span class="lang-en">COVER</span><span class="lang-uk">УКРИТТЯ</span></button>
                     <button class="bm-tool-btn @(_editorMode == "hazard" ? "bm-tool-active" : "")"
-                            @onclick='() => SetEditor("hazard")' title="Paint hazard zone (fire, acid)">HAZARD</button>
+                            @onclick='() => SetEditor("hazard")' title="Paint hazard zone (fire, acid)"><span class="lang-en">HAZARD</span><span class="lang-uk">НЕБЕЗПЕКА</span></button>
                     <span class="bm-tool-sep">|</span>
-                    <button class="bm-tool-btn" @onclick="FillFloor" title="Fill entire map with floor">FILL FLOOR</button>
-                    <button class="bm-tool-btn" @onclick="ClearMap" title="Clear all tiles">CLEAR</button>
+                    <button class="bm-tool-btn" @onclick="FillFloor" title="Fill entire map with floor"><span class="lang-en">FILL FLOOR</span><span class="lang-uk">ЗАПОВНИТИ ПІДЛОГУ</span></button>
+                    <button class="bm-tool-btn" @onclick="ClearMap" title="Clear all tiles"><span class="lang-en">CLEAR</span><span class="lang-uk">ОЧИСТИТИ</span></button>
                 </div>
             }
 
             <div class="bm-toolbar-right">
                 <button class="bm-tool-btn @(_logOpen ? "bm-tool-active" : "")"
                         @onclick='() => _logOpen = !_logOpen'>
-                    LOG (@_map.CombatLog.Count)
+                    <span class="lang-en">LOG</span><span class="lang-uk">ЖУРНАЛ</span> (@_map.CombatLog.Count)
                 </button>
                 @if (_map.Tokens.Any(t => WoundStateFromDmg(t.TotalDamageTaken) == WoundState.Dead))
                 {
-                    <button class="bm-tool-btn bm-loot-btn" @onclick="OpenLoot">⚰ LOOT THE FALLEN</button>
+                    <button class="bm-tool-btn bm-loot-btn" @onclick="OpenLoot">⚰ <span class="lang-en">LOOT THE FALLEN</span><span class="lang-uk">ОБШУКАТИ ПАЛИХ</span></button>
                 }
                 @if (_isGm)
                 {
                     <button class="ncc-btn-submit bm-save-btn @(_saving ? "bm-saving" : "")"
                             @onclick="SaveMap" disabled="@_saving">
-                        @(_saving ? "SAVING..." : "SAVE MAP")
+                        @(_saving ? "<span class=\"lang-en\">SAVING...</span><span class=\"lang-uk\">ЗБЕРЕЖЕННЯ...</span>" : "<span class=\"lang-en\">SAVE MAP</span><span class=\"lang-uk\">ЗБЕРЕГТИ КАРТУ</span>")
                     </button>
                 }
                 @if (_hubStatus == "connected")
                 {
-                    <span class="bm-status-ok">● LIVE</span>
+                    <span class="bm-status-ok">● <span class="lang-en">LIVE</span><span class="lang-uk">ОНЛАЙН</span></span>
                 }
                 else
                 {
-                    <span class="bm-status-bad">○ OFFLINE</span>
+                    <span class="bm-status-bad">○ <span class="lang-en">OFFLINE</span><span class="lang-uk">ОФЛАЙН</span></span>
                 }
             </div>
         </div>
@@ -95,17 +95,17 @@
                 @if (_contextMenuTarget != null)
                 {
                     <div class="bm-context-menu" style="left: @(_contextMenuX)px; top: @(_contextMenuY)px; position: absolute; z-index: 1000; background: var(--nc-bg-dark); border: 1px solid var(--nc-cyan); padding: 0.5rem; display:flex; flex-direction:column; gap:0.4rem; min-width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.8);">
-                        <div style="font-weight:bold; color:var(--nc-cyan); font-size:0.75rem; text-align:center;">TARGET: @_contextMenuTarget.Handle</div>
+                        <div style="font-weight:bold; color:var(--nc-cyan); font-size:0.75rem; text-align:center;"><span class="lang-en">TARGET</span><span class="lang-uk">ЦІЛЬ</span>: @_contextMenuTarget.Handle</div>
                         
-                        <div style="font-size:0.6rem; color:var(--nc-dim); text-align:center;">DISTANCE: @(_selectedToken != null ? GetDistance(_selectedToken, _contextMenuTarget) : 0) m</div>
+                        <div style="font-size:0.6rem; color:var(--nc-dim); text-align:center;"><span class="lang-en">DISTANCE</span><span class="lang-uk">ВІДСТАНЬ</span>: @(_selectedToken != null ? GetDistance(_selectedToken, _contextMenuTarget) : 0) m</div>
 
-                        <button class="ncc-btn-submit" @onclick="async () => { await ExecuteAttack(_contextMenuTarget); CloseContextMenu(); }">FIRE</button>
-                        <button class="ncc-btn-submit" style="background:var(--nc-red); color:#000;" @onclick="async () => { await ExecuteSuppressiveFire(_contextMenuTarget); CloseContextMenu(); }">SUPPRESS</button>
+                        <button class="ncc-btn-submit" @onclick="async () => { await ExecuteAttack(_contextMenuTarget); CloseContextMenu(); }"><span class="lang-en">FIRE</span><span class="lang-uk">ВОГОНЬ</span></button>
+                        <button class="ncc-btn-submit" style="background:var(--nc-red); color:#000;" @onclick="async () => { await ExecuteSuppressiveFire(_contextMenuTarget); CloseContextMenu(); }"><span class="lang-en">SUPPRESS</span><span class="lang-uk">ПОДАВИТИ</span></button>
                         
                         <hr style="border-color:var(--nc-border); margin:0.2rem 0;" />
                         
-                        <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-text); font-size:0.6rem; border:1px solid var(--nc-border);" @onclick="async () => { await SelectTokenFromSidebar(_contextMenuTarget.Id); CloseContextMenu(); }">Select Token</button>
-                        <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-red); font-size:0.6rem; border:none; margin-top:0.2rem;" @onclick="CloseContextMenu">Cancel</button>
+                        <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-text); font-size:0.6rem; border:1px solid var(--nc-border);" @onclick="async () => { await SelectTokenFromSidebar(_contextMenuTarget.Id); CloseContextMenu(); }"><span class="lang-en">Select Token</span><span class="lang-uk">Вибрати Токен</span></button>
+                        <button class="ncc-btn-submit" style="background:transparent; color:var(--nc-red); font-size:0.6rem; border:none; margin-top:0.2rem;" @onclick="CloseContextMenu"><span class="lang-en">Cancel</span><span class="lang-uk">Скасувати</span></button>
                     </div>
                 }
             </div>
@@ -117,13 +117,13 @@
                 @if (_selectedToken != null)
                 {
                     <div class="bm-sidebar-section bm-selected-info">
-                        <div class="bm-section-title">SELECTED</div>
+                        <div class="bm-section-title"><span class="lang-en">SELECTED</span><span class="lang-uk">ВИБРАНО</span></div>
                         <div class="bm-selected-handle" style="color:@_selectedToken.Color">
                             ● @_selectedToken.Handle.ToUpper()
                         </div>
-                        <div class="bm-selected-sub">Walk: @_selectedToken.MoveRange tiles</div>
-                        <div class="bm-selected-sub">Run: @(_selectedToken.MoveRange + _selectedToken.MoveRange / 2) tiles</div>
-                        <div class="bm-hint">Blue cells = walkable range</div>
+                        <div class="bm-selected-sub"><span class="lang-en">Walk</span><span class="lang-uk">Хода</span>: @_selectedToken.MoveRange <span class="lang-en">tiles</span><span class="lang-uk">тайлів</span></div>
+                        <div class="bm-selected-sub"><span class="lang-en">Run</span><span class="lang-uk">Біг</span>: @(_selectedToken.MoveRange + _selectedToken.MoveRange / 2) <span class="lang-en">tiles</span><span class="lang-uk">тайлів</span></div>
+                        <div class="bm-hint"><span class="lang-en">Blue cells = walkable range</span><span class="lang-uk">Сині клітинки = зона ходу</span></div>
                     </div>
                 }
 
@@ -135,15 +135,15 @@
                     {
                         var _cWeapons = _attChar.Inventory.Where(i => i.Category == "Weapon").ToList();
                         <div class="bm-sidebar-section bm-combat-panel">
-                            <div class="bm-section-title">⚔ COMBAT</div>
+                            <div class="bm-section-title">⚔ <span class="lang-en">COMBAT</span><span class="lang-uk">БІЙ</span></div>
                             @if (_cWeapons.Count == 0)
                             {
-                                <div class="bm-empty-hint">No weapons in inventory.</div>
+                                <div class="bm-empty-hint"><span class="lang-en">No weapons in inventory.</span><span class="lang-uk">Немає зброї в інвентарі.</span></div>
                             }
                             else
                             {
                                 <select class="ncc-select bm-weap-select" @onchange="OnCombatWeaponChanged">
-                                    <option value="">— SELECT WEAPON —</option>
+                                    <option value="">— <span class="lang-en">SELECT WEAPON</span><span class="lang-uk">ВИБРАТИ ЗБРОЮ</span> —</option>
                                     @foreach (var w in _cWeapons)
                                     {
                                         <option value="@w.InstanceId">@w.Name</option>
@@ -155,43 +155,43 @@
                             {
                                 var _targets = GetTargetsInRange();
                                 <div class="bm-weap-stats">
-                                    DMG: <strong>@_selectedWeapon.Damage</strong> &nbsp;WA: @_selectedWeapon.Acc &nbsp;<span style="color:var(--nc-red)">@_weaponStats.BaseRange m</span>
+                                    <span class="lang-en">DMG</span><span class="lang-uk">ШКОДА</span>: <strong>@_selectedWeapon.Damage</strong> &nbsp;<span class="lang-en">WA</span><span class="lang-uk">ТЗ</span>: @_selectedWeapon.Acc &nbsp;<span style="color:var(--nc-red)">@_weaponStats.BaseRange m</span>
                                 </div>
                                 <div class="bm-attack-mods" style="display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.5rem; font-size:.65rem; color:var(--nc-text-dim)">
-                                    <label style="cursor:pointer" title="+3 to roll (Aiming)"><input type="checkbox" @bind="_modAim" /> Aim (+3)</label>
-                                    <label style="cursor:pointer" title="+3 to roll (Burst)"><input type="checkbox" @bind="_modBurst" /> Burst (+3)</label>
-                                    <label style="cursor:pointer" title="Full Auto"><input type="checkbox" @bind="_modAuto" /> Auto</label>
+                                    <label style="cursor:pointer" title="+3 to roll (Aiming)"><input type="checkbox" @bind="_modAim" /> <span class="lang-en">Aim (+3)</span><span class="lang-uk">Приціл (+3)</span></label>
+                                    <label style="cursor:pointer" title="+3 to roll (Burst)"><input type="checkbox" @bind="_modBurst" /> <span class="lang-en">Burst (+3)</span><span class="lang-uk">Черга (+3)</span></label>
+                                    <label style="cursor:pointer" title="Full Auto"><input type="checkbox" @bind="_modAuto" /> <span class="lang-en">Auto</span><span class="lang-uk">Авто</span></label>
                                     @if (_modAuto)
                                     {
                                         <input type="number" class="ncc-input" style="width:40px; padding:0; height:20px" min="1" max="100" @bind="_autoRounds" title="Rounds Fired" />
                                     }
-                                    <label style="cursor:pointer" title="-3 to roll (One-handed)"><input type="checkbox" @bind="_modOneHanded" /> 1-Hand (-3)</label>
+                                    <label style="cursor:pointer" title="-3 to roll (One-handed)"><input type="checkbox" @bind="_modOneHanded" /> <span class="lang-en">1-Hand (-3)</span><span class="lang-uk">1-Рука (-3)</span></label>
                                     <select @bind="_modCover" class="ncc-select" style="font-size:.65rem; padding:.1rem; width:80px; border-color:var(--nc-border); background:transparent; color:var(--nc-text)">
-                                        <option value="0">No Cover</option>
-                                        <option value="5">Cover (-5)</option>
-                                        <option value="10">Heavy (-10)</option>
+                                        <option value="0"><span class="lang-en">No Cover</span><span class="lang-uk">Без укриття</span></option>
+                                        <option value="5"><span class="lang-en">Cover (-5)</span><span class="lang-uk">Укриття (-5)</span></option>
+                                        <option value="10"><span class="lang-en">Heavy (-10)</span><span class="lang-uk">Важке (-10)</span></option>
                                     </select>
                                     <select @bind="_modCalledShot" class="ncc-select" style="font-size:.65rem; padding:.1rem; width:100px; border-color:var(--nc-border); background:transparent; color:var(--nc-text)">
-                                        <option value="">No Called Shot</option>
-                                        <option value="Head">Head (-4)</option>
-                                        <option value="Torso">Torso (-4)</option>
-                                        <option value="RightArm">R.Arm (-4)</option>
-                                        <option value="LeftArm">L.Arm (-4)</option>
-                                        <option value="RightLeg">R.Leg (-4)</option>
-                                        <option value="LeftLeg">L.Leg (-4)</option>
+                                        <option value=""><span class="lang-en">No Called Shot</span><span class="lang-uk">Без прицілу</span></option>
+                                        <option value="Head"><span class="lang-en">Head (-4)</span><span class="lang-uk">Голова (-4)</span></option>
+                                        <option value="Torso"><span class="lang-en">Torso (-4)</span><span class="lang-uk">Торс (-4)</span></option>
+                                        <option value="RightArm"><span class="lang-en">R.Arm (-4)</span><span class="lang-uk">П.Рука (-4)</span></option>
+                                        <option value="LeftArm"><span class="lang-en">L.Arm (-4)</span><span class="lang-uk">Л.Рука (-4)</span></option>
+                                        <option value="RightLeg"><span class="lang-en">R.Leg (-4)</span><span class="lang-uk">П.Нога (-4)</span></option>
+                                        <option value="LeftLeg"><span class="lang-en">L.Leg (-4)</span><span class="lang-uk">Л.Нога (-4)</span></option>
                                     </select>
                                     @if (_charById.TryGetValue(_selectedToken.CharacterId, out var attChar))
                                     {
-                                        <label style="cursor:pointer" title="Spend LUCK (+1 per point)">Luck (<span style="color:var(--nc-cyan)">@attChar.CurrentLuck</span>): <input type="number" class="ncc-input" style="width:40px; padding:0; height:20px" min="0" max="@attChar.CurrentLuck" @bind="_modLuck" /></label>
+                                        <label style="cursor:pointer" title="Spend LUCK (+1 per point)"><span class="lang-en">Luck</span><span class="lang-uk">Удача</span> (<span style="color:var(--nc-cyan)">@attChar.CurrentLuck</span>): <input type="number" class="ncc-input" style="width:40px; padding:0; height:20px" min="0" max="@attChar.CurrentLuck" @bind="_modLuck" /></label>
                                     }
                                 </div>
                                 @if (_targets.Count == 0)
                                 {
-                                    <div class="bm-empty-hint" style="margin-top:.4rem;">No targets in range.</div>
+                                    <div class="bm-empty-hint" style="margin-top:.4rem;"><span class="lang-en">No targets in range.</span><span class="lang-uk">Немає цілей в радіусі.</span></div>
                                 }
                                 else
                                 {
-                                    <div class="bm-section-title" style="margin-top:.6rem;">TARGETS IN RANGE</div>
+                                    <div class="bm-section-title" style="margin-top:.6rem;"><span class="lang-en">TARGETS IN RANGE</span><span class="lang-uk">ЦІЛІ В РАДІУСІ</span></div>
                                     @foreach (var tgt in _targets)
                                     {
                                         int _dist = GetDistance(_selectedToken, tgt);
@@ -203,8 +203,8 @@
                                                 <div class="bm-token-pos @GetWoundClass(_ws)">@_dist m | @_ws.ToString().ToUpper()</div>
                                             </div>
                                             <div style="display:flex; gap:0.2rem;">
-                                                <button class="bm-attack-btn" @onclick="() => ExecuteAttack(tgt)">FIRE</button>
-                                                <button class="bm-attack-btn" style="background:var(--nc-red); color:#000;" @onclick="() => ExecuteSuppressiveFire(tgt)" title="Target must pass COOL check to move">SUPPRESS</button>
+                                                <button class="bm-attack-btn" @onclick="() => ExecuteAttack(tgt)"><span class="lang-en">FIRE</span><span class="lang-uk">ВОГОНЬ</span></button>
+                                                <button class="bm-attack-btn" style="background:var(--nc-red); color:#000;" @onclick="() => ExecuteSuppressiveFire(tgt)" title="Target must pass COOL check to move"><span class="lang-en">SUPPRESS</span><span class="lang-uk">ПОДАВИТИ</span></button>
                                             </div>
                                         </div>
                                     }
@@ -228,13 +228,13 @@
                 @if (_isGm)
                 {
                     <div class="bm-sidebar-section">
-                        <div class="bm-section-title">TEAMS (@_map.Teams.Count)</div>
+                        <div class="bm-section-title"><span class="lang-en">TEAMS</span><span class="lang-uk">КОМАНДИ</span> (@_map.Teams.Count)</div>
                         @foreach (var team in _map.Teams)
                         {
                             <div class="bm-team-row">
                                 <div class="bm-token-dot" style="background:@team.Color"></div>
                                 <span class="bm-team-name">@team.Name.ToUpper()</span>
-                                <span class="bm-team-badge @(team.IsPlayerSide ? "bm-team-player" : "bm-team-enemy")">@(team.IsPlayerSide ? "PLR" : "ENM")</span>
+                                <span class="bm-team-badge @(team.IsPlayerSide ? "bm-team-player" : "bm-team-enemy")">@(team.IsPlayerSide ? "<span class=\"lang-en\">PLR</span><span class=\"lang-uk\">ГРАВЕЦЬ</span>" : "<span class=\"lang-en\">ENM</span><span class=\"lang-uk\">ВОРОГ</span>")</span>
                                 <button class="bm-remove-btn" @onclick:stopPropagation="true" @onclick="() => RemoveTeam(team.Id)">✕</button>
                             </div>
                         }
@@ -244,11 +244,11 @@
                                 <input type="color" @bind="_newTeamColor" class="bm-team-color-pick" />
                                 <label class="bm-team-player-lbl">
                                     <input type="checkbox" @bind="_newTeamIsPlayer" />
-                                    <span>Player side</span>
+                                    <span><span class="lang-en">Player side</span><span class="lang-uk">Сторона гравців</span></span>
                                 </label>
                                 <button class="ncc-btn-submit bm-add-btn bm-team-add-btn"
                                         @onclick="AddTeam"
-                                        disabled="@string.IsNullOrEmpty(_newTeamName)">+ ADD</button>
+                                        disabled="@string.IsNullOrEmpty(_newTeamName)">+ <span class="lang-en">ADD</span><span class="lang-uk">ДОДАТИ</span></button>
                             </div>
                         </div>
                     </div>
@@ -256,10 +256,10 @@
 
                 <!-- Tokens on map -->
                 <div class="bm-sidebar-section">
-                    <div class="bm-section-title">TOKENS ON MAP (@_map.Tokens.Count)</div>
+                    <div class="bm-section-title"><span class="lang-en">TOKENS ON MAP</span><span class="lang-uk">ТОКЕНИ НА КАРТІ</span> (@_map.Tokens.Count)</div>
                     @if (_map.Tokens.Count == 0)
                     {
-                        <div class="bm-empty-hint">No tokens yet.</div>
+                        <div class="bm-empty-hint"><span class="lang-en">No tokens yet.</span><span class="lang-uk">Токенів ще немає.</span></div>
                     }
                     @foreach (var token in _map.Tokens)
                     {
@@ -284,16 +284,16 @@
                 @if (_isGm)
                 {
                     <div class="bm-sidebar-section">
-                        <div class="bm-section-title">ADD TOKEN</div>
+                        <div class="bm-section-title"><span class="lang-en">ADD TOKEN</span><span class="lang-uk">ДОДАТИ ТОКЕН</span></div>
                         <select class="ncc-select bm-char-select" @bind="_addTokenTeamId" style="margin-bottom:.3rem">
-                            <option value="">— NO TEAM —</option>
+                            <option value="">— <span class="lang-en">NO TEAM</span><span class="lang-uk">БЕЗ КОМАНДИ</span> —</option>
                             @foreach (var tm in _map.Teams)
                             {
                                 <option value="@tm.Id">@tm.Name.ToUpper()</option>
                             }
                         </select>
                         <select class="ncc-select bm-char-select" @bind="_addCharId">
-                            <option value="">— SELECT CHARACTER —</option>
+                            <option value="">— <span class="lang-en">SELECT CHARACTER</span><span class="lang-uk">ВИБРАТИ ПЕРСОНАЖА</span> —</option>
                             @foreach (var c in _characters.Where(c => _map.Tokens.All(t => t.CharacterId != c.Id)))
                             {
                                 <option value="@c.Id">@c.Handle.ToUpper() (@c.Role)</option>
@@ -301,23 +301,23 @@
                         </select>
                         <button class="ncc-btn-submit bm-add-btn" @onclick="AddToken"
                                 disabled="@string.IsNullOrEmpty(_addCharId)">
-                            ADD TO MAP ⊕
+                            <span class="lang-en">ADD TO MAP ⊕</span><span class="lang-uk">ДОДАТИ НА КАРТУ ⊕</span>
                         </button>
                     </div>
                 }
 
                 <!-- Legend -->
                 <div class="bm-sidebar-section bm-legend">
-                    <div class="bm-section-title">LEGEND</div>
-                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-floor"></div> FLOOR</div>
-                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-wall"></div> WALL</div>
-                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-door"></div> DOOR</div>
+                    <div class="bm-section-title"><span class="lang-en">LEGEND</span><span class="lang-uk">ЛЕГЕНДА</span></div>
+                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-floor"></div> <span class="lang-en">FLOOR</span><span class="lang-uk">ПІДЛОГА</span></div>
+                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-wall"></div> <span class="lang-en">WALL</span><span class="lang-uk">СТІНА</span></div>
+                    <div class="bm-legend-row"><div class="bm-legend-tile bm-tile-door"></div> <span class="lang-en">DOOR</span><span class="lang-uk">ДВЕРІ</span></div>
                     @if (_isGm)
                     {
-                        <div class="bm-hint" style="margin-top:.5rem;">Right-click tile → erase</div>
+                        <div class="bm-hint" style="margin-top:.5rem;"><span class="lang-en">Right-click tile → erase</span><span class="lang-uk">Права кнопка миші → стерти</span></div>
                     }
-                    <div class="bm-hint">Click token → show range</div>
-                    <div class="bm-hint">Drag token → move</div>
+                    <div class="bm-hint"><span class="lang-en">Click token → show range</span><span class="lang-uk">Клік на токен → показати радіус</span></div>
+                    <div class="bm-hint"><span class="lang-en">Drag token → move</span><span class="lang-uk">Перетягнути токен → перемістити</span></div>
                 </div>
 
             </div>
@@ -329,7 +329,7 @@
             <div class="bm-log-panel">
                 <div class="bm-log-panel-header">
                     <div class="bm-log-panel-title-row">
-                        <span class="bm-log-panel-title">COMBAT LOG</span>
+                        <span class="bm-log-panel-title"><span class="lang-en">COMBAT LOG</span><span class="lang-uk">БОЙОВИЙ ЖУРНАЛ</span></span>
                         <button class="bm-remove-btn" style="font-size:1rem" @onclick='() => _logOpen = false'>✕</button>
                     </div>
                     <div class="bm-log-filters-row">
@@ -337,12 +337,17 @@
                             @foreach (var f in new[]{"ALL","HITS","MISSES","CRITS"})
                             {
                                 <button class="bm-tool-btn @(_logFilter == f ? "bm-tool-active" : "")"
-                                        @onclick="() => { _logFilter = f; }">@f</button>
+                                        @onclick="() => { _logFilter = f; }">
+                                    @if (f == "ALL") { <span class="lang-en">ALL</span><span class="lang-uk">ВСІ</span> }
+                                    else if (f == "HITS") { <span class="lang-en">HITS</span><span class="lang-uk">ВЛУЧАННЯ</span> }
+                                    else if (f == "MISSES") { <span class="lang-en">MISSES</span><span class="lang-uk">ПРОМАХИ</span> }
+                                    else if (f == "CRITS") { <span class="lang-en">CRITS</span><span class="lang-uk">КРИТИ</span> }
+                                </button>
                             }
                         </div>
                         @if (_isGm)
                         {
-                            <button class="bm-tool-btn" @onclick="ClearCombatLog">CLEAR</button>
+                            <button class="bm-tool-btn" @onclick="ClearCombatLog"><span class="lang-en">CLEAR</span><span class="lang-uk">ОЧИСТИТИ</span></button>
                         }
                     </div>
                 </div>
@@ -350,7 +355,7 @@
                     @{ var filteredLog = GetFilteredLog().ToList(); }
                     @if (!filteredLog.Any())
                     {
-                        <div class="bm-empty-hint" style="padding:1rem">No events yet.</div>
+                        <div class="bm-empty-hint" style="padding:1rem"><span class="lang-en">No events yet.</span><span class="lang-uk">Подій ще немає.</span></div>
                     }
                     @foreach (var entry in filteredLog)
                     {
@@ -365,25 +370,25 @@
                             <div class="bm-le-body">
                                 @if (entry.IsFumble)
                                 {
-                                    <span class="bm-log-fumble">FUMBLE</span>
+                                    <span class="bm-log-fumble"><span class="lang-en">FUMBLE</span><span class="lang-uk">ПРОВАЛ</span></span>
                                 }
                                 else
                                 {
-                                    <span>Roll @entry.Roll vs DN @entry.TargetDN</span>
-                                    @if (entry.IsCritical) { <span class="bm-log-crit"> [CRIT]</span> }
-                                    @if (entry.IsHit) { <span class="bm-log-hit"> HIT</span> }
-                                    else { <span class="bm-log-miss"> MISS</span> }
+                                    <span><span class="lang-en">Roll</span><span class="lang-uk">Кидок</span> @entry.Roll <span class="lang-en">vs DN</span><span class="lang-uk">проти СК</span> @entry.TargetDN</span>
+                                    @if (entry.IsCritical) { <span class="bm-log-crit"> [<span class="lang-en">CRIT</span><span class="lang-uk">КРИТ</span>]</span> }
+                                    @if (entry.IsHit) { <span class="bm-log-hit"> <span class="lang-en">HIT</span><span class="lang-uk">ВЛУЧАННЯ</span></span> }
+                                    else { <span class="bm-log-miss"> <span class="lang-en">MISS</span><span class="lang-uk">ПРОМАХ</span></span> }
                                     @if (entry.IsHit && entry.FinalDamage > 0)
                                     {
-                                        <span> | @entry.Location | @entry.RawDamage→@entry.FinalDamage dmg | @entry.WoundState.ToUpper()</span>
+                                        <span> | @entry.Location | @entry.RawDamage→@entry.FinalDamage <span class="lang-en">dmg</span><span class="lang-uk">шкд</span> | @entry.WoundState.ToUpper()</span>
                                     }
                                     @if (entry.StunSavePassed.HasValue)
                                     {
-                                        <span class="@(entry.StunSavePassed.Value ? "bm-log-hit" : "bm-log-fumble")"> Stun @(entry.StunSavePassed.Value ? "✓" : "✗")</span>
+                                        <span class="@(entry.StunSavePassed.Value ? "bm-log-hit" : "bm-log-fumble")"> <span class="lang-en">Stun</span><span class="lang-uk">Оглуш.</span> @(entry.StunSavePassed.Value ? "✓" : "✗")</span>
                                     }
                                     @if (entry.DeathSavePassed.HasValue)
                                     {
-                                        <span class="@(entry.DeathSavePassed.Value ? "bm-log-hit" : "bm-log-fumble")"> Death @(entry.DeathSavePassed.Value ? "✓" : "✗")</span>
+                                        <span class="@(entry.DeathSavePassed.Value ? "bm-log-hit" : "bm-log-fumble")"> <span class="lang-en">Death</span><span class="lang-uk">Смерть</span> @(entry.DeathSavePassed.Value ? "✓" : "✗")</span>
                                     }
                                 }
                             </div>
@@ -399,12 +404,12 @@
             <div class="bm-modal-overlay" @onclick='() => _lootOpen = false'>
                 <div class="bm-modal" @onclick:stopPropagation="true">
                     <div class="bm-modal-header">
-                        <span class="bm-modal-title">⚰ LOOT THE FALLEN</span>
+                        <span class="bm-modal-title">⚰ <span class="lang-en">LOOT THE FALLEN</span><span class="lang-uk">ОБШУКАТИ ПАЛИХ</span></span>
                         <button class="bm-remove-btn" style="font-size:1rem" @onclick='() => _lootOpen = false'>✕</button>
                     </div>
                     <div class="bm-modal-body">
                         <div class="bm-loot-col">
-                            <div class="bm-loot-col-title">FALLEN</div>
+                            <div class="bm-loot-col-title"><span class="lang-en">FALLEN</span><span class="lang-uk">ПАЛІ</span></div>
                             @foreach (var (tok, sheet) in GetDeadTokens())
                             {
                                 <div class="bm-loot-char">
@@ -420,7 +425,7 @@
                                                        min="1" max="@sheet.Eurobucks"
                                                        value="@(_takingEb.GetValueOrDefault(sheet.Id ?? string.Empty, 0))"
                                                        @onchange="e => SetTakingEb(sheet.Id, e.Value?.ToString())" />
-                                                <button class="bm-loot-btn-take" @onclick="() => TakeEb(sheet)">TAKE</button>
+                                                <button class="bm-loot-btn-take" @onclick="() => TakeEb(sheet)"><span class="lang-en">TAKE</span><span class="lang-uk">ВЗЯТИ</span></button>
                                             </div>
                                         </div>
                                     }
@@ -429,22 +434,22 @@
                                         <div class="bm-loot-item-row">
                                             <span class="bm-loot-item-name">@item.Name</span>
                                             <span class="bm-loot-item-cat">@item.Category</span>
-                                            <button class="bm-loot-btn-take" @onclick="() => TakeItem(sheet, item)">TAKE</button>
+                                            <button class="bm-loot-btn-take" @onclick="() => TakeItem(sheet, item)"><span class="lang-en">TAKE</span><span class="lang-uk">ВЗЯТИ</span></button>
                                         </div>
                                     }
                                     @if (!sheet.Inventory.Any(i => !sheet.InstalledCyberwareIds.Contains(i.InstanceId)) && sheet.Eurobucks <= 0)
                                     {
-                                        <div class="bm-empty-hint">Nothing to loot.</div>
+                                        <div class="bm-empty-hint"><span class="lang-en">Nothing to loot.</span><span class="lang-uk">Нічого обшукати.</span></div>
                                     }
                                 </div>
                             }
                         </div>
                         <div class="bm-loot-col bm-loot-col-right">
-                            <div class="bm-loot-col-title">RECIPIENT</div>
+                            <div class="bm-loot-col-title"><span class="lang-en">RECIPIENT</span><span class="lang-uk">ОТРИМУВАЧ</span></div>
                             @if (_isGm)
                             {
                                 <select class="ncc-select bm-char-select" @bind="_lootRecipientId" style="margin-bottom:.6rem">
-                                    <option value="">— CHOOSE CHARACTER —</option>
+                                    <option value="">— <span class="lang-en">CHOOSE CHARACTER</span><span class="lang-uk">ВИБЕРІТЬ ПЕРСОНАЖА</span> —</option>
                                     @foreach (var ch in _characters.Where(c => _map.Tokens.Any(t => t.CharacterId == c.Id && WoundStateFromDmg(t.TotalDamageTaken) != WoundState.Dead)))
                                     {
                                         <option value="@ch.Id">@ch.Handle.ToUpper()</option>
@@ -455,14 +460,14 @@
                             {
                                 var recip = _charById.GetValueOrDefault(_lootRecipientId);
                                 <div class="bm-loot-char-name" style="color:var(--nc-accent2)">
-                                    ● @(recip?.Handle.ToUpper() ?? "NO CHARACTER")
+                                    ● @if(recip != null) { @recip.Handle.ToUpper() } else { <span class="lang-en">NO CHARACTER</span><span class="lang-uk">НЕМАЄ ПЕРСОНАЖА</span> }
                                 </div>
                             }
                             @{ var recipChar = _charById.GetValueOrDefault(_lootRecipientId); }
                             @if (recipChar != null)
                             {
                                 <div class="bm-loot-char-name" style="font-size:.68rem;color:var(--nc-text-dim);margin-bottom:.4rem">
-                                    @recipChar.Eurobucks eb in wallet
+                                    @recipChar.Eurobucks <span class="lang-en">eb in wallet</span><span class="lang-uk">євродоларів у гаманці</span>
                                 </div>
                                 @foreach (var item in recipChar.Inventory)
                                 {

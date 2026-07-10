@@ -41,26 +41,31 @@
 .nc-cornered-b::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; top: auto; }
 
 /* ── LANGUAGE SWITCHING ──────────────────────────────────── */
-/* EN is default; RU shown in luna; PL shown in heroldowie; EEC for euro theme */
-.lang-ru, .lang-pl, .lang-eec { display: none; }
-.nc-ticker-track.lang-ru, .nc-ticker-track.lang-pl, .nc-ticker-track.lang-eec { display: none; }
+/* EN is default; RU shown in luna; PL shown in heroldowie; EEC for euro theme; UK for kyiv theme */
+.lang-ru, .lang-pl, .lang-eec, .lang-uk { display: none; }
+.nc-ticker-track.lang-ru, .nc-ticker-track.lang-pl, .nc-ticker-track.lang-eec, .nc-ticker-track.lang-uk { display: none; }
 
 /* ── Luna (Soviet RU) ──────────────────────────────────────── */
-:root[data-theme="luna"] .lang-en, :root[data-theme="luna"] .lang-pl, :root[data-theme="luna"] .lang-eec { display: none; }
+:root[data-theme="luna"] .lang-en, :root[data-theme="luna"] .lang-pl, :root[data-theme="luna"] .lang-eec, :root[data-theme="luna"] .lang-uk { display: none; }
 :root[data-theme="luna"] .lang-ru { display: revert; font-family: var(--font-cyrillic); }
 :root[data-theme="luna"] .nc-ticker-track.lang-ru { display: flex; }
 
 /* ── Heroldowie (Polish PL) ────────────────────────────────── */
-:root[data-theme="heroldowie"] .lang-en, :root[data-theme="heroldowie"] .lang-ru, :root[data-theme="heroldowie"] .lang-eec { display: none; }
+:root[data-theme="heroldowie"] .lang-en, :root[data-theme="heroldowie"] .lang-ru, :root[data-theme="heroldowie"] .lang-eec, :root[data-theme="heroldowie"] .lang-uk { display: none; }
 :root[data-theme="heroldowie"] .lang-pl { display: revert; }
 :root[data-theme="heroldowie"] .nc-ticker-track.lang-pl { display: flex; }
 
 /* ── EEC (European Blue) ─────────────────────────────────── */
-:root[data-theme="eec"] .lang-ru, :root[data-theme="eec"] .lang-pl { display: none; }
+:root[data-theme="eec"] .lang-ru, :root[data-theme="eec"] .lang-pl, :root[data-theme="eec"] .lang-uk { display: none; }
 :root[data-theme="eec"] .lang-eec { display: revert; }
 :root[data-theme="eec"] .nc-ticker-track.lang-eec { display: flex; }
 :root[data-theme="eec"] .nc-ticker-track.lang-en { display: none !important; }
 :root[data-theme="eec"] .hide-in-eec { display: none !important; }
+
+/* ── Kyiv (Ukrainian Newspaper) ────────────────────────────── */
+:root[data-theme="kyiv"] .lang-en, :root[data-theme="kyiv"] .lang-ru, :root[data-theme="kyiv"] .lang-pl, :root[data-theme="kyiv"] .lang-eec { display: none !important; }
+:root[data-theme="kyiv"] .lang-uk { display: revert; font-family: var(--font-type); }
+:root[data-theme="kyiv"] .nc-ticker-track.lang-uk { display: flex; }
 
 /* ── BRAND LAYOUT (column — name row + subtitle) ─────────── */
 .nc-brand-row-gap { gap: 0.4rem; }
@@ -121,6 +126,29 @@ html[data-theme="luna"] body::after {
     inset: 0;
     pointer-events: none;
     z-index: 0;
+}
+
+/* ── KYIV THEME — Retro Newspaper ─────────────────────────── */
+:root[data-theme="kyiv"] {
+    --nc-black:   #f4f1ea;
+    --nc-dark:    #e8e4d9;
+    --nc-panel:   #dfdacb;
+    --nc-border:  #2b2b2b;
+    --nc-cream:   #1a1a1a;
+    --nc-red:     #8b0000;
+    --nc-cyan:    #1a1a1a;
+    --nc-gold:    #5a4a35;
+    --nc-green:   #2b4a2b;
+    --nc-dim:     #4a4a4a;
+}
+
+html[data-theme="kyiv"], html[data-theme="kyiv"] body {
+    background: var(--nc-black);
+    color: var(--nc-cream);
+}
+
+html[data-theme="kyiv"] body::before {
+    background-image: radial-gradient(rgba(0,0,0,0.1) 1px, transparent 1px);
 }
 
 html, body {
@@ -233,11 +261,33 @@ body::before {
     border-left: 2px solid transparent;
     white-space: nowrap;
     overflow: hidden;
-    transition: color 0.15s, background 0.15s, border-color 0.15s;
+    transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     display: block;
+    position: relative;
+    z-index: 1;
 }
-.nc-nav-link:hover  { color: var(--nc-cyan); background: rgba(0,229,255,0.04); }
-.nc-nav-link.active { color: var(--nc-cream); border-left-color: var(--nc-red); background: rgba(255,0,60,0.05); }
+.nc-nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; height: 100%; width: 0;
+    background: linear-gradient(90deg, rgba(0,229,255,0.1), transparent);
+    transition: width 0.3s ease;
+    z-index: -1;
+}
+.nc-nav-link:hover  { 
+    color: var(--nc-cyan); 
+    border-left-color: var(--nc-cyan);
+    transform: translateX(4px);
+    text-shadow: 0 0 5px rgba(0, 229, 255, 0.4);
+}
+.nc-nav-link:hover::before {
+    width: 100%;
+}
+.nc-nav-link.active { 
+    color: var(--nc-cream); 
+    border-left-color: var(--nc-red); 
+    background: rgba(255,0,60,0.05); 
+}
 
 .nc-sidebar-footer {
     border-top: 1px solid var(--nc-border);
@@ -893,24 +943,39 @@ html[data-theme="eec"] .brand-slash { color: var(--nc-gold); }
 
 .ncc-input,
 .ncc-select {
-    background: rgba(0,0,0,0.4);
-    border: 1px solid var(--nc-border);
+    background: rgba(16, 20, 24, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-left: 3px solid var(--nc-cyan);
     color: var(--nc-cream);
     font-family: var(--font-mono);
     font-size: 0.88rem;
     letter-spacing: 0.05em;
     padding: 0.45rem 0.6rem;
     outline: none;
-    transition: border-color 0.15s;
+    transition: all 0.25s ease;
     appearance: none;
     -webkit-appearance: none;
     width: 100%;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+    box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.05);
+}
+
+.ncc-select {
+    background-image: linear-gradient(45deg, transparent 50%, var(--nc-cyan) 50%), linear-gradient(135deg, var(--nc-cyan) 50%, transparent 50%);
+    background-position: calc(100% - 15px) calc(50% + 2px), calc(100% - 10px) calc(50% + 2px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    cursor: pointer;
 }
 
 .ncc-input:focus,
 .ncc-select:focus {
-    border-color: var(--nc-red);
-    box-shadow: 0 0 0 1px rgba(255,0,60,0.15);
+    border-color: var(--nc-cyan);
+    background: rgba(0, 229, 255, 0.08);
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.2), inset 0 0 10px rgba(0, 229, 255, 0.1);
+    border-left: 3px solid var(--nc-cream);
 }
 
 .ncc-input::placeholder { color: var(--nc-dim); opacity: 0.55; }
@@ -1523,4 +1588,117 @@ html[data-theme="eec"] .brand-slash { color: var(--nc-gold); }
     .hwz-layout { grid-template-columns: 1fr; }
     .hwz-stats-grid { grid-template-columns: 1fr 1fr; }
     .hwz-derived-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── AAA VISUAL IMPROVEMENTS ────────────────────────────── */
+/* Glassmorphism Panels */
+.nc-sidebar, .news-article, .market-item, .hwz-card, .hwz-detail-box, .dice-terminal, .setup-box, .settings-box {
+    background: rgba(17, 18, 20, 0.55) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Glitch Hover Effect */
+@keyframes glitch-anim {
+    0% { text-shadow: 2px 0 var(--nc-cyan), -2px 0 var(--nc-gold); opacity: 1; }
+    20% { text-shadow: -2px 0 var(--nc-cyan), 2px 0 var(--nc-gold); opacity: 0.8; }
+    40% { text-shadow: 2px 0 var(--nc-cyan), -2px 0 var(--nc-gold); opacity: 1; }
+    60% { text-shadow: -2px 0 var(--nc-cyan), 2px 0 var(--nc-gold); opacity: 0.9; }
+    80% { text-shadow: 2px 0 var(--nc-cyan), -2px 0 var(--nc-gold); opacity: 1; }
+    100% { text-shadow: -2px 0 var(--nc-cyan), 2px 0 var(--nc-gold); opacity: 0.8; }
+}
+.glitch-hover:hover {
+    animation: glitch-anim 0.25s infinite;
+    color: var(--nc-red) !important;
+}
+
+/* Angled HUD Borders */
+.nc-angled {
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+}
+
+/* Implicit Glitch and Angled borders */
+.nc-nav-link:hover {
+    animation: glitch-anim 0.25s infinite;
+    color: var(--nc-red) !important;
+    text-shadow: 2px 0 var(--nc-cyan), -2px 0 var(--nc-gold);
+}
+
+.news-article, .market-item, .hwz-card, .setup-box, .settings-box {
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+}
+
+/* ── VISUAL UX IMPROVEMENTS (Approved Proposals) ─────────── */
+
+/* 1. Cyberpunk Unified Scrollbars */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+::-webkit-scrollbar-track {
+    background: var(--nc-dark);
+    border-left: 1px solid var(--nc-border);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--nc-dim);
+    border: 1px solid var(--nc-border);
+    border-radius: 2px;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--nc-red);
+    border-color: var(--nc-red);
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
+}
+
+/* 2. Interactive Data-Scramble on Hover (Safe version without content animation) */
+.nc-nav-link { position: relative; overflow: hidden; }
+.nc-nav-link::after {
+    content: '0xFA3$!';
+    position: absolute;
+    inset: 0;
+    background: var(--nc-dark);
+    color: var(--nc-cyan);
+    display: flex;
+    align-items: center;
+    padding-left: 1.1rem;
+    font-weight: bold;
+    letter-spacing: 0.2em;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+.nc-nav-link:hover::after {
+    animation: scramble-glitch 0.35s ease-out forwards;
+}
+@keyframes scramble-glitch {
+    0%   { opacity: 1; transform: translateX(-5px); }
+    20%  { opacity: 0.8; transform: translateX(5px); }
+    40%  { opacity: 1; transform: translateX(-2px); }
+    60%  { opacity: 0.5; transform: translateX(2px); }
+    80%  { opacity: 0.9; transform: translateX(0); }
+    100% { opacity: 0; display: none; }
+}
+
+/* 3. Pulsing "Data Transfer" Accents */
+.nc-panel-label {
+    position: relative;
+    padding-right: 15px;
+}
+.nc-panel-label::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 5px;
+    width: 6px;
+    height: 6px;
+    background: var(--nc-cyan);
+    box-shadow: 0 0 6px var(--nc-cyan);
+    animation: data-pulse 1.2s infinite alternate;
+}
+@keyframes data-pulse {
+    0%, 20% { opacity: 0.1; transform: scale(0.8); }
+    80%, 100% { opacity: 1; transform: scale(1.1); box-shadow: 0 0 10px var(--nc-cyan); }
 }

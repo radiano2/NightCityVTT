@@ -15,6 +15,8 @@
             <span class="lang-en">// DICE TERMINAL //</span>
             <span class="lang-ru">// ДАЙС ТЕРМИНАЛ //</span>
             <span class="lang-pl">// TERMINAL KOŚCI //</span>
+            <span class="lang-uk">// ТЕРМІНАЛ КУБИКА //</span>
+            <span class="lang-eec">// DICE TERMINAL //</span>
         </span>
         <div class="dt-clock-badge">
             <span class="dt-clock">@_clock</span>
@@ -30,6 +32,8 @@
                 <span class="lang-en">// ATTRIBUTES //</span>
                 <span class="lang-ru">// АТРИБУТЫ //</span>
                 <span class="lang-pl">// ATRYBUTY //</span>
+                <span class="lang-uk">// ХАРАКТЕРИСТИКИ //</span>
+                <span class="lang-eec">// ATTRIBUTES //</span>
             </div>
             <div class="dt-inputs">
                 <MudNumericField T="int" @bind-Value="_stat"
@@ -53,6 +57,8 @@
                 <span class="lang-en">// DAMAGE FORMULA //</span>
                 <span class="lang-ru">// ФОРМУЛА УРОНА //</span>
                 <span class="lang-pl">// FORMUŁA OBRAŻEŃ //</span>
+                <span class="lang-uk">// ФОРМУЛА ШКОДИ //</span>
+                <span class="lang-eec">// DAMAGE FORMULA //</span>
             </div>
             <div class="dt-damage-row">
                 <MudTextField @bind-Value="_damageFormula"
@@ -68,32 +74,44 @@
                 <span class="lang-en">// QUICK ACTIONS //</span>
                 <span class="lang-ru">// БЫСТРЫЕ ДЕЙСТВИЯ //</span>
                 <span class="lang-pl">// SZYBKIE AKCJE //</span>
+                <span class="lang-uk">// ШВИДКІ ДІЇ //</span>
+                <span class="lang-eec">// QUICK ACTIONS //</span>
             </div>
             <div class="dt-actions">
                 <MudButton Variant="Variant.Filled"   Color="Color.Error"   OnClick="DoSkillCheck">
                     <span class="lang-en">SKILL CHECK</span>
                     <span class="lang-ru">ПРОВЕРКА НАВЫКА</span>
                     <span class="lang-pl">SPRAWDZENIE</span>
+                    <span class="lang-uk">ПЕРЕВІРКА НАВИЧОК</span>
+                    <span class="lang-eec">SKILL CHECK</span>
                 </MudButton>
                 <MudButton Variant="Variant.Filled"   Color="Color.Warning" OnClick="DoAttack">
                     <span class="lang-en">ATTACK</span>
                     <span class="lang-ru">АТАКА</span>
                     <span class="lang-pl">ATAK</span>
+                    <span class="lang-uk">АТАКА</span>
+                    <span class="lang-eec">ATTACK</span>
                 </MudButton>
                 <MudButton Variant="Variant.Filled"   Color="Color.Info"    OnClick="DoSave">
                     <span class="lang-en">SAVE</span>
                     <span class="lang-ru">СПАСБРОСОК</span>
                     <span class="lang-pl">RZUT OBRONNY</span>
+                    <span class="lang-uk">РЯТУВАЛЬНИЙ КИДОК</span>
+                    <span class="lang-eec">SAVE</span>
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="DoD10">
                     <span class="lang-en">MANUAL D10</span>
                     <span class="lang-ru">РУЧНОЙ D10</span>
                     <span class="lang-pl">RĘCZNY D10</span>
+                    <span class="lang-uk">РУЧНИЙ D10</span>
+                    <span class="lang-eec">MANUAL D10</span>
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="DoD6">
                     <span class="lang-en">MANUAL D6</span>
                     <span class="lang-ru">РУЧНОЙ D6</span>
                     <span class="lang-pl">RĘCZNY D6</span>
+                    <span class="lang-uk">РУЧНИЙ D6</span>
+                    <span class="lang-eec">MANUAL D6</span>
                 </MudButton>
             </div>
         </div>
@@ -108,6 +126,8 @@
                 <span class="lang-en">_ AWAITING INPUT — JACK IN TO ROLL _</span>
                 <span class="lang-ru">_ ОЖИДАНИЕ ВВОДА — ПОДКЛЮЧИСЬ ДЛЯ БРОСКА _</span>
                 <span class="lang-pl">_ OCZEKIWANIE — PODŁĄCZ SIĘ, ABY RZUCIĆ _</span>
+                <span class="lang-uk">_ ОЧІКУВАННЯ ВВОДУ — ПІДКЛЮЧІТЬСЯ ДЛЯ КИДКА _</span>
+                <span class="lang-eec">_ AWAITING INPUT — JACK IN TO ROLL _</span>
             </div>
         }
         @foreach (var entry in _log)
@@ -122,6 +142,8 @@
             <span class="lang-en">CLEAR LOG</span>
             <span class="lang-ru">ОЧИСТИТЬ</span>
             <span class="lang-pl">WYCZYŚĆ LOG</span>
+            <span class="lang-uk">ОЧИСТИТИ ЖУРНАЛ</span>
+            <span class="lang-eec">CLEAR LOG</span>
         </MudButton>
     </div>
 </div>
