@@ -15,15 +15,15 @@
 {
     <div class="ncc-loading">
         <div class="ncc-empty-icon">⬡</div>
-        <div class="ncc-empty-sub">ACCESSING SECURE DOSSIER...</div>
+        <div class="ncc-empty-sub"><span class="lang-en">ACCESSING SECURE DOSSIER...</span><span class="lang-uk">ДОСТУП ДО ЗАСЕКРЕЧЕНОГО ДОСЬЄ...</span></div>
     </div>
 }
 else if (_character == null)
 {
     <div class="ncc-empty">
         <div class="ncc-empty-icon">✕</div>
-        <div>DOSSIER NOT FOUND OR CORRUPTED</div>
-        <button class="ncc-btn-submit" style="margin-top: 1rem;" @onclick='() => Nav.NavigateTo("/characters", forceLoad: true)'>RETURN TO REGISTRY</button>
+        <div><span class="lang-en">DOSSIER NOT FOUND OR CORRUPTED</span><span class="lang-uk">ДОСЬЄ НЕ ЗНАЙДЕНО АБО ПОШКОДЖЕНО</span></div>
+        <button class="ncc-btn-submit" style="margin-top: 1rem;" @onclick='() => Nav.NavigateTo("/characters", forceLoad: true)'><span class="lang-en">RETURN TO REGISTRY</span><span class="lang-uk">ПОВЕРНУТИСЯ ДО РЕЄСТРУ</span></button>
     </div>
 }
 else
@@ -32,17 +32,17 @@ else
         <!-- HEADER -->
         <div class="dp-header">
             <div style="display:flex; align-items:center; gap: 2rem;">
-                <button class="back-btn" @onclick='() => Nav.NavigateTo("/characters", forceLoad: true)'>◁ BACK</button>
+                <button class="back-btn" @onclick='() => Nav.NavigateTo("/characters", forceLoad: true)'><span class="lang-en">◁ BACK</span><span class="lang-uk">◁ НАЗАД</span></button>
                 <div class="dp-title-block">
                     <h1>@_character.Handle.ToUpper()</h1>
                     <div class="dp-role">@_character.Role // @_character.SpecialAbility</div>
                 </div>
             </div>
             <div class="dp-meta">
-                <span class="funds">FUNDS: €$@_character.Eurobucks</span>
+                <span class="funds"><span class="lang-en">FUNDS:</span><span class="lang-uk">КОШТИ:</span> €$@_character.Eurobucks</span>
                 @if (Session.CurrentUser?.Role == UserRole.GameMaster && !string.IsNullOrEmpty(_character.OwnerId))
                 {
-                    <span class="owner">OPERATOR: @_character.OwnerId</span>
+                    <span class="owner"><span class="lang-en">OPERATOR:</span><span class="lang-uk">ОПЕРАТОР:</span> @_character.OwnerId</span>
                 }
             </div>
         </div>
@@ -53,31 +53,37 @@ else
             <!-- LEFT COLUMN: Stats & Lifepath -->
             <div class="dp-col-left">
                 <div class="dp-section">
-                    <h3>NEURAL & PHYSICAL STATS</h3>
+                    <h3><span class="lang-en">NEURAL & PHYSICAL STATS</span><span class="lang-uk">НЕЙРОННІ ТА ФІЗИЧНІ ХАРАКТЕРИСТИКИ</span></h3>
                     <div class="dp-stats">
                         <div class="stat-chip">INT: @_character.INT</div>
-                        <div class="stat-chip">REF: @_character.REF</div>
+                        <div class="stat-chip @(TotalEV > 0 ? "stat-penalized" : "")" title="@(TotalEV > 0 ? $"-{TotalEV} EV Penalty" : "")">
+                            REF: @Math.Max(1, _character.REF - TotalEV) @(TotalEV > 0 ? $" (-{TotalEV})" : "")
+                        </div>
                         <div class="stat-chip">TECH: @_character.TECH</div>
                         <div class="stat-chip">COOL: @_character.COOL</div>
-                        <div class="stat-chip">LK: @_character.LK</div>
+                        <div class="stat-chip lk-chip" style="cursor:pointer; display:flex; align-items:center; gap:0.2rem;" title="Left-click to spend luck, Right-click to restore">
+                            <button style="background:transparent; border:none; color:var(--nc-cyan); cursor:pointer; font-weight:bold; font-size:1.1rem;" @onclick="DecrementLuck" @onclick:preventDefault>-</button>
+                            LK: @_character.CurrentLuck / @_character.LK
+                            <button style="background:transparent; border:none; color:var(--nc-cyan); cursor:pointer; font-weight:bold; font-size:1.1rem;" @onclick="IncrementLuck" @onclick:preventDefault>+</button>
+                        </div>
                         <div class="stat-chip">ATT: @_character.ATT</div>
                         <div class="stat-chip">MA: @_character.MA</div>
                         <div class="stat-chip">EMP: @_character.EMP</div>
                         <div class="stat-chip">BT: @_character.BT</div>
                     </div>
                     <div class="dp-derived">
-                        <div class="der-row"><span>MOBILITY</span> <strong>@_character.Mobility</strong></div>
-                        <div class="der-row"><span>RESILIENCE</span> <strong>@_character.Resilience</strong></div>
+                        <div class="der-row"><span><span class="lang-en">MOBILITY</span><span class="lang-uk">МОБІЛЬНІСТЬ</span></span> <strong>@_character.Mobility</strong></div>
+                        <div class="der-row"><span><span class="lang-en">RESILIENCE</span><span class="lang-uk">ВИТРИВАЛІСТЬ</span></span> <strong>@_character.Resilience</strong></div>
                     </div>
 
                     <!-- HUMANITY PANEL -->
                     <div class="humanity-panel @HumanityClass">
                         @if (_character.Humanity == 0)
                         {
-                            <div class="cyberpsycho-banner">// CYBERPSYCHOSIS THRESHOLD BREACHED // OPERATOR RECLASSIFIED AS HOSTILE //</div>
+                            <div class="cyberpsycho-banner"><span class="lang-en">// CYBERPSYCHOSIS THRESHOLD BREACHED // OPERATOR RECLASSIFIED AS HOSTILE //</span><span class="lang-uk">// ПОРІГ КІБЕРПСИХОЗУ ПОРУШЕНО // ОПЕРАТОРА ПЕРЕКВАЛІФІКОВАНО НА ВОРОЖОГО //</span></div>
                         }
                         <div class="hu-header">
-                            <span class="hu-label">HUMANITY INDEX</span>
+                            <span class="hu-label"><span class="lang-en">HUMANITY INDEX</span><span class="lang-uk">ІНДЕКС ЛЮДЯНОСТІ</span></span>
                             <span class="hu-status @HumanityClass">@HumanityStatus</span>
                         </div>
                         <div class="hu-bar-track">
@@ -90,19 +96,19 @@ else
                         @if (_character.InstalledCyberwareIds.Count > 0)
                         {
                             <div style="font-size:0.65rem; color:var(--nc-dim); margin-top:0.4rem; letter-spacing:0.08em;">
-                                @_character.InstalledCyberwareIds.Count IMPLANT(S) ACTIVE
+                                @_character.InstalledCyberwareIds.Count <span class="lang-en">IMPLANT(S) ACTIVE</span><span class="lang-uk">ІМПЛАНТ(ІВ) АКТИВНО</span>
                             </div>
                         }
                     </div>
                 </div>
 
                 <div class="dp-section">
-                    <h3>LIFEPATH PROTOCOL</h3>
+                    <h3><span class="lang-en">LIFEPATH PROTOCOL</span><span class="lang-uk">ПРОТОКОЛ ЖИТТЄВОГО ШЛЯХУ</span></h3>
                     <div class="lp-grid">
-                        <div class="lp-item"><span>ORIGIN</span><strong>@_character.EthnicOrigin</strong></div>
-                        <div class="lp-item"><span>STYLE</span><strong>@_character.Clothes, @_character.Hairstyle, @_character.Affectation</strong></div>
-                        <div class="lp-item"><span>FAMILY</span><strong>@_character.FamilyRanking — @_character.FamilyTragedy</strong></div>
-                        <div class="lp-item"><span>PERSONALITY</span><strong>@_character.PersonalityTrait</strong></div>
+                        <div class="lp-item"><span><span class="lang-en">ORIGIN</span><span class="lang-uk">ПОХОДЖЕННЯ</span></span><strong>@_character.EthnicOrigin</strong></div>
+                        <div class="lp-item"><span><span class="lang-en">STYLE</span><span class="lang-uk">СТИЛЬ</span></span><strong>@_character.Clothes, @_character.Hairstyle, @_character.Affectation</strong></div>
+                        <div class="lp-item"><span><span class="lang-en">FAMILY</span><span class="lang-uk">СІМ'Я</span></span><strong>@_character.FamilyRanking — @_character.FamilyTragedy</strong></div>
+                        <div class="lp-item"><span><span class="lang-en">PERSONALITY</span><span class="lang-uk">ОСОБИСТІСТЬ</span></span><strong>@_character.PersonalityTrait</strong></div>
                     </div>
                 </div>
 
@@ -112,13 +118,24 @@ else
                     if (skills.Count > 0)
                     {
                         <div class="dp-section" style="flex: 1; display:flex; flex-direction:column;">
-                            <h3>SKILL MATRIX</h3>
+                            <h3 style="display:flex; justify-content:space-between; align-items:center;">
+                                <span class="lang-en">SKILL MATRIX</span><span class="lang-uk">МАТРИЦЯ НАВИЧОК</span>
+                                <span style="color:var(--nc-cyan)">IP: @_character.IP</span>
+                            </h3>
                             <div class="skills-list">
                                 @foreach (var kv in skills.Where(k => k.Value > 0).OrderByDescending(k => k.Value))
                                 {
-                                    <div class="skill-row">
+                                    <div class="skill-row" style="display:flex; justify-content:space-between; align-items:center;">
                                         <span>@kv.Key</span>
-                                        <span class="skill-val">@kv.Value</span>
+                                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                                            <span class="skill-val">@kv.Value</span>
+                                            <button class="ncc-btn-submit" style="padding:0.1rem 0.3rem; font-size:0.5rem" 
+                                                    title="Upgrade (@(kv.Value == 0 ? 10 : kv.Value * 10) IP)"
+                                                    disabled="@(_character.IP < (kv.Value == 0 ? 10 : kv.Value * 10) || kv.Value >= 10)"
+                                                    @onclick="() => UpgradeSkill(kv.Key)">
+                                                +
+                                            </button>
+                                        </div>
                                     </div>
                                 }
                             </div>
@@ -132,20 +149,20 @@ else
 
                 <!-- CYBERWARE BAY -->
                 <div class="dp-section cyber-bay-section" ondragover="event.preventDefault()" @ondrop="HandleCyberDrop">
-                    <h3>CYBERWARE BAY
-                        <span style="font-size:0.65rem; color:var(--nc-dim); font-weight:normal; margin-left:0.5rem;">drag cyberware here to install</span>
+                    <h3><span class="lang-en">CYBERWARE BAY</span><span class="lang-uk">ВІДСІК КІБЕРІМПЛАНТІВ</span>
+                        <span style="font-size:0.65rem; color:var(--nc-dim); font-weight:normal; margin-left:0.5rem;"><span class="lang-en">drag cyberware here to install</span><span class="lang-uk">перетягніть імпланти сюди для встановлення</span></span>
                     </h3>
 
                     @if (!string.IsNullOrEmpty(_installLog))
                     {
                         <div class="install-log @(_installSuccess ? "log-ok" : "log-cost")" @onclick="() => _installLog = string.Empty">
-                            @_installLog <span style="opacity:0.5; font-size:0.7rem; margin-left:0.5rem;">[click to dismiss]</span>
+                            @_installLog <span style="opacity:0.5; font-size:0.7rem; margin-left:0.5rem;"><span class="lang-en">[click to dismiss]</span><span class="lang-uk">[натисніть, щоб закрити]</span></span>
                         </div>
                     }
 
                     @if (_character.InstalledCyberwareIds.Count == 0)
                     {
-                        <div class="cyber-empty">NO IMPLANTS DETECTED // DRAG CYBERWARE FROM INVENTORY TO INSTALL</div>
+                        <div class="cyber-empty"><span class="lang-en">NO IMPLANTS DETECTED // DRAG CYBERWARE FROM INVENTORY TO INSTALL</span><span class="lang-uk">ІМПЛАНТІВ НЕ ВИЯВЛЕНО // ПЕРЕТЯГНІТЬ КІБЕРІМПЛАНТИ З ІНВЕНТАРЮ ДЛЯ ВСТАНОВЛЕННЯ</span></div>
                     }
                     else
                     {
@@ -159,9 +176,9 @@ else
                                     <div class="ci-icon">⬡</div>
                                     <div class="ci-info">
                                         <div class="ci-name">@item.Name.ToUpper()</div>
-                                        <div class="ci-cost">HUMANITY COST: <span style="color:var(--nc-red);">–@cost</span></div>
+                                        <div class="ci-cost"><span class="lang-en">HUMANITY COST:</span><span class="lang-uk">ВТРАТА ЛЮДЯНОСТІ:</span> <span style="color:var(--nc-red);">–@cost</span></div>
                                     </div>
-                                    <button class="ci-remove" title="Uninstall" @onclick="() => UninstallCyberware(item)">REMOVE</button>
+                                    <button class="ci-remove" title="Uninstall" @onclick="() => UninstallCyberware(item)"><span class="lang-en">REMOVE</span><span class="lang-uk">ВИЛУЧИТИ</span></button>
                                 </div>
                             }
                         </div>
@@ -169,60 +186,103 @@ else
                 </div>
 
                 <div class="dp-section" style="height: 100%; display: flex; flex-direction: column;">
-                    <h3>LOADOUT & INVENTORY</h3>
+                    <h3><span class="lang-en">LOADOUT & INVENTORY</span><span class="lang-uk">СПОРЯДЖЕННЯ ТА ІНВЕНТАР</span></h3>
                     
                     <div class="inv-system">
                         <div class="inv-paper-doll">
-                            <h3 style="color:var(--nc-cyan); font-size:0.8rem; text-align:center; margin-bottom:1rem;">EQUIPPED GEAR</h3>
+                            <h3 style="color:var(--nc-cyan); font-size:0.8rem; text-align:center; margin-bottom:1rem;"><span class="lang-en">EQUIPPED GEAR</span><span class="lang-uk">ЕКІПІРОВАНЕ СПОРЯДЖЕННЯ</span></h3>
                             <div class="paper-doll">
                                 <div class="pd-head @(HasEquipped("HEAD") ? "filled" : "")" 
                                      ondragover="event.preventDefault()" 
                                      @ondrop='() => HandleDrop("HEAD")'>
-                                    @(GetEquippedName("HEAD") ?? "HEAD")
+                                    @( (MarkupString)(GetEquippedName("HEAD") ?? "<span class=\"lang-en\">HEAD</span><span class=\"lang-uk\">ГОЛОВА</span>") )
+                                </div>
+                                <div class="pd-head @(HasEquipped("HEAD_OUTER") ? "filled" : "")" 
+                                     ondragover="event.preventDefault()" 
+                                     @ondrop='() => HandleDrop("HEAD_OUTER")' style="margin-top:2px;">
+                                    @( (MarkupString)(GetEquippedName("HEAD_OUTER") ?? "<span class=\"lang-en\">HEAD (OUTER)</span><span class=\"lang-uk\">ГОЛОВА (ЗОВН.)</span>") )
                                 </div>
                                 <div class="pd-mid">
-                                    <div class="pd-arm @(HasEquipped("R.ARM") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("R.ARM")'>
-                                        @(GetEquippedName("R.ARM") ?? "R.ARM")
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-arm @(HasEquipped("R.ARM") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("R.ARM")'>
+                                            @( (MarkupString)(GetEquippedName("R.ARM") ?? "<span class=\"lang-en\">R.ARM</span><span class=\"lang-uk\">П.РУКА</span>") )
+                                        </div>
+                                        <div class="pd-arm @(HasEquipped("R.ARM_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("R.ARM_OUTER")'>
+                                            @( (MarkupString)(GetEquippedName("R.ARM_OUTER") ?? "<span class=\"lang-en\">R.ARM (O)</span><span class=\"lang-uk\">П.РУКА (З)</span>") )
+                                        </div>
                                     </div>
-                                    <div class="pd-torso @(HasEquipped("TORSO") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("TORSO")'>
-                                        @(GetEquippedName("TORSO") ?? "TORSO")
+                                    
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-torso @(HasEquipped("TORSO") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("TORSO")'>
+                                            @( (MarkupString)(GetEquippedName("TORSO") ?? "<span class=\"lang-en\">TORSO</span><span class=\"lang-uk\">ТУЛУБ</span>") )
+                                        </div>
+                                        <div class="pd-torso @(HasEquipped("TORSO_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("TORSO_OUTER")'>
+                                            @( (MarkupString)(GetEquippedName("TORSO_OUTER") ?? "<span class=\"lang-en\">TORSO (OUTER)</span><span class=\"lang-uk\">ТУЛУБ (ЗОВН.)</span>") )
+                                        </div>
                                     </div>
-                                    <div class="pd-arm @(HasEquipped("L.ARM") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("L.ARM")'>
-                                        @(GetEquippedName("L.ARM") ?? "L.ARM")
+
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-arm @(HasEquipped("L.ARM") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("L.ARM")'>
+                                            @( (MarkupString)(GetEquippedName("L.ARM") ?? "<span class=\"lang-en\">L.ARM</span><span class=\"lang-uk\">Л.РУКА</span>") )
+                                        </div>
+                                        <div class="pd-arm @(HasEquipped("L.ARM_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("L.ARM_OUTER")'>
+                                            @( (MarkupString)(GetEquippedName("L.ARM_OUTER") ?? "<span class=\"lang-en\">L.ARM (O)</span><span class=\"lang-uk\">Л.РУКА (З)</span>") )
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="pd-legs">
-                                    <div class="pd-leg @(HasEquipped("R.LEG") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("R.LEG")'>
-                                        @(GetEquippedName("R.LEG") ?? "R.LEG")
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-leg @(HasEquipped("R.LEG") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("R.LEG")'>
+                                            @( (MarkupString)(GetEquippedName("R.LEG") ?? "<span class=\"lang-en\">R.LEG</span><span class=\"lang-uk\">П.НОГА</span>") )
+                                        </div>
+                                        <div class="pd-leg @(HasEquipped("R.LEG_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("R.LEG_OUTER")'>
+                                            @( (MarkupString)(GetEquippedName("R.LEG_OUTER") ?? "<span class=\"lang-en\">R.LEG (O)</span><span class=\"lang-uk\">П.НОГА (З)</span>") )
+                                        </div>
                                     </div>
-                                    <div class="pd-leg @(HasEquipped("L.LEG") ? "filled" : "")" 
-                                         ondragover="event.preventDefault()" 
-                                         @ondrop='() => HandleDrop("L.LEG")'>
-                                        @(GetEquippedName("L.LEG") ?? "L.LEG")
+
+                                    <div style="display:flex; flex-direction:column; gap:2px;">
+                                        <div class="pd-leg @(HasEquipped("L.LEG") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("L.LEG")'>
+                                            @( (MarkupString)(GetEquippedName("L.LEG") ?? "<span class=\"lang-en\">L.LEG</span><span class=\"lang-uk\">Л.НОГА</span>") )
+                                        </div>
+                                        <div class="pd-leg @(HasEquipped("L.LEG_OUTER") ? "filled" : "")" 
+                                             ondragover="event.preventDefault()" 
+                                             @ondrop='() => HandleDrop("L.LEG_OUTER")'>
+                                            @( (MarkupString)(GetEquippedName("L.LEG_OUTER") ?? "<span class=\"lang-en\">L.LEG (O)</span><span class=\"lang-uk\">Л.НОГА (З)</span>") )
+                                        </div>
                                     </div>
                                 </div>
                                 
                                 <div class="pd-weapon @(HasEquipped("WEAPON") ? "filled" : "")" style="margin-top:0.5rem; width:100%; height:30px; border:1px dashed var(--nc-gold); display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--nc-gold);"
                                      ondragover="event.preventDefault()" 
                                      @ondrop='() => HandleDrop("WEAPON")'>
-                                    @(GetEquippedName("WEAPON") ?? "WEAPON SLOT")
+                                    @( (MarkupString)(GetEquippedName("WEAPON") ?? "<span class=\"lang-en\">WEAPON SLOT</span><span class=\"lang-uk\">СЛОТ ЗБРОЇ</span>") )
                                 </div>
                                 <div class="pd-vehicle @(HasEquipped("VEHICLE_SLOT") ? "filled" : "")" style="margin-top:0.5rem; width:100%; height:30px; border:1px dashed #f472b6; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:#f472b6;"
                                      ondragover="event.preventDefault()" 
                                      @ondrop='() => HandleDrop("VEHICLE_SLOT")'>
-                                    @(GetEquippedName("VEHICLE_SLOT") ?? "VEHICLE SLOT")
+                                    @( (MarkupString)(GetEquippedName("VEHICLE_SLOT") ?? "<span class=\"lang-en\">VEHICLE SLOT</span><span class=\"lang-uk\">СЛОТ ТРАНСПОРТУ</span>") )
                                 </div>
                                 @if (HasEquipped("VEHICLE_SLOT"))
                                 {
-                                    <button class="ncc-btn-submit" style="margin-top: 0.5rem; font-size: 0.6rem; width: 100%;" @onclick='() => ShowVehicleDetails(GetEquippedName("VEHICLE_SLOT"))'>VIEW VEHICLE</button>
+                                    <button class="ncc-btn-submit" style="margin-top: 0.5rem; font-size: 0.6rem; width: 100%;" @onclick='() => ShowVehicleDetails(GetEquippedName("VEHICLE_SLOT"))'><span class="lang-en">VIEW VEHICLE</span><span class="lang-uk">ОГЛЯД ТРАНСПОРТУ</span></button>
                                 }
                             </div>
                         </div>
@@ -230,7 +290,7 @@ else
                         <div class="inv-grids">
                             <div class="inv-grid-section" ondragover="event.preventDefault()" @ondrop='() => HandleDrop("BACKPACK")'>
                                 <div class="inv-header">
-                                    <span class="lbl">BACKPACK // CARRY CAP: @(_character.BT * 10) KG</span>
+                                    <span class="lbl"><span class="lang-en">BACKPACK // CARRY CAP:</span><span class="lang-uk">РЮКЗАК // ВАНТАЖОПІДЙОМНІСТЬ:</span> @(_character.BT * 10) KG</span>
                                     <span class="val">@GetWeight("BACKPACK") / @(_character.BT * 10) KG</span>
                                 </div>
                                 <div class="grid-container" style="--max-cells: @(_character.BT * 20);">
@@ -253,7 +313,7 @@ else
                             {
                                 <div class="inv-grid-section" style="margin-top: 1rem;" ondragover="event.preventDefault()" @ondrop='() => HandleDrop("VEHICLE")'>
                                     <div class="inv-header" style="color:var(--nc-cyan);">
-                                        <span class="lbl">VEHICLE TRUNK // CAP: 500 KG</span>
+                                        <span class="lbl"><span class="lang-en">VEHICLE TRUNK // CAP:</span><span class="lang-uk">БАГАЖНИК ТРАНСПОРТУ // МІСТКІСТЬ:</span> 500 KG</span>
                                         <span class="val">@GetWeight("VEHICLE") / 500 KG</span>
                                     </div>
                                     <div class="grid-container" style="--max-cells: 1000;">
@@ -288,20 +348,20 @@ else
             <button class="detail-close" style="color: var(--nc-cyan);" @onclick="CloseItemDetails">✕</button>
             <h2 style="color: var(--nc-cyan); margin-bottom: 0.5rem; border-bottom: 1px solid var(--nc-border); padding-bottom: 0.5rem;">@_selectedItem.Name.ToUpper()</h2>
             <div style="font-size: 0.8rem; color: var(--nc-dim); margin-bottom: 1rem;">
-                <span style="color: var(--nc-gold);">@_selectedItem.Category.ToUpper()</span> // WGT: @_selectedItem.WeightKg KG // COST: €$@_selectedItem.CostEurobucks
+                <span style="color: var(--nc-gold);">@_selectedItem.Category.ToUpper()</span> // <span class="lang-en">WGT:</span><span class="lang-uk">ВАГА:</span> @_selectedItem.WeightKg KG // <span class="lang-en">COST:</span><span class="lang-uk">ЦІНА:</span> €$@_selectedItem.CostEurobucks
             </div>
             <p style="font-size: 0.9rem; color: var(--nc-cream); line-height: 1.5; margin-bottom: 1.5rem;">@_selectedItem.Description</p>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 1rem; border: 1px dashed var(--nc-border);">
-                @if (!string.IsNullOrEmpty(_selectedItem.Damage)) { <div><strong style="color:var(--nc-red);">DMG:</strong> @_selectedItem.Damage</div> }
-                @if (!string.IsNullOrEmpty(_selectedItem.Acc)) { <div><strong style="color:var(--nc-cyan);">ACC:</strong> @_selectedItem.Acc</div> }
-                @if (!string.IsNullOrEmpty(_selectedItem.Range)) { <div><strong style="color:var(--nc-dim);">RNG:</strong> @_selectedItem.Range</div> }
-                @if (!string.IsNullOrEmpty(_selectedItem.Capacity)) { <div><strong style="color:var(--nc-dim);">CAP:</strong> @_selectedItem.Capacity</div> }
-                @if (!string.IsNullOrEmpty(_selectedItem.ROF)) { <div><strong style="color:var(--nc-dim);">ROF:</strong> @_selectedItem.ROF</div> }
-                @if (!string.IsNullOrEmpty(_selectedItem.SP)) { <div><strong style="color:var(--nc-cyan);">SP:</strong> @_selectedItem.SP</div> }
-                @if (!string.IsNullOrEmpty(_selectedItem.EV)) { <div><strong style="color:var(--nc-dim);">EV:</strong> @_selectedItem.EV</div> }
-                @if (!string.IsNullOrEmpty(_selectedItem.Concealability)) { <div><strong style="color:var(--nc-dim);">CONC:</strong> @_selectedItem.Concealability</div> }
-                @if (!string.IsNullOrEmpty(_selectedItem.Availability)) { <div><strong style="color:var(--nc-dim);">AVAIL:</strong> @_selectedItem.Availability</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Damage)) { <div><strong style="color:var(--nc-red);"><span class="lang-en">DMG:</span><span class="lang-uk">ШКОДА:</span></strong> @_selectedItem.Damage</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Acc)) { <div><strong style="color:var(--nc-cyan);"><span class="lang-en">ACC:</span><span class="lang-uk">ТОЧНІСТЬ:</span></strong> @_selectedItem.Acc</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Range)) { <div><strong style="color:var(--nc-dim);"><span class="lang-en">RNG:</span><span class="lang-uk">ДАЛЬНІСТЬ:</span></strong> @_selectedItem.Range</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Capacity)) { <div><strong style="color:var(--nc-dim);"><span class="lang-en">CAP:</span><span class="lang-uk">ЄМНІСТЬ:</span></strong> @_selectedItem.Capacity</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.ROF)) { <div><strong style="color:var(--nc-dim);"><span class="lang-en">ROF:</span><span class="lang-uk">ШВИДКОСТР:</span></strong> @_selectedItem.ROF</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.SP)) { <div><strong style="color:var(--nc-cyan);"><span class="lang-en">SP:</span><span class="lang-uk">БРОНЯ:</span></strong> @_selectedItem.SP</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.EV)) { <div><strong style="color:var(--nc-dim);"><span class="lang-en">EV:</span><span class="lang-uk">ШТРАФ (EV):</span></strong> @_selectedItem.EV</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Concealability)) { <div><strong style="color:var(--nc-dim);"><span class="lang-en">CONC:</span><span class="lang-uk">ПРИХОВАНІСТЬ:</span></strong> @_selectedItem.Concealability</div> }
+                @if (!string.IsNullOrEmpty(_selectedItem.Availability)) { <div><strong style="color:var(--nc-dim);"><span class="lang-en">AVAIL:</span><span class="lang-uk">ДОСТУПНІСТЬ:</span></strong> @_selectedItem.Availability</div> }
             </div>
         </div>
     </div>
@@ -313,20 +373,20 @@ else
     <div class="detail-overlay" @onclick="CloseVehicleDetails">
         <div class="detail-box" style="border-color: #f472b6; max-width: 800px;" @onclick:stopPropagation="true">
             <button class="detail-close" style="color: #f472b6;" @onclick="CloseVehicleDetails">✕</button>
-            <h2 style="color: #f472b6; margin-bottom: 0.5rem; border-bottom: 1px solid var(--nc-border); padding-bottom: 0.5rem;">@_selectedVehicle.Name.ToUpper() DIAGRAM</h2>
+            <h2 style="color: #f472b6; margin-bottom: 0.5rem; border-bottom: 1px solid var(--nc-border); padding-bottom: 0.5rem;">@_selectedVehicle.Name.ToUpper() <span class="lang-en">DIAGRAM</span><span class="lang-uk">КРЕСЛЕННЯ</span></h2>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1rem;">
                 <div>
                     <div style="font-size: 0.8rem; color: var(--nc-dim); margin-bottom: 1rem;">
-                        <span style="color: var(--nc-gold);">VEHICLE</span> // WGT: @_selectedVehicle.WeightKg KG // COST: €$@_selectedVehicle.CostEurobucks
+                        <span style="color: var(--nc-gold);"><span class="lang-en">VEHICLE</span><span class="lang-uk">ТРАНСПОРТ</span></span> // <span class="lang-en">WGT:</span><span class="lang-uk">ВАГА:</span> @_selectedVehicle.WeightKg KG // <span class="lang-en">COST:</span><span class="lang-uk">ЦІНА:</span> €$@_selectedVehicle.CostEurobucks
                     </div>
                     <p style="font-size: 0.9rem; color: var(--nc-cream); line-height: 1.5; margin-bottom: 1.5rem;">@_selectedVehicle.Description</p>
                     
                     <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 1rem; border: 1px dashed var(--nc-border);">
-                        @if (!string.IsNullOrEmpty(_selectedVehicle.TopSpeed)) { <div><strong style="color:var(--nc-cyan);">TOP SPEED:</strong> @_selectedVehicle.TopSpeed</div> }
-                        @if (!string.IsNullOrEmpty(_selectedVehicle.Seats)) { <div><strong style="color:var(--nc-dim);">SEATS:</strong> @_selectedVehicle.Seats</div> }
-                        @if (!string.IsNullOrEmpty(_selectedVehicle.SDP)) { <div><strong style="color:var(--nc-red);">STRUCTURAL DAMAGE POINTS (SDP):</strong> @_selectedVehicle.SDP</div> }
-                        <div><strong style="color:var(--nc-gold);">TRUNK CAPACITY:</strong> 500 KG</div>
+                        @if (!string.IsNullOrEmpty(_selectedVehicle.TopSpeed)) { <div><strong style="color:var(--nc-cyan);"><span class="lang-en">TOP SPEED:</span><span class="lang-uk">МАКС ШВИДКІСТЬ:</span></strong> @_selectedVehicle.TopSpeed</div> }
+                        @if (!string.IsNullOrEmpty(_selectedVehicle.Seats)) { <div><strong style="color:var(--nc-dim);"><span class="lang-en">SEATS:</span><span class="lang-uk">МІСЦЬ:</span></strong> @_selectedVehicle.Seats</div> }
+                        @if (!string.IsNullOrEmpty(_selectedVehicle.SDP)) { <div><strong style="color:var(--nc-red);"><span class="lang-en">STRUCTURAL DAMAGE POINTS (SDP):</span><span class="lang-uk">ОЧКИ СТРУКТУРИ (SDP):</span></strong> @_selectedVehicle.SDP</div> }
+                        <div><strong style="color:var(--nc-gold);"><span class="lang-en">TRUNK CAPACITY:</span><span class="lang-uk">МІСТКІСТЬ БАГАЖНИКА:</span></strong> 500 KG</div>
                     </div>
                 </div>
                 
@@ -341,7 +401,7 @@ else
  \________________/
     (O)      (O)
                         </pre>
-                        <div style="margin-top: 1rem;">[ SCHEMATIC RENDER ]</div>
+                        <div style="margin-top: 1rem;"><span class="lang-en">[ SCHEMATIC RENDER ]</span><span class="lang-uk">[ СХЕМАТИЧНЕ КРЕСЛЕННЯ ]</span></div>
                     </div>
                 </div>
             </div>
@@ -488,6 +548,37 @@ else
         _     => "hu-psycho"
     };
 
+    private int TotalEV => GetTotalEV();
+
+    private int GetTotalEV()
+    {
+        if (_character == null || _character.EquippedGearIds == null) return 0;
+        int ev = 0;
+        foreach (var id in _character.EquippedGearIds.Values.Distinct())
+        {
+            var item = _character.Inventory.FirstOrDefault(i => i.InstanceId == id);
+            if (item != null && int.TryParse(item.EV, out int val))
+            {
+                ev += val;
+            }
+        }
+        return ev;
+    }
+
+    private async Task DecrementLuck()
+    {
+        if (_character == null || _character.CurrentLuck <= 0) return;
+        _character.CurrentLuck--;
+        await CharApi.UpdateAsync(_character);
+    }
+
+    private async Task IncrementLuck()
+    {
+        if (_character == null || _character.CurrentLuck >= _character.LK) return;
+        _character.CurrentLuck++;
+        await CharApi.UpdateAsync(_character);
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await Session.InitializeAsync();
@@ -554,6 +645,24 @@ else
         StateHasChanged();
     }
 
+    private async Task UpgradeSkill(string skillName)
+    {
+        if (_character == null) return;
+        var skills = JsonSerializer.Deserialize<Dictionary<string, int>>(_character.SkillsJson) ?? new();
+        if (skills.TryGetValue(skillName, out int level))
+        {
+            int cost = level == 0 ? 10 : level * 10;
+            
+            if (_character.IP >= cost && level < 10)
+            {
+                _character.IP -= cost;
+                skills[skillName] = level + 1;
+                _character.SkillsJson = JsonSerializer.Serialize(skills);
+                await CharApi.UpdateAsync(_character);
+            }
+        }
+    }
+
     // ── INVENTORY LOGIC ──
     private GearItemDto? _draggedItem;
     private GearItemDto? _selectedItem;
@@ -585,7 +694,7 @@ else
 
         if (targetZone == "WEAPON" && !isWeapon) return;
         if (targetZone == "VEHICLE_SLOT" && !isVehicle) return;
-        if ((targetZone == "HEAD" || targetZone == "TORSO" || targetZone == "R.ARM" || targetZone == "L.ARM" || targetZone == "R.LEG" || targetZone == "L.LEG") && !isArmor) return;
+        if ((targetZone == "HEAD" || targetZone == "TORSO" || targetZone == "R.ARM" || targetZone == "L.ARM" || targetZone == "R.LEG" || targetZone == "L.LEG" || targetZone.EndsWith("_OUTER")) && !isArmor) return;
         if (targetZone == "VEHICLE" && isVehicle) return; // Can't put a vehicle in a vehicle trunk
 
         // Remove from current equip slot if it's equipped

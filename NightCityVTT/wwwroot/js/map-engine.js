@@ -13,7 +13,11 @@ let isPainting = false;
 let selectedTokenId = null;
 let dragTokenId = null;
 let dragCursorX = 0, dragCursorY = 0;
-let highlights = [];            // [{col,row}] movement range cells
+let highlights = [];            // [{col,row}] movement range cells (blue)
+let attackHighlights = [];      // [{col,row}] weapon attack range cells (red)
+
+let particles = [];
+let animating = false;
 
 // Palette
 const FILL = { 0: '#06060f', 1: '#0d1117', 2: '#0d0208', 3: '#061106' };
@@ -29,13 +33,13 @@ export function init(canvasId, w, h, ts) {
     mapWidth = w; mapHeight = h; tileSize = ts;
     canvas.width  = w * ts;
     canvas.height = h * ts;
-    ctx = canvas.getContext('2d');
+    ctx = canvas.getContext('2d', { alpha: false }); // Better performance if opaque
 
-    canvas.addEventListener('mousedown',    onMouseDown);
-    canvas.addEventListener('mousemove',    onMouseMove);
-    canvas.addEventListener('mouseup',      onMouseUp);
-    canvas.addEventListener('mouseleave',   onMouseLeave);
-    canvas.addEventListener('contextmenu',  e => { e.preventDefault(); onRightClick(e); });
+    canvas.onmousedown = onMouseDown;
+    canvas.onmousemove = onMouseMove;
+    canvas.onmouseup   = onMouseUp;
+    canvas.onmouseleave= onMouseLeave;
+    canvas.oncontextmenu = (e) => { e.preventDefault(); onRightClick(e); };
     return true;
 }
 
@@ -78,6 +82,16 @@ export function setHighlights(cells) {
     render();
 }
 
+export function setAttackRange(cells) {
+    attackHighlights = cells || [];
+    render();
+}
+
+export function clearAttackRange() {
+    attackHighlights = [];
+    render();
+}
+
 export function selectToken(tokenId) {
     selectedTokenId = tokenId;
     render();
@@ -87,6 +101,7 @@ export function selectToken(tokenId) {
 
 function render() {
     if (!ctx) return;
+    ctx.globalCompositeOperation = 'source-over';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Background
@@ -100,12 +115,22 @@ function render() {
         }
     }
 
-    // Movement highlights
+    // Movement highlights (blue)
     for (const h of highlights) {
         const x = h.col * tileSize, y = h.row * tileSize;
         ctx.fillStyle   = 'rgba(0,210,255,0.12)';
         ctx.fillRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
         ctx.strokeStyle = 'rgba(0,210,255,0.55)';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
+    }
+
+    // Attack range highlights (red)
+    for (const h of attackHighlights) {
+        const x = h.col * tileSize, y = h.row * tileSize;
+        ctx.fillStyle   = 'rgba(255,40,40,0.09)';
+        ctx.fillRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
+        ctx.strokeStyle = 'rgba(255,40,40,0.35)';
         ctx.lineWidth   = 1;
         ctx.strokeRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
     }
@@ -129,6 +154,128 @@ function render() {
             ctx.globalAlpha = 1;
         }
     }
+
+    // Line of Sight
+    if (selectedTokenId && editorMode === null && !isPainting) {
+        const token = tokens.find(t => t.id === selectedTokenId);
+        if (token) {
+            drawLineOfSight(token);
+        }
+    }
+
+    if (!animating && particles.length > 0) {
+        animating = true;
+        requestAnimationFrame(animateParticles);
+    }
+}
+
+function drawLineOfSight(token) {
+    const cx = token.col * tileSize + tileSize / 2;
+    const cy = token.row * tileSize + tileSize / 2;
+    const radius = tileSize * 12;
+    
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    
+    for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
+        let dx = Math.cos(angle);
+        let dy = Math.sin(angle);
+        let dist = 0;
+        let hitX = cx;
+        let hitY = cy;
+        
+        while (dist < radius) {
+            hitX += dx * 2;
+            hitY += dy * 2;
+            dist += 2;
+            const c = Math.floor(hitX / tileSize);
+            const r = Math.floor(hitY / tileSize);
+            if (c < 0 || c >= mapWidth || r < 0 || r >= mapHeight) break;
+            const t = tiles[`${c},${r}`] || 0;
+            if (t === 2 || t === 3 || t === 4) break; // block vision
+        }
+        ctx.lineTo(hitX, hitY);
+    }
+    ctx.closePath();
+    
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    grd.addColorStop(0, 'rgba(0,0,0,1)');
+    grd.addColorStop(0.8, 'rgba(0,0,0,0.8)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.fill();
+    
+    ctx.globalCompositeOperation = 'source-over';
+}
+
+export function triggerAttackEffect(attackerId, targetId, damageStr, isHit) {
+    const a = tokens.find(t => t.id === attackerId);
+    const t = tokens.find(t => t.id === targetId);
+    if (!a || !t) return;
+    
+    const ax = a.col * tileSize + tileSize/2;
+    const ay = a.row * tileSize + tileSize/2;
+    const tx = t.col * tileSize + tileSize/2;
+    const ty = t.row * tileSize + tileSize/2;
+    
+    particles.push({ type: 'muzzle', x: ax, y: ay, tx, ty, life: 1.0 });
+    particles.push({ type: 'tracer', x: ax, y: ay, tx, ty, life: 1.0, isHit });
+    
+    if (isHit) {
+        particles.push({ type: 'floater', x: tx, y: ty, text: damageStr, color: '#ff2040', life: 1.0 });
+    } else {
+        particles.push({ type: 'floater', x: tx, y: ty, text: 'MISS', color: '#aaaaaa', life: 1.0 });
+    }
+    
+    if (!animating) { animating = true; requestAnimationFrame(animateParticles); }
+}
+
+function animateParticles() {
+    render(); 
+    
+    let active = false;
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= 0.03;
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+            continue;
+        }
+        active = true;
+        
+        if (p.type === 'muzzle') {
+            const size = tileSize * p.life;
+            ctx.fillStyle = `rgba(255, 200, 50, ${p.life})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, size, 0, Math.PI*2);
+            ctx.fill();
+        } else if (p.type === 'tracer') {
+            const progress = 1.0 - p.life; 
+            const curX = p.x + (p.tx - p.x) * progress;
+            const curY = p.y + (p.ty - p.y) * progress;
+            ctx.strokeStyle = p.isHit ? `rgba(255, 255, 50, ${p.life})` : `rgba(150, 150, 150, ${p.life})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(curX, curY);
+            ctx.stroke();
+        } else if (p.type === 'floater') {
+            const rise = (1.0 - p.life) * 40;
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life;
+            ctx.font = 'bold 22px "Share Tech Mono"';
+            ctx.textAlign = 'center';
+            ctx.fillText(p.text, p.x, p.y - rise - 10);
+            ctx.globalAlpha = 1.0;
+        }
+    }
+    
+    if (active) requestAnimationFrame(animateParticles);
+    else animating = false;
 }
 
 function drawTile(col, row, type) {
@@ -170,6 +317,35 @@ function drawTile(col, row, type) {
         ctx.textAlign   = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('▭', x + tileSize / 2, y + tileSize / 2);
+    } else if (type === 4) {
+        // Half-cover — orange tinted block with dashed outline
+        ctx.fillStyle   = '#1a0d00';
+        ctx.fillRect(x, y, tileSize, tileSize);
+        ctx.strokeStyle = 'rgba(255,140,0,0.6)';
+        ctx.lineWidth   = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+        ctx.setLineDash([]);
+        ctx.fillStyle   = 'rgba(255,140,0,0.7)';
+        ctx.font        = `${Math.floor(tileSize * 0.35)}px monospace`;
+        ctx.textAlign   = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('◒', x + tileSize / 2, y + tileSize / 2);
+    } else if (type === 5) {
+        // Hazard — yellow striped hazard pattern
+        ctx.fillStyle   = '#1a1a00';
+        ctx.fillRect(x, y, tileSize, tileSize);
+        ctx.strokeStyle = 'rgba(255,255,0,0.8)';
+        ctx.lineWidth   = 1;
+        ctx.strokeRect(x, y, tileSize, tileSize);
+        ctx.strokeStyle = 'rgba(255,255,0,0.2)';
+        ctx.lineWidth   = 2;
+        ctx.beginPath();
+        for (let d = -tileSize; d < tileSize * 2; d += 8) {
+            ctx.moveTo(x + d, y);
+            ctx.lineTo(x + d + tileSize, y + tileSize);
+        }
+        ctx.stroke();
     }
 
     // Universal faint grid
@@ -249,15 +425,26 @@ function onMouseDown(e) {
         return;
     }
 
-    // Play mode — check for token hit
     const hit = tokens.find(t => t.col === col && t.row === row);
     if (hit) {
+        if (selectedTokenId && hit.id !== selectedTokenId) {
+            // Context menu!
+            if (dotnetRef) {
+                // Determine offset relative to canvas
+                const rect = canvas.getBoundingClientRect();
+                const offsetX = e.clientX - rect.left;
+                const offsetY = e.clientY - rect.top;
+                dotnetRef.invokeMethodAsync('OnTokenTargeted', hit.id, offsetX, offsetY);
+            }
+            return;
+        }
         dragTokenId  = hit.id;
-        dragCursorX  = e.clientX;
-        dragCursorY  = e.clientY;
-        // Select and highlight movement range
+        dragCursorX = e.clientX;
+        dragCursorY = e.clientY;
         selectedTokenId = hit.id;
         if (dotnetRef) dotnetRef.invokeMethodAsync('OnTokenSelected', hit.id);
+        render();
+        return;
     } else {
         selectedTokenId = null;
         highlights = [];
@@ -315,7 +502,7 @@ function onRightClick(e) {
 }
 
 function paintAt(col, row) {
-    const typeMap = { floor: 1, wall: 2, door: 3 };
+    const typeMap = { floor: 1, wall: 2, door: 3, halfcover: 4, hazard: 5 };
     const t = typeMap[editorMode];
     if (t !== undefined) tiles[`${col},${row}`] = t;
     render();

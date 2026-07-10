@@ -4,11 +4,15 @@ public class StoryStageDto
 {
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    
+
     // Optional Skill Check
     public bool HasSkillCheck { get; set; }
     public string SkillName { get; set; } = string.Empty;
-    public int TargetDifficulty { get; set; } = 15; // Standard Average difficulty
+    public int TargetDifficulty { get; set; } = 15;
+
+    // Optional Map + Enemy Assignment
+    public string? MapId { get; set; }
+    public List<string> EnemyCharacterIds { get; set; } = new();
 }
 
 public class StoryDto

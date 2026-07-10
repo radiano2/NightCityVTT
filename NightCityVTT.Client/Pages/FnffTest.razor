@@ -10,6 +10,8 @@
     <span class="lang-en">FNFF Combat Simulator</span>
     <span class="lang-ru">Симулятор боя FNFF</span>
     <span class="lang-pl">Symulator walki FNFF</span>
+    <span class="lang-uk">[UK] FNFF Combat Simulator</span>
+    <span class="lang-eec">FNFF Combat Simulator</span>
 </PageTitle>
 
 <div class="fnff-page">
@@ -17,6 +19,8 @@
         <h1 class="lang-en">FRIDAY NIGHT FIREFIGHT // COMBAT SIMULATOR</h1>
         <h1 class="lang-ru">FRIDAY NIGHT FIREFIGHT // СИМУЛЯТОР БОЯ</h1>
         <h1 class="lang-pl">FRIDAY NIGHT FIREFIGHT // SYMULATOR WALKI</h1>
+        <h1 class="lang-uk">[UK] FRIDAY NIGHT FIREFIGHT // COMBAT SIMULATOR</h1>
+        <h1 class="lang-eec">FRIDAY NIGHT FIREFIGHT // COMBAT SIMULATOR</h1>
         <p class="subtitle">Test combat logic against database entities using CP2020 mechanics.</p>
     </div>
 
@@ -55,7 +59,7 @@
                                 <strong class="@GetWoundClass(_targetState.CurrentWoundState)">@_targetState.CurrentWoundState</strong>
                             </div>
                             <div class="status-row"><span>TOTAL DMG:</span> <strong>@_targetState.TotalDamageTaken</strong></div>
-                            <div class="status-row"><span>STUN PENALTY:</span> <strong>@_targetState.StunSaveModifier</strong></div>
+                            <div class="status-row"><span>WOUND PENALTY:</span> <strong>@_targetState.WoundPenalty</strong></div>
                             <button class="ncc-btn-submit" style="margin-top:0.5rem; width:100%; font-size:0.7rem;" @onclick="ResetTarget">RESET TARGET HEALTH</button>
                         </div>
                     }
@@ -86,6 +90,10 @@
                         <div class="wiz-field">
                             <label>MODIFIERS (AIM, SIGHTS, ETC)</label>
                             <input type="number" class="ncc-input" @bind="_attackModifiers" />
+                        </div>
+                        <div class="wiz-field">
+                            <label>ATTACKER WOUND PENALTY</label>
+                            <input type="number" class="ncc-input" @bind="_attackerWoundPenalty" max="0" />
                         </div>
                         <div class="wiz-field">
                             <label>COVER SP (TARGET)</label>
@@ -181,19 +189,22 @@
     .status-row { display: flex; justify-content: space-between; margin-bottom: 0.3rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .status-row span { color: var(--nc-dim); }
     
-    .action-btn { background: var(--nc-dark); border: 1px solid var(--nc-cyan); color: var(--nc-cyan); padding: 0.6rem; width: 100%; text-align: left; font-family: var(--font-mono); font-size: 0.8rem; cursor: pointer; transition: all 0.2s; margin-bottom: 0.5rem; }
-    .action-btn:hover:not(:disabled) { background: rgba(0,229,255,0.1); }
-    .action-btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--nc-dim); color: var(--nc-dim); }
+    .action-btn { background: rgba(16, 20, 24, 0.8); border: 1px solid var(--nc-cyan); color: var(--nc-cyan); padding: 0.8rem; width: 100%; text-align: left; font-family: var(--font-mono); font-size: 0.8rem; cursor: pointer; transition: all 0.25s; margin-bottom: 0.5rem; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%); backdrop-filter: blur(5px); position: relative; }
+    .action-btn::after { content: ''; position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: var(--nc-cyan); }
+    .action-btn:hover:not(:disabled) { background: rgba(0,229,255,0.15); box-shadow: 0 0 15px rgba(0, 229, 255, 0.3); text-shadow: 0 0 5px rgba(0, 229, 255, 0.5); }
+    .action-btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--nc-dim); color: var(--nc-dim); filter: grayscale(1); }
     .action-btn.warning { border-color: var(--nc-gold); color: var(--nc-gold); text-align: center; }
-    .action-btn.warning:hover:not(:disabled) { background: rgba(255,191,36,0.1); }
+    .action-btn.warning::after { background: var(--nc-gold); }
+    .action-btn.warning:hover:not(:disabled) { background: rgba(255,191,36,0.15); box-shadow: 0 0 15px rgba(255,191,36,0.3); }
     .action-btn.danger { border-color: var(--nc-red); color: var(--nc-red); text-align: center; }
-    .action-btn.danger:hover:not(:disabled) { background: rgba(255,0,60,0.1); }
+    .action-btn.danger::after { background: var(--nc-red); }
+    .action-btn.danger:hover:not(:disabled) { background: rgba(255,0,60,0.15); box-shadow: 0 0 15px rgba(255,0,60,0.3); }
 
     .fnff-log-container { background: var(--nc-panel); border: 1px solid var(--nc-border); display: flex; flex-direction: column; }
     .fnff-log-container h3 { padding: 1rem; margin: 0; font-size: 0.9rem; color: var(--nc-red); border-bottom: 1px solid var(--nc-border); background: var(--nc-dark); }
     
-    .dt-log { flex: 1; padding: 1rem; overflow-y: auto; font-size: 0.85rem; position: relative; background: #080a0c; min-height: 400px; }
-    .dt-log::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px); pointer-events: none; }
+    .dt-log { flex: 1; padding: 1.5rem; overflow-y: auto; font-size: 0.85rem; position: relative; background: rgba(8, 10, 12, 0.9); min-height: 400px; text-shadow: 0 0 2px rgba(255,255,255,0.3); }
+    .dt-log::after { content: ''; position: absolute; inset: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 10; }
     .log-line { padding: 0.3rem 0; line-height: 1.4; color: var(--nc-cream); border-bottom: 1px dotted rgba(255,255,255,0.05); }
     .log-result { color: var(--nc-cyan); }
     .log-crit { color: var(--nc-gold); font-weight: bold; }
@@ -235,6 +246,7 @@
     private int _range = 10;
     private int _attackerSkillBase = 12; // REF + Skill average
     private int _attackModifiers = 0;
+    private int _attackerWoundPenalty = 0;
     private int _coverSp = 0;
     private bool _armorLayering = false;
 
@@ -337,8 +349,8 @@
         int targetNumber = _range <= 1 ? 10 : _range <= _selectedWeaponStats.BaseRange / 4 ? 15 : _range <= _selectedWeaponStats.BaseRange / 2 ? 20 : _range <= _selectedWeaponStats.BaseRange ? 25 : 30;
         
         int roll = _engine.RollExploding1D10(out bool fumble, out bool crit);
-        int total = fumble ? roll : roll + _attackerSkillBase + _selectedWeaponStats.WA + _attackModifiers;
-        
+        int total = fumble ? roll : roll + _attackerSkillBase + _selectedWeaponStats.WA + _attackModifiers + _attackerWoundPenalty;
+
         _lastHitSuccess = !fumble && (total >= targetNumber);
 
         if (fumble)
@@ -350,7 +362,8 @@
         {
             string critTag = crit ? "<span class='log-crit'>[CRITICAL EXPLOSION]</span>" : "";
             string resultTag = _lastHitSuccess ? "<span class='log-result'>[HIT]</span>" : "<span class='log-dim'>[MISS]</span>";
-            Log($"Roll: {roll} {critTag} + Skill({_attackerSkillBase}) + WA({_selectedWeaponStats.WA}) + Mod({_attackModifiers}) = <strong>{total}</strong> vs Target: <strong>{targetNumber}</strong>", "");
+            string woundTag = _attackerWoundPenalty < 0 ? $" + Wound({_attackerWoundPenalty})" : "";
+            Log($"Roll: {roll} {critTag} + Skill({_attackerSkillBase}) + WA({_selectedWeaponStats.WA}) + Mod({_attackModifiers}){woundTag} = <strong>{total}</strong> vs Target: <strong>{targetNumber}</strong>", "");
             Log($"Result: {resultTag}", _lastHitSuccess ? "log-result" : "log-dim");
         }
     }
@@ -364,7 +377,7 @@
         string locType = _calledShotLocation.HasValue ? "CALLED SHOT" : "RANDOM ROLL";
         Log($"Hit Location ({locType}): <strong>{location.ToString().ToUpper()}</strong>", "");
 
-        var result = _engine.CalculateDamage(_targetState, _selectedWeaponStats.DamageDice, location, _coverSp, _armorLayering);
+        var result = _engine.CalculateDamage(_targetState, _selectedWeaponStats.DamageDice, location, _coverSp + (_armorLayering ? 5 : 0));
         
         string layerTag = _armorLayering ? " (Layering +5 SP applied)" : "";
         Log($"Raw Damage: <strong>{result.RawDamage}</strong> vs Armor SP: {result.RawDamage - result.PenetratingDamage} {layerTag}", "");
@@ -391,7 +404,7 @@
     {
         if (_targetState == null) return;
         Log("---", "");
-        Log($"Rolling Stun Save (BODY: {_targetState.BODY}, Penalty: {_targetState.StunSaveModifier})...", "");
+        Log($"Rolling Stun Save (BODY: {_targetState.BODY}, Wound Penalty: {_targetState.WoundPenalty})...", "");
         bool pass = _engine.MakeStunSave(_targetState);
         
         if (pass) Log("<span class='log-result'>[SAVE PASSED]</span> Target remains active.", "log-result");

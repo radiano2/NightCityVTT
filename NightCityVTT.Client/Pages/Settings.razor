@@ -10,20 +10,23 @@
     <span class="lang-eec">EC Protocol Config</span>
     <span class="lang-ru">Настройки системы</span>
     <span class="lang-pl">Ustawienia systemu</span>
+    <span class="lang-uk">Налаштування системи</span>
 </PageTitle>
 
 <div class="setup-container">
     <h2 class="setup-title">
         <span class="lang-en hide-in-eec">SYSTEM SETTINGS</span>
-        <span class="lang-eec">PROTOCOL CONFIGURATION</span>
-        <span class="lang-ru">НАСТРОЙКИ СИСТЕМЫ</span>
-        <span class="lang-pl">USTAWIENIA SYSTEMU</span>
+        <span class="lang-eec">EC PROTOCOL CONFIGURATION</span>
+        <span class="lang-ru">ТЕРМИНАЛ СОВОЙЛ: НАСТРОЙКИ</span>
+        <span class="lang-pl">WĘZEŁ SIECI: USTAWIENIA KORPORACYJNE</span>
+        <span class="lang-uk">СИСТЕМНІ НАЛАШТУВАННЯ КИЄВА</span>
     </h2>
     <p class="setup-subtitle">
         <span class="lang-en hide-in-eec">Configure visual protocols and connection timing.</span>
         <span class="lang-eec">Adjust EC protocol parameters, visuals, and link speeds.</span>
-        <span class="lang-ru">Настройте визуальные протоколы и время соединения.</span>
-        <span class="lang-pl">Skonfiguruj protokoły wizualne i czas połączenia.</span>
+        <span class="lang-ru">Калибровка визуальных протоколов орбитальной станции.</span>
+        <span class="lang-pl">Zarządzanie wizualizacją i protokołami sieciowymi.</span>
+        <span class="lang-uk">Налаштування ретро-візуальних протоколів та термінів підключення.</span>
     </p>
 
     @if (_loading)
@@ -35,6 +38,7 @@
                 <span class="lang-eec">ACCESSING ARCHIVE...</span>
                 <span class="lang-ru">ПОЛУЧЕНИЕ ДАННЫХ...</span>
                 <span class="lang-pl">POBIERANIE DANYCH...</span>
+                <span class="lang-uk">ОТРИМАННЯ ДАНИХ ДРУКУ...</span>
             </div>
         </div>
     }
@@ -43,15 +47,17 @@
         <div class="ncc-section">
             <div class="ncc-section-title">
                 <span class="lang-en hide-in-eec">Visual Protocol (Theme)</span>
-                <span class="lang-eec">Aesthetic Protocol</span>
-                <span class="lang-ru">Визуальный протокол (Тема)</span>
-                <span class="lang-pl">Protokół wizualny (Motyw)</span>
+                <span class="lang-eec">EC Aesthetic Protocol</span>
+                <span class="lang-ru">Цветовой протокол «Луна»</span>
+                <span class="lang-pl">Motyw interfejsu ICE</span>
+                <span class="lang-uk">Візуальний протокол (Газета)</span>
             </div>
             <select class="ncc-select" @bind="_settings.Theme">
                 <option value="">ENGLISH (DEFAULT)</option>
                 <option value="eec">EEC (EUROPEAN BLUE)</option>
                 <option value="luna">LUNA (RUSSIAN)</option>
                 <option value="heroldowie">HEROLDOWIE (POLISH)</option>
+                <option value="kyiv">KYIV INDEPENDENT (UKRAINIAN)</option>
             </select>
         </div>
 
@@ -59,15 +65,17 @@
             <div class="ncc-section-title">
                 <span class="lang-en hide-in-eec">Hacking Animation Interval (ms)</span>
                 <span class="lang-eec">Uplink Simulation Delay (ms)</span>
-                <span class="lang-ru">Интервал анимации взлома (мс)</span>
-                <span class="lang-pl">Interwał animacji hackowania (ms)</span>
+                <span class="lang-ru">Задержка обхода льда (мс)</span>
+                <span class="lang-pl">Opóźnienie ataku Black ICE (ms)</span>
+                <span class="lang-uk">Інтервал анімації друку (мс)</span>
             </div>
             <input type="number" class="ncc-input" @bind="_settings.AnimationIntervalMs" min="0" step="100" />
             <div class="ncc-msg" style="margin-top: 0.5rem; color: var(--nc-dim);">
                 <span class="lang-en hide-in-eec">Default is 5000 (5 seconds). Set to 0 to disable.</span>
                 <span class="lang-eec">Standard delay is 5000ms. Set to 0 for instant access.</span>
-                <span class="lang-ru">По умолчанию 5000 (5 секунд). Установите 0 для отключения.</span>
-                <span class="lang-pl">Domyślnie 5000 (5 sekund). Ustaw 0, aby wyłączyć.</span>
+                <span class="lang-ru">Стандарт 5000мс. Установить 0 для мгновенного входа в Сеть.</span>
+                <span class="lang-pl">Domyślnie 5000ms. Wpisz 0 dla pominięcia sekwencji.</span>
+                <span class="lang-uk">Стандартно 5000мс. Встановіть 0 для миттєвого доступу.</span>
             </div>
         </div>
 
@@ -75,16 +83,18 @@
             <div class="ncc-section-title">
                 <span class="lang-en hide-in-eec">Kinescope Protocol (CRT Filter)</span>
                 <span class="lang-eec">Retro-Phosphor Simulation</span>
-                <span class="lang-ru">Протокол кинескопа (ЭЛТ-фильтр)</span>
-                <span class="lang-pl">Protokół kineskopowy (Filtr CRT)</span>
+                <span class="lang-ru">Эмуляция ЭЛТ монитора</span>
+                <span class="lang-pl">Filtry kineskopowe braindance'u</span>
+                <span class="lang-uk">Емуляція газетного друку (CRT)</span>
             </div>
             <div style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0;">
                 <input type="checkbox" id="crtToggle" @bind="_settings.CrtFilterEnabled" style="accent-color: var(--nc-red); transform: scale(1.4);" />
                 <label for="crtToggle" class="ncc-label" style="cursor: pointer; margin-bottom: 0;">
                     <span class="lang-en hide-in-eec">ENABLE SCANLINES AND PHOSPHOR GLOW</span>
                     <span class="lang-eec">ENABLE STANDARDIZED SCANLINE PROTOCOL</span>
-                    <span class="lang-ru">ВКЛЮЧИТЬ СКАНИРУЮЩИЕ ЛИНИИ И СВЕЧЕНИЕ ФОСФОРА</span>
-                    <span class="lang-pl">WŁĄCZ LINIE SKANOWANIA I POŚWIATĘ FOSFOROWĄ</span>
+                    <span class="lang-ru">АКТИВИРОВАТЬ ФОСФОРНОЕ СВЕЧЕНИЕ СОВЕТСКОГО КИНЕСКОПА</span>
+                    <span class="lang-pl">WŁĄCZ INTERFERENCJĘ OPTYCZNĄ I POŚWIATĘ</span>
+                    <span class="lang-uk">АКТИВУВАТИ ЕФЕКТ РЕТРО ГАЗЕТИ ТА ЧОРНИЛ</span>
                 </label>
             </div>
         </div>
@@ -94,13 +104,15 @@
                 @if (_saving) {
                     <span class="lang-en hide-in-eec">SAVING...</span>
                     <span class="lang-eec">PROCESSING...</span>
-                    <span class="lang-ru">СОХРАНЕНИЕ...</span>
-                    <span class="lang-pl">ZAPISYWANIE...</span>
+                    <span class="lang-ru">СИНХРОНИЗАЦИЯ...</span>
+                    <span class="lang-pl">PRZETWARZANIE DANYCH...</span>
+                    <span class="lang-uk">ЗБЕРЕЖЕННЯ...</span>
                 } else {
                     <span class="lang-en hide-in-eec">SAVE SETTINGS</span>
                     <span class="lang-eec">APPLY PARAMETERS</span>
                     <span class="lang-ru">СОХРАНИТЬ НАСТРОЙКИ</span>
                     <span class="lang-pl">ZAPISZ USTAWIENIA</span>
+                    <span class="lang-uk">ЗБЕРЕГТИ НАЛАШТУВАННЯ</span>
                 }
             </button>
             @if (_statusMsg != null)
@@ -147,6 +159,7 @@
                 "eec" => "[ PARAMETERS APPLIED ]",
                 "luna" => "[ НАСТРОЙКИ СОХРАНЕНЫ ]",
                 "heroldowie" => "[ USTAWIENIA ZAPISANE ]",
+                "kyiv" => "[ НАЛАШТУВАННЯ ЗБЕРЕЖЕНО ]",
                 _ => "[ SETTINGS SAVED SUCCESSFULLY ]"
             };
             
